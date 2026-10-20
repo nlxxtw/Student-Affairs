@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>数据自动匹配助手</title>
+  <link rel="stylesheet" href="/assets/data-match-style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">匹</div>
+    <div class="brand-copy"><span>LOCAL LOOKUP TOOL</span><h1>数据自动匹配助手</h1><p>上传两表 · 参考字段 · 字段映射 · 自动填充录入表</p></div>
+    <div class="local-badge"><i></i><div><b>本地运行</b><small>数据不会离开浏览器</small></div></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <span class="eyebrow">WPS「查找录入」的网页版</span>
+        <h2>两份表格对照，自动填充录入表</h2>
+        <p>上传<b>查找表</b>（完整对照数据）和<b>录入表</b>（待填充数据），设置一个或多个<b>参考字段</b>作为匹配条件，再把查找表的字段<b>映射</b>到录入表——开始匹配后逐行带出数据，<b>导出录入表</b>即为填好的结果，不用再手写 VLOOKUP。</p>
+      </div>
+      <div class="flow-visual" aria-hidden="true">
+        <div class="fv-col keys"><span class="fv-title">参考字段</span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span></div>
+        <span class="fv-link">→</span>
+        <div class="fv-col src"><span class="fv-title">查找表</span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span></div>
+        <span class="fv-link">→</span>
+        <div class="fv-col out"><span class="fv-title">录入表</span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span><span class="fv-bar"></span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <span class="step-no">1</span>
+        <div><h3>上传两份表格</h3><p>支持 .xlsx、.xls、.et 等 Excel / WPS 全系列格式，及 CSV、TXT 文本（自动识别 UTF-8 / GBK 编码）；也可以直接从表格复制后粘贴。</p></div>
+        <button id="loadDemo" class="ghost small" type="button">载入示例</button>
+      </div>
+      <div class="upload-grid">
+        <article class="upload-card lookup" id="lookupCard">
+          <div class="upload-title"><b>查找表</b><em>对照数据（数据来源）</em></div>
+          <p>完整的数据总表，匹配上的行从这里带出数据。</p>
+          <div class="tabs" role="tablist">
+            <button class="tab active" id="tabLookupUpload" type="button">上传文件</button>
+            <button class="tab" id="tabLookupPaste" type="button">粘贴文本</button>
+          </div>
+          <div id="paneLookupUpload" class="tabpane">
+            <label class="file-button">选择文件<input id="lookupFile" type="file" accept=".xlsx,.xlsm,.xlsb,.xlt,.xltx,.xltm,.xls,.et,.ett,.ods,.fods,.ots,.csv,.txt,.dif,.prn,.xml,.htm,.html"></label>
+            <span class="drop-hint">或将文件拖到本卡片</span>
+          </div>
+          <div id="paneLookupPaste" class="tabpane hidden">
+            <textarea id="lookupPaste" spellcheck="false" placeholder="从 Excel / WPS 复制一块区域（含表头行），粘贴到这里…"></textarea>
+          </div>
+          <div id="lookupMeta" class="file-meta empty">尚未上传查找表</div>
+          <div id="lookupPreview" class="hidden"></div>
+        </article>
+        <article class="upload-card entry" id="entryCard">
+          <div class="upload-title"><b>录入表</b><em>待填充（导出的结果）</em></div>
+          <p>要补齐数据的表，匹配后自动填充并导出。</p>
+          <div class="tabs" role="tablist">
+            <button class="tab active" id="tabEntryUpload" type="button">上传文件</button>
+            <button class="tab" id="tabEntryPaste" type="button">粘贴文本</button>
+          </div>
+          <div id="paneEntryUpload" class="tabpane">
+            <label class="file-button">选择文件<input id="entryFile" type="file" accept=".xlsx,.xlsm,.xlsb,.xlt,.xltx,.xltm,.xls,.et,.ett,.ods,.fods,.ots,.csv,.txt,.dif,.prn,.xml,.htm,.html"></label>
+            <span class="drop-hint">或将文件拖到本卡片</span>
+          </div>
+          <div id="paneEntryPaste" class="tabpane hidden">
+            <textarea id="entryPaste" spellcheck="false" placeholder="从 Excel / WPS 复制一块区域（含表头行），粘贴到这里…"></textarea>
+          </div>
+          <div id="entryMeta" class="file-meta empty">尚未上传录入表</div>
+          <div id="entryPreview" class="hidden"></div>
+        </article>
+      </div>
+      <div class="privacy">🔒 两份原始文件只在当前浏览器内存中处理；每次匹配结果会单独保存到系统加密数据库，切换功能后仍可恢复，只有手动删除历史记录才会移除。</div>
+    </section>
+
+    <section id="rulesCard" class="card hidden">
+      <div class="card-head">
+        <span class="step-no">2</span>
+        <div><h3>设置参考字段与字段映射</h3><p>参考字段是两表匹配的条件，可设置多个（如“学号＋班级”联合匹配）；字段映射决定查找表的哪些列填入录入表。</p></div>
+        <button id="aiRules" class="ghost small ai-btn" type="button">✨ AI 规则建议</button><button id="autoRules" class="ghost small" type="button">重新自动匹配规则</button>
+      </div>
+      <div id="preflightBox" class="preflight hidden"></div>
+      <div class="rule-block">
+        <div class="rule-head">
+          <b>参考字段</b>
+          <div class="tabs logic-switch" role="radiogroup" aria-label="多个参考字段的逻辑关系">
+            <button class="tab active" data-logic="and" type="button">与 · 同时满足</button>
+            <button class="tab" data-logic="or" type="button">或 · 任一满足</button>
+          </div>
+          <span class="rule-desc" id="refLogicDesc">所有条件都须同时匹配（联合关键字）</span>
+          <button id="addRef" class="ghost small" type="button">＋ 添加参考字段</button>
+        </div>
+        <div id="refRows" class="rule-rows"></div>
+      </div>
+      <div class="rule-block">
+        <div class="rule-head"><b>字段映射</b><span class="rule-desc">查找表字段 → 录入表字段，命中后把查找表的值填入该列</span><button id="addMap" class="ghost small" type="button">＋ 添加映射</button></div>
+        <div id="mapRows" class="rule-rows"></div>
+      </div>
+      <div class="options">
+        <label><input id="optTrim" type="checkbox" checked><span><b>忽略首尾空格</b><small>“张三 ”视为“张三”</small></span></label>
+        <label><input id="optSpaces" type="checkbox"><span><b>忽略全部空格</b><small>编号或姓名中间的空格</small></span></label>
+        <label><input id="optCase" type="checkbox"><span><b>英文不区分大小写</b><small>ABC 与 abc 视为一致</small></span></label>
+        <label><input id="optWidth" type="checkbox"><span><b>全角半角等价</b><small>２０２３ 与 2023 视为一致</small></span></label>
+        <label><input id="optNumeric" type="checkbox"><span><b>数值等价</b><small>90 与 90.00 视为一致</small></span></label>
+        <label><input id="optInvisible" type="checkbox"><span><b>忽略不可见字符</b><small>零宽字符、复制网页的隐形符号</small></span></label>
+        <label><select id="fillMode"><option value="confirm" selected>确认后覆盖</option><option value="blank">仅填充空白</option><option value="overwrite">覆盖已有</option></select><span><b>填充策略</b><small>录入表已有内容时</small></span></label>
+      </div>
+      <div class="action-row">
+        <p id="readyHint"></p>
+        <div>
+          <button id="clearAll" class="ghost" type="button">清空重来</button>
+          <button id="runMatch" class="primary" type="button">开始匹配</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="aiPanel" class="ai-panel hidden"></div>
+
+    <section id="resultCard" class="card result-card hidden">
+      <div id="recordBanner" class="record-banner hidden"><span id="recordBannerText"></span><button id="backToLive" class="linklike" type="button">返回当前结果</button></div>
+      <div class="card-head">
+        <span class="step-no">3</span>
+        <div><h3>匹配结果</h3><p id="resultIntro"></p></div>
+        <div class="result-actions">
+          <button id="aiBrief" class="ghost small ai-btn" type="button">📝 AI 简报</button>
+          <button id="aiDiag" class="ghost small ai-btn" type="button">🩺 AI 诊断</button>
+          <button id="copyButton" class="ghost small" type="button">复制结果</button>
+          <button id="exportButton" class="primary small" type="button">导出录入表</button>
+        </div>
+      </div>
+      <div id="statsBar" class="stats"></div>
+      <div class="hitbar-wrap"><div class="hitbar" aria-hidden="true"><i class="hit" id="hitSeg"></i><i class="missbar" id="missSeg"></i></div><span id="hitText"></span></div>
+      <div class="filter-tabs" id="filterTabs">
+        <button class="tab active" data-filter="all" type="button">全部<em id="cntAll"></em></button>
+        <button class="tab" data-filter="hit" type="button">已匹配<em id="cntHit"></em></button>
+        <button class="tab" data-filter="miss" type="button">未找到<em id="cntMiss"></em></button>
+        <button class="tab" data-filter="blank" type="button">参考为空<em id="cntBlank"></em></button>
+        <button class="tab" data-filter="unused" type="button">查找表未用<em id="cntUnused"></em></button>
+      </div>
+      <div class="result-wrap">
+        <table class="result-table">
+          <thead id="resultHead"></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+        <div id="emptyResult" class="empty-result hidden">当前筛选条件下没有记录。</div>
+      </div>
+      <div class="load-more"><button id="loadMore" class="ghost hidden" type="button">显示更多</button></div>
+      <div id="resultFoot" class="result-foot"></div>
+    </section>
+
+    <section id="historyCard" class="card hidden">
+      <div class="card-head">
+        <span class="step-no alt">记</span>
+        <div><h3>匹配记录</h3><p>每次匹配自动留档：两表来源、规则、选项与统计，可回看明细或重新导出。同一份数据重复匹配只保留最新一条；记录仅保存在本机浏览器，最多 20 条。</p></div>
+        <button id="clearHistory" class="ghost small" type="button">清空记录</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </main>
+
+  <div id="confirmMask" class="modal-mask hidden">
+    <div class="confirm-box" id="confirmBox" role="dialog" aria-modal="true" aria-label="覆盖确认" tabindex="-1">
+      <div class="cb-head"><b>覆盖确认</b><p id="cbDesc"></p></div>
+      <div class="cb-toolbar">
+        <button id="cbOverwriteAll" class="ghost small" type="button">全部覆盖</button>
+        <button id="cbKeepAll" class="ghost small" type="button">全部保留</button>
+        <span id="cbCounter" class="cb-counter"></span>
+      </div>
+      <div class="cb-list">
+        <div class="cb-row cb-title"><span>录入行号</span><span>参考值</span><span>字段</span><span>原内容</span><span>新内容</span><span>选择</span></div>
+        <div id="cbList"></div>
+      </div>
+      <div class="cb-pager">
+        <button id="cbPrev" class="ghost small" type="button">上一页</button>
+        <span id="cbPageInfo"></span>
+        <button id="cbNext" class="ghost small" type="button">下一页</button>
+      </div>
+      <div class="cb-foot">
+        <button id="cbCancel" class="ghost" type="button">取消（全部保留原值）</button>
+        <button id="cbApply" class="primary" type="button">确认应用</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="busy" class="busy hidden"><div class="spinner"></div><b>正在读取，请稍候…</b></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/xlsx.full.min.js"></script>
+  <script src="/assets/tool-history-client.js"></script>
+  <script src="/assets/data-match-app.js"></script>
+</body>
+</html>

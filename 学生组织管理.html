@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学生组织管理 · 数智学工</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%9B%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/searchable-filter-selects.css">
+<style>
+:root{--primary:#12805c;--primary-d:#0d6a4b;--primary-l:#e8f5ef;--border:#dce7e2;--muted:#75847e;--bg:#f2f6f4;--card:#fff;--danger:#b3423a;--warn:#99600c;--warn-bg:#fff5e3}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.6 "Microsoft YaHei","PingFang SC",sans-serif;color:#2c3a34;background:var(--bg)}
+a{color:#187a59}
+/* 布局 */
+.layout{display:block;min-height:0}
+/* 本页由数智学工主系统承载：一级、二级导航均由系统左栏提供。
+   永久隐藏旧独立版侧栏，避免嵌入页面再次出现双侧栏和空白区域。 */
+aside{display:none!important}
+aside .brand{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+aside .brand b{display:block;font-size:16px;color:#fff}
+aside .brand small{font-size:11.5px;color:#8fb5a8}
+nav{flex:1;overflow:auto;padding:8px 0}
+nav .grp{padding:10px 16px 4px;font-size:11.5px;color:#7ba795;letter-spacing:1px}
+nav .item{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;font-size:13.5px;border-left:3px solid transparent;transition:.15s}
+nav .item:hover{background:rgba(255,255,255,.06)}
+nav .item.active{background:rgba(18,128,92,.35);border-left-color:#36c08a;color:#fff;font-weight:600}
+.szo-content{min-width:0;padding:0;max-width:none}
+#embeddedTabs{display:none}
+.szo-third-tabs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:10px}
+.szo-third-tabs b{font-size:14px;color:var(--primary-d);padding-right:5px;margin-right:2px;border-right:1px solid var(--border)}
+.szo-third-tab{border:0;border-bottom:3px solid transparent;padding:7px 9px;background:transparent;color:#63736b;font:inherit;font-size:13px;cursor:pointer}
+.szo-third-tab:hover{color:var(--primary)}
+.szo-third-tab.active{color:var(--primary-d);border-bottom-color:var(--primary);font-weight:700}
+/* 通用 */
+h2.ptitle{margin:0 0 4px;font-size:19px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.in{height:34px;border:1px solid var(--border);border-radius:7px;padding:0 9px;background:#fff;font:inherit;min-width:120px}
+.btn{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 13px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;font:inherit;font-size:13px;transition:.15s}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.btn-primary:hover{background:var(--primary-d);color:#fff}
+.btn-danger{color:var(--danger)}
+.btn-sm{height:28px;padding:0 9px;font-size:12.5px;border-radius:6px}
+.btn-ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f4f8f6;color:#4d5f57;font-weight:600;text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #edf2f0;vertical-align:top}
+tr:hover td{background:#fafdfb}
+.list-scroll{overflow:auto;border:1px solid var(--border);border-radius:8px;background:#fff}
+.empty{padding:26px;text-align:center;color:#9aa8a1}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;background:var(--primary-l);color:var(--primary-d)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.tag.mut{background:#eef1f0;color:#56655e}
+.tag.bad{background:#fdeceb;color:var(--danger)}
+.muted{color:var(--muted);font-size:12.5px}
+.req{color:#c1443e;font-style:normal}
+/* 统计 */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat-grid>div{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px}
+.stat-grid small{display:block;color:var(--muted);font-size:11.5px}
+.stat-grid b{display:block;font-size:23px;margin:3px 0}
+/* 模态 */
+.mask{position:fixed;inset:0;background:rgba(15,35,28,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:36px 16px;overflow:auto}
+.mask.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:760px;max-width:100%;max-height:calc(100vh - 72px);display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.modal.wide{width:960px}
+.modal.xl{width:96vw;max-width:1600px}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-h b{font-size:16px}
+.modal-b{padding:16px 18px;overflow:auto}
+.modal-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field>label{font-size:12.5px;font-weight:600;color:#41504a}
+.field input,.field select,.field textarea{border:1px solid var(--border);border-radius:7px;padding:7px 9px;font:inherit;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px rgba(18,128,92,.12)}
+.field textarea{resize:vertical;min-height:64px}
+.field input[type=radio],.field input[type=checkbox]{width:auto;padding:0;border:0;background:none;accent-color:var(--primary);margin:0 6px 0 0;vertical-align:-2px;cursor:pointer}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px}
+/* 组织架构树 */
+.tree{border:1px dashed var(--border);border-radius:9px;padding:10px;background:#fbfdfc}
+.node{border:1px solid var(--border);border-radius:8px;background:#fff;margin:6px 0}
+.node-h{display:flex;align-items:center;gap:8px;padding:7px 10px;flex-wrap:wrap}
+.node-h b{font-size:13.5px}
+.node-h .nm{background:var(--primary-l);border-radius:6px;padding:1px 7px;font-size:12px;color:var(--primary-d)}
+.node-h .ops{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+.node-c{padding:0 10px 8px;margin-left:26px}
+.att-chip{display:inline-flex;align-items:center;gap:6px;background:#f4f8f6;border:1px solid var(--border);border-radius:7px;padding:4px 8px;margin:3px 4px 0 0;font-size:12.5px}
+.att-chip .x{cursor:pointer;color:#999;font-weight:700}
+.att-chip .x:hover{color:var(--danger)}
+.att-drop{border:1px dashed #b9dfcf;border-radius:8px;padding:8px 10px;margin-top:4px;color:var(--muted);font-size:12.5px;background:#f9fdfb}
+.pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:10px;font-size:12.5px;color:var(--muted)}
+.note{padding:10px 12px;border-left:4px solid #d99a30;background:var(--warn-bg);border-radius:7px;font-size:13px;color:#7a5a17;margin-bottom:12px}
+.ok-tip{padding:10px 12px;border-left:4px solid #36a06f;background:#edf8f2;border-radius:7px;font-size:13px;color:#126b49;margin-bottom:12px}
+/* 组织架构树状图（政企式自上而下 + 层级配色 + 浅灰连接线，参照用户示例图） */
+.tree-chart{overflow:auto;padding:16px 32px 20px;border:1px solid var(--border);border-radius:9px;background:#fff;box-sizing:border-box}
+.tree-chart ul{display:flex;justify-content:center;flex-wrap:nowrap;padding:26px 0 0;margin:0;list-style:none;position:relative;width:max-content;min-width:100%;box-sizing:border-box}
+.tree-chart>ul{padding-top:0}
+.tree-chart .org-root-chart{width:max-content;min-width:100%;box-sizing:border-box}
+.tree-chart .org-root-chart>ul{min-width:100%;width:max-content}
+.tree-chart ul ul::before{content:"";position:absolute;top:0;left:50%;border-left:1px solid #b8c4be;width:0;height:26px}
+.tree-chart li{position:relative;padding:26px 8px 0;display:flex;flex-direction:column;align-items:center}
+.tree-chart>ul>li{padding-top:0}
+.tree-chart li::before,.tree-chart li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:26px;border-top:1px solid #b8c4be}
+.tree-chart li::after{right:auto;left:50%;border-left:1px solid #b8c4be}
+.tree-chart>ul>li::before,.tree-chart>ul>li::after{display:none}
+.tree-chart li:only-child::before,.tree-chart li:only-child::after{display:none}
+.tree-chart li:only-child{padding-top:26px}
+.tree-chart>ul>li:only-child{padding-top:0}
+.tree-chart li:first-child::before,.tree-chart li:last-child::after{border-top:0}
+.tree-chart li:last-child::before{border-right:1px solid #b8c4be;border-radius:0 8px 0 0}
+.tree-chart li:first-child::after{border-radius:8px 0 0 0}
+/* 企业式根节点：组织本身置顶，主席团与各职能部门均为其直属分支 */
+.org-root-node{min-width:230px;max-width:340px;background:linear-gradient(135deg,#0d6248,#16815f);color:#fff;border-radius:10px;padding:11px 16px 10px;box-shadow:0 3px 10px rgba(10,79,55,.22);text-align:center}
+.org-root-node b{display:block;font-size:16px;letter-spacing:.2px}
+.org-root-node .root-meta{margin-top:4px;font-size:12px;line-height:1.55;color:rgba(255,255,255,.84)}
+.org-root-node .root-stats{display:flex;justify-content:center;gap:9px;margin-top:6px;font-size:11.5px;color:#d9f3e7}
+/* 层级配色：一级 橙 / 二级 蓝 / 三级 绿 / 四级及以下 浅蓝 */
+.org-node{width:172px;min-width:172px;max-width:172px;box-sizing:border-box;background:#99CCFF;color:#1f3a52;border-radius:8px;padding:9px 10px 8px;box-shadow:0 1px 5px rgba(20,60,45,.14);text-align:center}
+.org-node.d0{background:#FF9933}
+.org-node.d1{background:#3399CC}
+.org-node.d2{background:#66CC66}
+.org-node.d0,.org-node.d1,.org-node.d2{color:#fff}
+.org-node-h b{font-size:14.5px;display:block;color:inherit}
+.org-node-h .org-node-role{font-size:11.5px;display:block;margin-top:2px;line-height:1.4;color:inherit;opacity:.85}
+.org-node-mems{margin-top:5px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.org-node-mems .org-mem-line{font-size:12px;line-height:1.45;color:inherit;opacity:.95;white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.org-node-mems .org-mem-line.resigned{opacity:.5;text-decoration:line-through}
+.org-node-ops{display:flex;gap:2px;justify-content:center;margin-top:6px;opacity:.45;transition:.15s}
+.org-node:hover .org-node-ops{opacity:1}
+.org-node-ops .btn{height:20px;padding:0 5px;font-size:12px;border-radius:5px;background:rgba(255,255,255,.9);border-color:transparent}
+.org-node-ops .btn:hover{background:#fff}
+.tree-chart li.org-editing{min-width:520px}
+/* 组织架构层级表格（政企式） */
+.org-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;background:#fff;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.org-table thead th{background:#f0f7f3;padding:10px 12px;text-align:left;font-weight:600;color:#4d5f57;border-bottom:2px solid var(--border);white-space:nowrap}
+.org-table tbody tr{border-bottom:1px solid #edf2f0;transition:.1s}
+.org-table tbody tr:hover{background:#f8fbf9}
+.org-table tbody tr:last-child{border-bottom:none}
+.org-table td{padding:9px 12px;vertical-align:middle}
+.org-row-name{display:flex;align-items:center;gap:6px}
+.org-row-name .expand-btn{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;font-size:10.5px;cursor:pointer;background:#fff;color:var(--muted);flex:none}
+.org-row-name .expand-btn:hover{border-color:var(--primary);color:var(--primary)}
+.org-row-name .expand-btn.collapsed{transform:rotate(-90deg)}
+.org-row-name .expand-btn.empty{visibility:hidden}
+.org-row-name .dept-name{font-weight:600;color:#2c3a34}
+.org-row-name .dept-role{color:var(--muted);font-size:12.5px;margin-left:4px}
+.org-mem-chip{display:inline-flex;align-items:center;gap:4px;background:var(--primary-l);border-radius:5px;padding:2px 7px;font-size:12px;color:var(--primary-d);margin:2px 3px 2px 0;border:1px solid #d0e5d8}
+.org-mem-chip.resigned{background:#f4f8f6;color:#56655e;border-color:var(--border)}
+.org-ops{display:flex;gap:4px;flex-wrap:wrap}
+.org-ops .btn{height:24px;padding:0 7px;font-size:11.5px;border-radius:5px}
+/* 任务看板 */
+.tk-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tk-col{background:#f7faf8;border:1px solid var(--border);border-radius:10px;padding:10px;min-height:180px}
+.tk-col-h{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px;font-size:13px}
+.tk-col-h b{font-size:14px}
+.tk-col-h.stage-todo b{color:#99600c}.tk-col-h.stage-doing b{color:#1d5b91}.tk-col-h.stage-done b{color:#126b49}
+.tk-col-h span{background:#fff;border:1px solid var(--border);border-radius:999px;font-size:11.5px;padding:1px 8px;color:var(--muted)}
+.tk-card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:9px}
+.tk-card-h{display:flex;align-items:center;gap:7px}
+.tk-card-h b{font-size:13.5px}
+.tk-pri{flex:none;font-size:11px;color:#fff;border-radius:5px;padding:1px 6px}
+.tk-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:5px}
+.tk-prog{height:5px;background:#e9f1ed;border-radius:99px;overflow:hidden;margin-top:7px}
+.tk-prog i{display:block;height:100%;background:#16815f;border-radius:99px}
+.tk-ops{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+/* 卡片网格（招新岗位 / 架构模板库 复用） */
+.rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:8px}
+.rp-card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:11px}
+@media(max-width:900px){.tk-board{grid-template-columns:1fr}}
+@media(max-width:900px){.layout{flex-direction:column}aside{width:100%;flex-direction:row;flex-wrap:wrap}aside .brand{width:100%}nav{display:flex;flex-wrap:wrap}nav .grp{width:100%}.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:720px){.szo-third-tabs{margin-bottom:10px}}
+/* ===== 概览页美化 ===== */
+.ov-hero{background:linear-gradient(120deg,#0f2f25 0%,#12805c 68%,#16976b 100%);color:#fff;border-radius:14px;padding:22px 24px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;box-shadow:0 10px 26px rgba(18,128,92,.22)}
+.ov-hero h1{margin:0;font-size:21px;font-weight:700;letter-spacing:.5px}
+.ov-hero .ov-sub{color:rgba(255,255,255,.82);font-size:13px;margin:7px 0 0;line-height:1.5}
+.ov-hero .ov-badges{display:flex;gap:12px;flex-wrap:wrap}
+.ov-hero .ov-badge{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:10px 18px;text-align:center;min-width:78px}
+.ov-hero .ov-badge b{display:block;font-size:21px;line-height:1.1}
+.ov-hero .ov-badge small{display:block;font-size:12px;color:rgba(255,255,255,.8);margin-top:2px}
+.ov-sec{display:flex;align-items:center;gap:9px;margin:20px 0 11px;font-size:14.5px;font-weight:700;color:#2c3a34}
+.ov-sec::before{content:"";width:4px;height:16px;background:var(--primary);border-radius:3px}
+.ov-sec .ov-line{flex:1;height:1px;background:var(--border)}
+.ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:12px}
+.ov-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.16s;position:relative;overflow:hidden}
+.ov-card:hover{transform:translateY(-2px);box-shadow:0 9px 22px rgba(20,60,45,.12);border-color:#9fd3bf}
+.ov-card .ov-ic{flex:none;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;color:#fff}
+.ov-card .ov-meta{min-width:0;flex:1}
+.ov-card .ov-meta small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov-card .ov-meta b{display:block;font-size:23px;color:#243a32;line-height:1.15;margin-top:1px}
+.ov-card .ov-meta .ov-note{display:block;color:var(--muted);font-size:11.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ov-row>.card{margin-bottom:0}
+@media(max-width:780px){.ov-row{grid-template-columns:1fr}}
+/* 日期/时间控件：确保原生日历/时间选择框可点、醒目 */
+input[type=date],input[type=datetime-local]{cursor:pointer}
+input[type=date].in,input[type=datetime-local].in{min-width:160px}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand"><b>🏛️ 学生组织管理</b><small>数智学工 · 已接入系统数据与附件库</small></div>
+  <nav id="nav"></nav>
+</aside>
+<section class="szo-content"><div id="embeddedTabs"></div><main id="main"></main></section>
+</div>
+<div class="mask" id="mask"><div class="modal" id="modal">
+  <div class="modal-h"><b id="modalTitle"></b><button class="btn btn-sm btn-ghost" onclick="closeModal()">✕ 关闭</button></div>
+  <div class="modal-b" id="modalBody"></div>
+  <div class="modal-f" id="modalFoot"></div>
+</div></div>
+<input type="file" id="filePick" multiple hidden>
+<script>
+"use strict";
+/* ================= 学生组织管理 =================
+ * 嵌入状态复用父页面已完成初始化的系统桥接，避免再次读取全量存储、在线校验授权。 */
+var KEY="nnuzc_student_org_v1";
+var IS_EMBEDDED=new URLSearchParams(location.search).get("embedded")==="1";
+var INITIAL_TAB=new URLSearchParams(location.search).get("tab")||"home";
+if(IS_EMBEDDED)document.body.classList.add("embedded");
+function studentOrgDemoActive(){try{return !!(IS_EMBEDDED&&window.parent&&window.parent.__WORKBENCH_DEMO__&&window.parent.__WORKBENCH_DEMO__.active);}catch(e){return false;}}
+function studentOrgDemoNotice(){toast("当前为演示数据模式，不能添加或修改真实数据；请先在主系统顶部清除演示数据。","warn");}
+function systemStorage(){
+  /* iframe 与主系统同源时，必须在父页面的桥接上下文中读写，才能直接同步到本机数据库。 */
+  try{if(IS_EMBEDDED&&window.parent&&window.parent!==window&&window.parent.localStorage)return window.parent.localStorage;}catch(e){}
+  return window.localStorage;
+}
+function systemWorkbench(){
+  try{if(IS_EMBEDDED&&window.parent&&window.parent!==window&&window.parent.workbench)return window.parent.workbench;}catch(e){}
+  return window.workbench;
+}
+var ORG_CATS={ "union-u":"校级学生会","club-u":"校级社团","union-c":"院级学生会","club-c":"院级社团","other":"其他组织" };
+var CLUB_TYPES=["思想政治类","学术科技类","文化体育类","志愿公益类","创新创业类","自律互助类"];
+var ORG_STATUS=["运行中","换届中","已归档","已解散"];
+var ACT_TYPES=["思想引领","学术科技","文化艺术","体育竞赛","志愿公益","社会实践","创新创业","其他"];
+var ACT_STATUS=["筹备中","进行中","已结束","已取消"];
+var CLASSROOM_MODULES=["思想成长","实践实习","创新创业","志愿公益","文体活动","工作履历","技能特长","其他"];
+var CLASSROOM_STATUS=["待审核","已认定","未通过"];
+var TASK_STAGES=["todo","doing","done"];
+var TASK_STAGE_LABELS={todo:"待办",doing:"进行中",done:"已完成"};
+var TASK_PRIORITIES=[{k:"high",label:"高",color:"#c0392b"},{k:"mid",label:"中",color:"#99600c"},{k:"low",label:"低",color:"#56655e"}];
+var PAGE_SIZE=15;
+var __orgLegacyFieldsRemoved=false;
+
+/* ---------- xlsx 生成工具（纯 JS，无依赖） ---------- */
+var XLSX_CRC_TABLE=(function(){var t=new Uint32Array(256);for(var i=0;i<256;i++){var c=i;for(var j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c>>>0;}return t;})();
+function xlsxCrc32(buf){var c=0xFFFFFFFF;for(var i=0;i<buf.length;i++)c=XLSX_CRC_TABLE[(c^buf[i])&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function xlsxMinZip(files){var enc=new TextEncoder(),localParts=[],centralParts=[],offset=0;files.forEach(function(f){var nb=enc.encode(f.name);var data=f.data instanceof Uint8Array?f.data:enc.encode(f.data);var crc=xlsxCrc32(data),size=data.length;var lh=new Uint8Array(30+nb.length);var lv=new DataView(lh.buffer);lv.setUint32(0,0x04034b50,true);lv.setUint16(4,20,true);lv.setUint16(6,0x0800,true);lv.setUint16(8,0,true);lv.setUint16(10,0,true);lv.setUint16(12,0x21,true);lv.setUint32(14,crc,true);lv.setUint32(18,size,true);lv.setUint32(22,size,true);lv.setUint16(26,nb.length,true);lv.setUint16(28,0,true);lh.set(nb,30);localParts.push(lh,data);var ch=new Uint8Array(46+nb.length);var cv=new DataView(ch.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);cv.setUint16(10,0,true);cv.setUint16(12,0,true);cv.setUint16(14,0x21,true);cv.setUint32(16,crc,true);cv.setUint32(20,size,true);cv.setUint32(24,size,true);cv.setUint16(28,nb.length,true);cv.setUint16(30,0,true);cv.setUint16(32,0,true);cv.setUint16(34,0,true);cv.setUint16(36,0,true);cv.setUint32(38,0,true);cv.setUint32(42,offset,true);ch.set(nb,46);centralParts.push(ch);offset+=lh.length+data.length;});var centralStart=offset;var centralSize=0;centralParts.forEach(function(c){centralSize+=c.length;});var eocd=new Uint8Array(22);var ev=new DataView(eocd.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(4,0,true);ev.setUint16(6,0,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,centralSize,true);ev.setUint32(16,centralStart,true);ev.setUint16(20,0,true);var total=0;localParts.forEach(function(p){total+=p.length;});total+=centralSize+eocd.length;var out=new Uint8Array(total);var pos=0;localParts.forEach(function(p){out.set(p,pos);pos+=p.length;});centralParts.forEach(function(c){out.set(c,pos);pos+=c.length;});out.set(eocd,pos);return out;}
+function xlsxXmlEsc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function xlsxColLetter(n){var s="";while(n>0){var m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;}
+function xlsxBuildStylesXML(){return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">\n  <fonts count="2"><font><sz val="11"/><name val="Calibri"/><charset val="134"/></font><font><b/><sz val="11"/><name val="Calibri"/><charset val="134"/></font></fonts>\n  <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF12805C"/><bgColor indexed="64"/></patternFill></fill></fills>\n  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>\n  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>\n  <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>\n  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>\n</styleSheet>';}
+function xlsxBuildSheetXML(rows){var cols=(rows[0]||[]).length;var lastCol=xlsxColLetter(cols);var xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:'+lastCol+rows.length+'"/>';xml+='<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';xml+='<sheetFormatPr defaultRowHeight="18"/>';xml+='<cols>'+Array.from({length:cols},function(_,i){return '<col min="'+(i+1)+'" max="'+(i+1)+'" width="14" customWidth="1"/>';}).join('')+'</cols>';xml+='<sheetData>';rows.forEach(function(row,ri){xml+='<row r="'+(ri+1)+'">';row.forEach(function(v,ci){var ref=xlsxColLetter(ci+1)+(ri+1);var style=ri===0?' s="1"':'';if(v==null||v===""){xml+='<c r="'+ref+'"'+style+'/>';}else if(typeof v==="number"){xml+='<c r="'+ref+'"'+style+'><v>'+v+'</v></c>';}else if(typeof v==="boolean"){xml+='<c r="'+ref+'"'+style+' t="b"><v>'+(v?1:0)+'</v></c>';}else{xml+='<c r="'+ref+'"'+style+' t="inlineStr"><is><t xml:space="preserve">'+xlsxXmlEsc(v)+'</t></is></c>';}});xml+='</row>';});xml+='</sheetData></worksheet>';return xml;}
+function downloadXlsxFile(sheetName,rows,fileName){var enc=new TextEncoder(),files=[{name:'[Content_Types].xml',data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>')},{name:'_rels/.rels',data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')},{name:'xl/workbook.xml',data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'+xlsxXmlEsc(String(sheetName||'Sheet1').slice(0,31))+'" sheetId="1" r:id="rId1"/></sheets></workbook>')},{name:'xl/_rels/workbook.xml.rels',data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>')},{name:'xl/styles.xml',data:enc.encode(xlsxBuildStylesXML())},{name:'xl/worksheets/sheet1.xml',data:enc.encode(xlsxBuildSheetXML(rows))}];var bytes=xlsxMinZip(files);var blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fileName;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},200);}
+
+/* ---------- 存储 ---------- */
+function uid(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function loadData(){
+  /* 清除旧独立预览版遗留的演示缓存；正式数据只读取系统同步键。 */
+  try{var storage=systemStorage();storage.removeItem("szo_data_v1");return normalize(JSON.parse(storage.getItem(KEY)||"{}"));}catch(e){return blank();}
+}
+function blank(){return {orgs:[],activities:[],meetings:[],trainings:[],classrooms:[],tasks:[],templates:[],years:[],meta:{createdAt:new Date().toISOString()}};}
+var MEMBER_STATUSES=["在职","已卸任","退出","开除"];
+function normalizeMemberStatus(value){return MEMBER_STATUSES.indexOf(value)>=0?value:"在职";}
+function memberStatusOptions(value){return MEMBER_STATUSES.map(function(status){return '<option'+(normalizeMemberStatus(value)===status?' selected':'')+'>'+status+'</option>';}).join("");}
+function memberIsActive(member){return normalizeMemberStatus(member&&member.status)==="在职";}
+function memberStatusSuffix(member){var status=normalizeMemberStatus(member&&member.status);return status==="在职"?"":"（"+status+"）";}
+function normalizeMember(m){
+  m=m||{};if(!m._rid){m._rid=uid("member");__orgLegacyFieldsRemoved=true;}return {_rid:String(m._rid),sid:String(m.sid||"").trim(),name:String(m.name||"").trim(),position:String(m.position||"").trim(),phone:String(m.phone||"").trim(),joined:String(m.joined||"").trim(),status:normalizeMemberStatus(m.status),college:String(m.college||"").trim(),grade:String(m.grade||"").trim(),major:String(m.major||"").trim(),cls:String(m.cls||"").trim()};
+}
+function memberAttr(m){var a=[m.college,m.grade,m.major,m.cls].filter(function(x){return x;});return a.length?a.join("·"):"";}
+function normalize(d){
+  d=d||{};var b=blank();
+  var out={
+    orgs:Array.isArray(d.orgs)?d.orgs:[],
+    activities:Array.isArray(d.activities)?d.activities:[],
+    meetings:Array.isArray(d.meetings)?d.meetings:[],
+    trainings:Array.isArray(d.trainings)?d.trainings:[],
+    classrooms:Array.isArray(d.classrooms)?d.classrooms:[],
+    tasks:Array.isArray(d.tasks)?d.tasks:[],
+    templates:Array.isArray(d.templates)?d.templates:[],
+    years:Array.isArray(d.years)?d.years:[],
+    meta:d.meta||b.meta
+  };
+  /* 旧版成员结构（仅 姓名,学号）自动升级为干部任职模型（参考 cmsys 干部字段） */
+  out.orgs.forEach(function(o){
+    /* 组织层面的负责人、职务名称和联系电话已取消，负责人信息由架构节点中的岗位成员维护。 */
+    ["leader","leaderTitle","phone"].forEach(function(k){if(Object.prototype.hasOwnProperty.call(o,k)){delete o[k];__orgLegacyFieldsRemoved=true;}});
+    (function walk(nodes){(nodes||[]).forEach(function(n){
+      n.members=(n.members||[]).map(function(m){
+        if(typeof m==="string")return {sid:"",name:m,position:"",joined:"",status:"在职"};
+        /* 成员考评功能已取消，同时清理旧的评分明细。 */
+        if(m&&Object.prototype.hasOwnProperty.call(m,"score")){delete m.score;__orgLegacyFieldsRemoved=true;}
+        return normalizeMember(m);
+      });
+      walk(n.children);
+    });})(o.structure||[]);
+  });
+  /* 第二课堂不再关联学生组织，清理旧记录中的组织引用。 */
+  out.classrooms.forEach(function(r){if(Object.prototype.hasOwnProperty.call(r,"orgId")){delete r.orgId;__orgLegacyFieldsRemoved=true;}});
+  return out;
+}
+var DB=loadData();
+/* 只读关联学生管理主档：命中学号时自动补齐，未命中时不阻止本模块自行登记。 */
+function studentOrgMasterBySid(sid){
+  sid=String(sid||"").trim();if(!sid)return null;
+  try{
+    var rows=JSON.parse(systemStorage().getItem("nnuzc_students")||"[]");
+    return Array.isArray(rows)?rows.find(function(s){return String(s.id||s.sid||"").trim()===sid;})||null:null;
+  }catch(e){return null;}
+}
+function studentOrgMasterValues(s){
+  return s?{name:s.name||"",college:s.dept||s.college||"",grade:s.grade||"",major:s.major||"",cls:s.cls||s.className||"",phone:s.phone||""}:null;
+}
+function studentOrgFillMemberInputs(sid,row){
+  var source=studentOrgMasterValues(studentOrgMasterBySid(sid));if(!source)return false;
+  Object.keys(source).forEach(function(k){var el=row.querySelector(".m-"+k);if(el&&source[k])el.value=source[k];});
+  return true;
+}
+function studentOrgMemberSidChanged(input){
+  var ok=studentOrgFillMemberInputs(input.value,input.closest("tr"));
+  if(ok)toast("已匹配学生管理档案并补全信息","ok");
+}
+function studentOrgApplyRecordStudent(input){
+  var source=studentOrgMasterValues(studentOrgMasterBySid(input.value)),hint=document.getElementById("studentOrgMatchHint");
+  if(!source){if(hint)hint.textContent=input.value?"未在学生管理中找到该学号，可继续手工填写。":"";return;}
+  var fields={sname:source.name,college:source.college,grade:source.grade,major:source.major,cls:source.cls};
+  Object.keys(fields).forEach(function(k){var el=document.getElementById("fld_"+k);if(el&&fields[k])el.value=fields[k];});
+  if(hint)hint.textContent="已匹配学生管理档案并补全姓名、学院、年级、专业、班级。";
+}
+function studentOrgHydrateMember(member){
+  var source=studentOrgMasterValues(studentOrgMasterBySid(member.sid));
+  if(source)Object.keys(source).forEach(function(k){if(source[k])member[k]=source[k];});
+  return member;
+}
+function studentOrgHydrateClassroom(row){
+  var source=studentOrgMasterValues(studentOrgMasterBySid(row.sid));
+  if(source){row.sname=source.name||row.sname;row.college=source.college||row.college;row.grade=source.grade||row.grade;row.major=source.major||row.major;row.cls=source.cls||row.cls;}
+  return row;
+}
+function save(){
+  if(studentOrgDemoActive()){studentOrgDemoNotice();DB=loadData();scheduleRender();return false;}
+  try{systemStorage().setItem(KEY,JSON.stringify(DB));}
+  catch(e){toast("保存失败：无法同步到数智学工系统，请检查服务连接后重试","warn");}
+}
+async function studentOrgRecycle(moduleKey,entityType,ids){
+  var fn=null;try{fn=IS_EMBEDDED&&window.parent&&window.parent.recycleMoveRecords;}catch(e){}
+  if(typeof fn!=="function"){toast("回收站组件尚未加载，请返回主系统刷新后重试","warn");return false;}
+  var moved=await fn(moduleKey,entityType,ids);if(!moved)return false;DB=loadData();renderMain();return true;
+}
+/* 首次打开即清理旧版字段，避免仅隐藏表单而遗留个人信息。 */
+if(__orgLegacyFieldsRemoved)save();
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function fmtSize(n){if(n>1048576)return (n/1048576).toFixed(1)+" MB";if(n>1024)return (n/1024).toFixed(0)+" KB";return n+" B";}
+function today(){return new Date().toISOString().slice(0,10);}
+function curAcademicYear(){var d=new Date(),y=d.getFullYear();return d.getMonth()+1>=8?y+"-"+(y+1):(y-1)+"-"+y;}
+function yearOptions(sel){
+  var ys=(DB.years||[]).slice();
+  /* 当前值不在列表时保留为可选项，避免编辑保存时学年被静默改成第一项 */
+  if(sel&&ys.indexOf(sel)<0)ys.unshift(sel);
+  ys.sort(function(a,b){return String(b).localeCompare(String(a));});
+  return ys.map(function(x){return '<option value="'+x+'"'+(x===sel?" selected":"")+'>'+x+"学年</option>";}).join("");
+}
+
+/* ---------- 导航 ---------- */
+var TABS=[
+  {k:"home",icon:"📊",label:"概览",grp:"总览"},
+  {k:"years",icon:"🗓️",label:"学年管理",grp:"总览"},
+  {k:"union-u",icon:"🏛️",label:"校级学生会",grp:"组织管理"},
+  {k:"club-u",icon:"🌐",label:"校级社团",grp:"组织管理"},
+  {k:"union-c",icon:"🏢",label:"院级学生会",grp:"组织管理"},
+  {k:"club-c",icon:"🎓",label:"院级社团",grp:"组织管理"},
+  {k:"other",icon:"🧩",label:"其他组织",grp:"组织管理"},
+  {k:"activity",icon:"🎉",label:"活动管理",grp:"业务台账"},
+  {k:"meeting",icon:"📝",label:"会议记录",grp:"业务台账"},
+  {k:"training",icon:"📖",label:"培训记录",grp:"业务台账"},
+  {k:"classroom",icon:"🏅",label:"第二课堂",grp:"业务台账"},
+  {k:"taskboard",icon:"🗂️",label:"任务看板",grp:"业务台账"},
+  {k:"library",icon:"📁",label:"资料库",grp:"资料"}
+];
+var curTab=TABS.some(function(t){return t.k===INITIAL_TAB;})?INITIAL_TAB:"home";
+function tabGroup(k){var tab=TABS.find(function(t){return t.k===k;});return tab?tab.grp:"总览";}
+function groupTabs(group){return TABS.filter(function(t){return t.grp===group;});}
+function embeddedThirdTabsHtml(){
+  var group=tabGroup(curTab),tabs=groupTabs(group);
+  return '<div class="szo-third-tabs"><b>'+esc(group)+'</b>'+tabs.map(function(t){return '<button type="button" class="szo-third-tab'+(t.k===curTab?' active':'')+'" onclick="go(\''+t.k+'\')">'+t.icon+' '+esc(t.label)+'</button>';}).join('')+'</div>';
+}
+function renderNav(){
+  var h="",grp="";
+  TABS.forEach(function(t){
+    if(t.grp!==grp){grp=t.grp;h+='<div class="grp">'+esc(grp)+'</div>';}
+    h+='<div class="item'+(t.k===curTab?" active":"")+'" onclick="go(\''+t.k+'\')"><span>'+t.icon+'</span>'+esc(t.label)+'</div>';
+  });
+  document.getElementById("nav").innerHTML=h;
+}
+function go(k){curTab=k;renderNav();renderMain();}
+/* 筛选输入防抖渲染：避免中文输入法组词过程被频繁重绘打断（160ms 停顿后刷新） */
+var __renderT=null;
+function scheduleRender(){clearTimeout(__renderT);__renderT=setTimeout(renderMain,160);}
+function renderMain(){
+  var m=document.getElementById("main");
+  /* 重渲染前记录焦点输入框与光标位置，渲染后恢复，保证筛选框可连续输入 */
+  var ae=document.activeElement,fid=(ae&&ae.id&&m.contains(ae))?ae.id:null,caret=null;
+  if(fid&&ae.tagName==="INPUT"&&ae.selectionStart!=null){try{caret=[ae.selectionStart,ae.selectionEnd];}catch(e){}}
+  var content="";
+  if(curTab==="home")content=homeHtml();
+  else if(ORG_CATS[curTab])content=orgListHtml(curTab);
+  else if(curTab==="activity")content=listHtml("activity");
+  else if(curTab==="meeting")content=listHtml("meeting");
+  else if(curTab==="training")content=listHtml("training");
+  else if(curTab==="classroom")content=listHtml("classroom");
+  else if(curTab==="taskboard")content=taskboardHtml();
+  else if(curTab==="library")content=libraryHtml();
+  else if(curTab==="years")content=yearManageHtml();
+  m.innerHTML=(IS_EMBEDDED?embeddedThirdTabsHtml():"")+content;
+  if(curTab==="classroom")ccSelectionRefresh();
+  if(fid){var el=document.getElementById(fid);if(el&&el.focus){el.focus();if(caret&&el.setSelectionRange){try{el.setSelectionRange(caret[0],caret[1]);}catch(e){}}}}
+}
+
+/* ---------- 概览 ---------- */
+function homeHtml(){
+  var cnt=function(cat){return DB.orgs.filter(function(o){return o.cat===cat;}).length;};
+  var num=function(v){return Number(v)||0;};
+  var budget=DB.activities.reduce(function(s,a){return s+num(a.budget);},0),expense=DB.activities.reduce(function(s,a){return s+num(a.expense);},0),sponsor=DB.activities.reduce(function(s,a){return s+num(a.sponsor);},0);
+  var expected=DB.meetings.reduce(function(s,m){return s+num(m.expected);},0),actual=DB.meetings.reduce(function(s,m){return s+num(m.actual);},0);
+  var attendRate=expected?Math.round(actual/expected*1000)/10:0;
+  var doingTasks=DB.tasks.filter(function(t){return t.stage==="doing";}).length,todoTasks=DB.tasks.filter(function(t){return (t.stage||"todo")==="todo";}).length;
+  var totalMembers=DB.orgs.reduce(function(s,o){return s+treeMembers(o.structure||[]);},0);
+  var totalLedgers=DB.activities.length+DB.meetings.length+DB.trainings.length+DB.classrooms.length+DB.tasks.length;
+  var hero='<div class="ov-hero"><div><h1>📊 学生组织数据中心</h1><p class="ov-sub">组织 · 活动 · 会议 · 培训 · 第二课堂 · 任务 的全景统计与概览</p></div>'
+    +'<div class="ov-badges">'
+    +'<div class="ov-badge"><b>'+DB.orgs.length+'</b><small>组织</small></div>'
+    +'<div class="ov-badge"><b>'+totalMembers+'</b><small>成员</small></div>'
+    +'<div class="ov-badge"><b>'+totalLedgers+'</b><small>台账</small></div>'
+    +'</div></div>';
+  var cards=[
+    {label:"组织总数",val:DB.orgs.length,sub:"点击进入组织管理",icon:"🏛️",color:"#12805c",go:"union-u"},
+    {label:"校级学生会",val:cnt("union-u"),sub:"",icon:"🏛️",color:"#16815f",go:"union-u"},
+    {label:"校级社团",val:cnt("club-u"),sub:"",icon:"🌐",color:"#1d7a8c",go:"club-u"},
+    {label:"院级学生会",val:cnt("union-c"),sub:"",icon:"🏢",color:"#99600c",go:"union-c"},
+    {label:"院级社团",val:cnt("club-c"),sub:"",icon:"🌟",color:"#7a5ad9",go:"club-c"},
+    {label:"其他组织",val:cnt("other"),sub:"自定义组织",icon:"🧩",color:"#56655e",go:"other"},
+    {label:"活动记录",val:DB.activities.length,sub:"活动台账",icon:"🎪",color:"#d9772b",go:"activity"},
+    {label:"会议记录",val:DB.meetings.length,sub:"出勤率 "+attendRate+"%",icon:"📅",color:"#1d5b91",go:"meeting"},
+    {label:"培训记录",val:DB.trainings.length,sub:"",icon:"📚",color:"#7a5ad9",go:"training"},
+    {label:"第二课堂记录",val:DB.classrooms.length,sub:"",icon:"🏅",color:"#0e8f9c",go:"classroom"},
+    {label:"进行中任务",val:doingTasks,sub:"待办 "+todoTasks+" 项",icon:"🗂️",color:"#c1443e",go:"taskboard"}
+  ];
+  function statGroup(title,items){
+    return '<div class="ov-sec">'+title+'<span class="ov-line"></span></div>'
+      +'<div class="ov-grid">'+items.map(function(c){
+        return '<div class="ov-card" onclick="go(\''+(c.go||"home")+'\')"><div class="ov-ic" style="background:'+c.color+'">'+c.icon+'</div><div class="ov-meta"><small>'+esc(c.label)+'</small><b>'+c.val+'</b>'+(c.sub?'<span class="ov-note">'+esc(c.sub)+'</span>':'')+'</div></div>';
+      }).join("")+'</div>';
+  }
+  var byYear={},byStatus={};
+  DB.orgs.forEach(function(o){byYear[o.year||"未填写"]=(byYear[o.year||"未填写"]||0)+1;byStatus[o.status||"运行中"]=(byStatus[o.status||"运行中"]||0)+1;});
+  var rows=DB.orgs.slice().sort(function(a,b){return String(b.updatedAt||"").localeCompare(String(a.updatedAt||""));}).slice(0,10).map(function(o){
+    return '<tr><td>'+esc(ORG_CATS[o.cat]||"—")+'</td><td><b>'+esc(o.name)+'</b></td><td>'+esc(o.year||"—")+'</td><td>'+esc(o.termNo?("第"+o.termNo+"届"):"—")+'</td><td>'+statusTag(o.status)+'</td><td><a href="javascript:void(0)" onclick="orgOpen(\''+o.id+'\')">查看架构</a></td></tr>';
+  }).join("")||'<tr><td colspan="6" class="empty">暂无组织，请到左侧「组织管理」新增</td></tr>';
+  return hero
+    +'<div class="note">本页已接入<b>数智学工系统</b>：业务数据自动同步至本机服务端，附件保存到系统加密附件库。</div>'
+    +(DB.orgs.length?"":'<div class="ok-tip">暂未登记学生组织。请从左侧「组织管理」新增组织，再维护组织架构与业务台账。</div>')
+    +statGroup("组织概况",cards.slice(0,6))
+    +statGroup("业务台账",cards.slice(6))
+    +'<div class="ov-sec">成员任职轨迹<span class="ov-line"></span></div>'+memberTenureHtml()
+    +'<div class="ov-row">'
+      +'<div class="card"><b>活动经费概况</b><div class="muted" style="margin-top:6px">预算合计 <b>'+budget+'</b> 元 · 实际支出 <b>'+expense+'</b> 元 · 赞助 <b>'+sponsor+'</b> 元 · 结余 <b>'+(budget+sponsor-expense)+'</b> 元</div></div>'
+      +'<div class="card"><b>会议出勤考核</b><div class="muted" style="margin-top:6px">应到合计 '+expected+' 人次 · 实到合计 '+actual+' 人次 · 出勤率 '+attendRate+'%'+(expected?"":"（暂无考核数据）")+'</div></div>'
+    +'</div>'
+    +'<div class="ov-row" style="margin-top:14px">'
+      +'<div class="card"><b>按学年分布</b><div class="muted" style="margin-top:6px">'+(Object.keys(byYear).length?Object.keys(byYear).sort().reverse().map(function(y){return '<span class="tag" style="margin:2px 6px 2px 0">'+esc(y)+' · '+byYear[y]+' 个</span>';}).join(""):"暂无数据")+'</div></div>'
+      +'<div class="card"><b>组织状态分布</b><div class="muted" style="margin-top:6px">'+(Object.keys(byStatus).length?Object.keys(byStatus).map(function(s){return '<span class="tag'+(s==="已解散"?" bad":s==="换届中"?" warn":"")+'" style="margin:2px 6px 2px 0">'+esc(s)+' · '+byStatus[s]+' 个</span>';}).join(""):"暂无数据")+'</div></div>'
+    +'</div>'
+    +'<div class="card" style="padding:0;margin-top:14px"><div style="padding:12px 14px 0"><b>最近更新的组织</b></div><div class="list-scroll" style="border:0;margin-top:8px"><table><thead><tr><th>类别</th><th>名称</th><th>学年</th><th>届数</th><th>状态</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+function termLabel(n){return n?("第"+n+"届"):"未设届数";}
+function statusTag(s){
+  s=s||"运行中";
+  return '<span class="tag'+(s==="已解散"?" bad":s==="换届中"?" warn":"")+'">'+esc(s)+'</span>';
+}
+/* 成员任职轨迹：按学号/姓名查其在所有组织、各届的任职记录 */
+window.__mtQ="";
+function memberTenureHtml(){
+  var q=String(window.__mtQ||"").trim().toLowerCase();
+  var out="";
+  if(q){
+    var rows=[];
+    DB.orgs.slice().sort(function(a,b){return b.termNo-a.termNo;}).forEach(function(o){
+      orgFlatMembers(o).forEach(function(it){
+        var m=it.member;
+        if(String(m.sid||"").toLowerCase()===q||String(m.name||"").toLowerCase()===q){
+          rows.push({org:o,m:m,dept:it.dept});
+        }
+      });
+    });
+  var active=rows.filter(function(r){return memberIsActive(r.m);});
+    out='<div class="card" style="padding:12px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><b>🧭 成员任职轨迹'+(rows.length?'（'+esc(rows[0].m.name||q)+'）':"")+'</b><span class="muted">共 '+rows.length+' 条 · 当前在职 '+active.length+' 条</span><span style="flex:1"></span><button class="btn btn-sm btn-ghost" onclick="window.__mtQ=\'\';renderMain()">清除查询</button></div>'
+      +(rows.length?'<div class="list-scroll" style="border:0"><table><thead><tr><th>组织</th><th>届数</th><th>学年</th><th>部门路径</th><th>职务</th><th>状态</th><th>入会日期</th></tr></thead><tbody>'+rows.map(function(r){
+        return '<tr><td>'+esc(ORG_CATS[r.org.cat])+' · <b>'+esc(r.org.name)+'</b></td><td>'+termLabel(r.org.termNo)+'</td><td>'+esc(r.org.year)+'</td><td>'+esc(r.dept)+'</td><td>'+esc(r.m.position||"—")+'</td><td><span class="tag'+(memberIsActive(r.m)?"":" mut")+'">'+esc(normalizeMemberStatus(r.m.status))+'</span></td><td>'+esc(r.m.joined||"—")+'</td></tr>';
+      }).join("")+'</tbody></table></div>':'<div class="empty">未找到该学生的任职记录</div>')+'</div>';
+  }
+  return '<div class="card" style="padding:12px"><div class="toolbar"><input class="in" id="mtQuery" style="flex:1;min-width:170px" placeholder="输入学号或姓名，查询该生在所有组织各届的任职轨迹…" value="'+esc(window.__mtQ)+'" onkeydown="if(event.key===\'Enter\'&&!event.isComposing){window.__mtQ=this.value;renderMain();}"><button class="btn btn-sm btn-primary" onclick="window.__mtQ=document.getElementById(\'mtQuery\').value;renderMain()">任职查询</button></div></div>'+out;
+}
+
+/* ---------- 组织管理 ---------- */
+var orgFilter={};
+function orgListHtml(cat){
+  orgFilter[cat]=orgFilter[cat]||{kw:"",year:"",status:"",dept:""};
+  var f=orgFilter[cat];
+  var kw=f.kw.toLowerCase();
+  var list=DB.orgs.filter(function(o){
+    return o.cat===cat&&(!kw||[o.name,o.dept,o.advisor,o.intro].join(" ").toLowerCase().indexOf(kw)>=0)&&(!f.year||o.year===f.year)&&(!f.status||o.status===f.status)&&(!f.dept||o.dept===f.dept);
+  }).sort(function(a,b){return String(b.year||"").localeCompare(String(a.year||""))||String(b.updatedAt||"").localeCompare(String(a.updatedAt||""));});
+  __viewCache["orgs:"+cat]=list;
+  var catName=ORG_CATS[cat];
+  var isUnion=cat.indexOf("union")===0;
+  var years=Array.from(new Set(DB.orgs.filter(function(o){return o.cat===cat;}).map(function(o){return o.year;}).filter(Boolean))).sort().reverse();
+  var rows=list.map(function(o){
+    var nodeCount=treeCount(o.structure||[]);
+    var memberCount=treeMembers(o.structure||[]);
+    var activeCount=treeActiveMembers(o.structure||[]);
+    var actN=DB.activities.filter(function(x){return x.orgId===o.id;}).length;
+    var meetN=DB.meetings.filter(function(x){return x.orgId===o.id;}).length;
+    var trainN=DB.trainings.filter(function(x){return x.orgId===o.id;}).length;
+    var taskN=DB.tasks.filter(function(x){return x.orgId===o.id;}).length;
+    var orgTerms=DB.orgs.filter(function(x){return x.name===o.name;}).sort(function(a,b){return b.termNo-a.termNo;});
+    return '<tr><td style="white-space:nowrap">'+esc(o.year||"—")+'</td><td>'+esc(o.termNo?("第"+esc(o.termNo)+"届"):"—")+'</td>'+(cat.indexOf("-c")>0?'<td>'+esc(o.dept||"—")+'</td>':'')+'<td style="min-width:150px"><b>'+esc(o.name)+'</b>'+(o.clubType?'<small class="muted" style="display:block">'+esc(o.clubType)+'</small>':'')+(orgTerms.length>1?'<small class="muted" style="display:block;margin-top:2px">历届：'+orgTerms.map(function(t){return '<a href="javascript:void(0)" onclick="orgOpen(\''+t.id+'\')" title="'+esc(t.year+' · '+t.status)+'" style="margin-right:4px">'+termLabel(t.termNo)+'</a>';}).join("")+'</small>':'')+'</td><td>'+esc(o.advisor||"—")+'</td><td class="muted">'+nodeCount+' 部门 / '+memberCount+' 人（在职 '+activeCount+'）</td><td class="muted" style="white-space:nowrap">活动 '+actN+' · 会议 '+meetN+' · 培训 '+trainN+' · 任务 '+taskN+'</td><td>'+statusTag(o.status)+'</td><td style="white-space:nowrap"><a href="javascript:void(0)" onclick="orgOpen(\''+o.id+'\')">架构</a>　<a href="javascript:void(0)" onclick="orgForm(\''+o.id+'\')">编辑</a>　<a href="javascript:void(0)" onclick="orgSuccession(\''+o.id+'\')">换届</a>　<a href="javascript:void(0)" class="btn btn-sm btn-ghost btn-danger" style="height:auto;padding:2px 4px" onclick="orgDelete(\''+o.id+'\')">删除</a></td></tr>';
+  }).join("")||'<tr><td colspan="'+(cat.indexOf("-c")>0?9:8)+'" class="empty">暂无'+esc(catName)+'，点击右上角新增</td></tr>';
+  return '<h2 class="ptitle">'+(cat==="other"?"🧩":isUnion?"🏛️":"🌐")+' '+esc(catName)+'管理</h2><p class="sub">学年 / 届数管理 + 可自由编辑的组织架构模型（'+(isUnion?"主席团 + 工作部门":"社长 + 职能部门")+'模式）。点击「架构」进入架构编辑器。</p>'
+    +'<div class="card" style="padding:12px"><div class="toolbar"><input class="in" id="orgKw" style="flex:1;min-width:180px" placeholder="搜索名称、学院、指导老师…" value="'+esc(f.kw)+'" oninput="orgSetFilter(\''+cat+'\',\'kw\',this.value)"><select class="in" onchange="orgSetFilter(\''+cat+'\',\'year\',this.value)"><option value="">全部学年</option>'+years.map(function(y){return '<option value="'+esc(y)+'"'+(f.year===y?" selected":"")+'>'+esc(y)+' 学年</option>';}).join("")+'</select>'+(cat.indexOf("-c")>0?'<select class="in" onchange="orgSetFilter(\''+cat+'\',\'dept\',this.value)"><option value="">全部学院</option>'+Array.from(new Set(DB.orgs.filter(function(o){return o.cat===cat&&o.dept;}).map(function(o){return o.dept;}))).sort().map(function(d){return '<option value="'+esc(d)+'"'+(f.dept===d?" selected":"")+'>'+esc(d)+'</option>';}).join("")+'</select>':"")+'<select class="in" onchange="orgSetFilter(\''+cat+'\',\'status\',this.value)"><option value="">全部状态</option>'+ORG_STATUS.map(function(s){return '<option value="'+esc(s)+'"'+(f.status===s?" selected":"")+'>'+esc(s)+'</option>';}).join("")+'</select><button class="btn btn-sm btn-ghost" onclick="orgResetFilter(\''+cat+'\')">重置</button><span style="flex:1"></span><button class="btn btn-sm btn-ghost" onclick="downloadTemplate(\'orgs\')">组织模板</button><button class="btn btn-sm btn-primary" onclick="pickCsv(\'orgs\')">导入组织 Excel</button><button class="btn btn-sm btn-ghost" onclick="exportCsv(\'orgs\',\''+cat+'\',1)">导出 Excel</button><button class="btn btn-primary" onclick="orgForm(null,\''+cat+'\')">＋ 新增'+esc(catName)+'</button></div></div>'
+    +'<div class="list-scroll"><table><thead><tr><th>学年</th><th>届数</th>'+(cat.indexOf("-c")>0?"<th>所属学院</th>":"")+'<th>名称</th><th>指导老师</th><th>架构规模</th><th>关联台账</th><th>状态</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function orgSetFilter(cat,k,v){orgFilter[cat][k]=String(v||"").trim();scheduleRender();}
+function orgResetFilter(cat){orgFilter[cat]={kw:"",year:"",status:"",dept:""};renderMain();}
+function treeCount(nodes){var n=0;(nodes||[]).forEach(function(x){n+=1+treeCount(x.children);});return n;}
+function treeMembers(nodes){var n=0;(nodes||[]).forEach(function(x){n+=(x.members||[]).length+treeMembers(x.children);});return n;}
+function treeActiveMembers(nodes){var n=0;(nodes||[]).forEach(function(x){n+=(x.members||[]).filter(memberIsActive).length+treeActiveMembers(x.children);});return n;}
+/* 导出组织成员名单 Excel */
+function exportMembers(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var rows=[];
+  (function walk(nodes,path){
+    (nodes||[]).forEach(function(n){
+      var p=path?path+" / "+n.name:n.name;
+      (n.members||[]).forEach(function(m){rows.push([m.sid,m.name,m.college,m.grade,m.major,m.cls,m.position||n.name,m.phone||"",p,m.status,m.joined]);});
+      walk(n.children,p);
+    });
+  })(o.structure,"");
+  if(!rows.length){toast("该组织暂无成员可导出","warn");return;}
+  downloadXlsxFile(o.name+"_成员名单", [["学号","姓名","学院","年级","专业","班级","职务","手机号","部门路径","状态","入会日期"],...rows], o.name+"_成员名单_"+today()+".xlsx");
+  toast("已导出 "+rows.length+" 名成员","ok");
+}
+
+/* 组织表单 */
+function orgForm(id,cat){
+  var o=id?DB.orgs.find(function(x){return x.id===id;}):null;
+  cat=cat||(o?o.cat:"union-u");
+  var isClub=cat.indexOf("club")===0,isCollege=cat.indexOf("-c")>0;
+  var isOther=cat==="other";
+  var body='<div class="grid2">'
+    +'<div class="field"><label>组织名称<span class="req"> *</span></label><input id="f_name" value="'+esc(o?o.name:"")+'" placeholder="'+(isClub?"如：篮球协会":isOther?"如：志愿服务中队 / 艺术团":"如：校学生会")+'"></div>'
+    +(isClub?'<div class="field"><label>社团类别</label><select id="f_clubType"><option value="">请选择</option>'+CLUB_TYPES.map(function(t){return '<option'+((o&&o.clubType===t)?" selected":"")+'>'+t+'</option>';}).join("")+'</select></div>':'')
+    +(isCollege?'<div class="field"><label>所属学院<span class="req"> *</span></label><input id="f_dept" value="'+esc(o?o.dept:"")+'" placeholder="如：信息工程学院"></div>':'')
+    +'<div class="field"><label>学年<span class="req"> *</span></label><select id="f_year">'+yearOptions(o?o.year:"")+'</select></div>'
+    +'<div class="field"><label>届数（选填）</label><input id="f_term" type="number" min="0" value="'+esc(o?o.termNo||"":"")+'" placeholder="留空表示暂不确定"></div>'
+    +'<div class="field"><label>指导老师</label><input id="f_advisor" value="'+esc(o?o.advisor||"":"")+'"></div>'
+    +'<div class="field"><label>状态</label><select id="f_status">'+ORG_STATUS.map(function(s){return '<option'+((o?o.status:"运行中")===s?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'
+    +'</div><div class="field"><label>简介</label><textarea id="f_intro" rows="3" placeholder="组织定位、主要职责等">'+esc(o?o.intro||"":"")+'</textarea></div>'
+    +(o?attEditorHtml(o.atts,"orgs",o.id):'<div class="muted">保存后再上传附件。</div>');
+  openModal(o?"编辑"+ORG_CATS[cat]:"新增"+ORG_CATS[cat],body,o?"保存":"创建并编辑架构",function(){
+    var name=Val("f_name"),year=Val("f_year"),term=Math.max(0,parseInt(Val("f_term"),10)||0);
+    if(!name){toast("请填写组织名称","warn");return false;}
+    if(!year){toast("请选择学年","warn");return false;}
+    
+    if(isCollege&&!Val("f_dept")){toast("院级组织必须填写所属学院","warn");return false;}
+    if(o){
+      o.name=name;o.year=year;o.termNo=term;o.advisor=Val("f_advisor");o.status=Val("f_status");o.intro=Val("f_intro");o.updatedAt=new Date().toISOString();delete o.leader;delete o.leaderTitle;delete o.phone;
+      if(isClub)o.clubType=Val("f_clubType");
+      if(isCollege)o.dept=Val("f_dept");
+    }else{
+      o={id:uid("org"),cat:cat,name:name,year:year,termNo:term,advisor:Val("f_advisor"),status:Val("f_status")||"运行中",intro:Val("f_intro"),structure:defaultStructure(cat),atts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      if(isClub)o.clubType=Val("f_clubType");
+      if(isCollege)o.dept=Val("f_dept");
+      DB.orgs.unshift(o);
+    }
+    save();
+    if(!id){curTab=o.cat;renderMain();orgOpen(o.id);}
+    else{renderMain();}
+    toast("已保存","ok");return true;
+  });
+}
+async function orgDelete(id){
+  var o=DB.orgs.find(function(x){return x.id===id;});if(!o)return;
+  var used=DB.activities.filter(function(x){return x.orgId===id;}).length+DB.meetings.filter(function(x){return x.orgId===id;}).length+DB.trainings.filter(function(x){return x.orgId===id;}).length+DB.tasks.filter(function(x){return x.orgId===id;}).length;
+  if(used&&!confirm("该组织关联的活动/会议/培训/任务记录共 "+used+" 条；移入回收站后关联台账仍保留。是否继续？"))return;
+  if(await studentOrgRecycle("studentOrg","student_org",[id]))toast("组织及其架构已移入回收站","ok");
+}
+/* 换届向导：配置新届学年 / 届数 / 成员处理 / 旧届归档 */
+function orgSuccession(id){
+  var o=DB.orgs.find(function(x){return x.id===id;});if(!o)return;
+  var m=o.year.match(/^(\d{4})-/),nextYear=m?(Number(m[1])+1)+"-"+(Number(m[1])+2):o.year;
+  var history=DB.orgs.filter(function(x){return x.id!==o.id&&x.name===o.name;});
+  /* 建议届数取同名组织最大届数+1，避免与历史届冲突 */
+  var maxTerm=o.termNo||0;history.forEach(function(h){if(h.termNo>maxTerm)maxTerm=h.termNo;});
+  var body='<div style="margin:0 0 12px;padding:9px 11px;background:#f4f8f6;border-radius:7px;font-size:13px">当前：'+termLabel(o.termNo)+' / '+o.year+' · 状态 '+esc(o.status)+(history.length?'　历史：'+history.map(function(h){return "第"+h.termNo+"届("+h.year.slice(0,4)+")";}).join("、"):"")+'</div>'
+    +'<div class="grid2">'
+    +'<div class="field"><label>新届届数<span class="req"> *</span></label><input id="s_term" type="number" min="1" value="'+(maxTerm+1)+'"></div>'
+    +'<div class="field"><label>新届学年<span class="req"> *</span></label><input id="s_year" value="'+esc(nextYear)+'" placeholder="如 2026-2027"></div>'
+    +'</div>'
+    +'<div class="field"><label>新届成员名单处理</label><label style="font-weight:400;display:block"><input type="radio" name="s_members" value="clear" checked> 清空成员（重新录入新一届名单）</label><label style="font-weight:400;display:block;margin-top:4px"><input type="radio" name="s_members" value="keep"> 保留成员（沿用上一届名单，可再调整）</label></div>'
+    +'<div class="field"><label style="font-weight:400"><input type="checkbox" id="s_archive" checked> 将'+termLabel(o.termNo)+'自动标记为「已归档」</label></div>'
+    +'<div class="muted">新届初始状态为「换届中」，完成名单调整后可在编辑中改回「运行中」；架构（部门与岗位）默认整体继承。</div>';
+  openModal("🔁 换届向导 · "+esc(o.name),body,"创建新一届",function(){
+    var term=parseInt(Val("s_term"),10),year=Val("s_year");
+    if(!term||term<=0){toast("请填写新届届数","warn");return false;}
+    var mY=year.match(/^(\d{4})-(\d{4})$/);
+    if(!mY||Number(mY[2])!==Number(mY[1])+1){toast("学年应为连续学年，如 2026-2027","warn");return false;}
+    if(term===o.termNo){toast("新届届数不能与当前届（第 "+o.termNo+" 届）相同","warn");return false;}
+    if(DB.orgs.some(function(x){return x.id!==o.id&&x.name===o.name&&x.termNo===term;})){toast("「"+o.name+"」已存在第 "+term+" 届，请调整届数","warn");return false;}
+    var keep=document.querySelector('input[name="s_members"]:checked').value==="keep";
+    doSuccession(o,{termNo:term,year:year,keepMembers:keep,archive:!!document.getElementById("s_archive").checked});
+    return true;
+  });
+}
+function doSuccession(o,opts){
+  var copy=JSON.parse(JSON.stringify(o));
+  copy.id=uid("org");copy.termNo=opts.termNo;copy.year=opts.year;copy.status="换届中";copy.atts=[];copy.createdAt=copy.updatedAt=new Date().toISOString();
+  (function walk(nodes){nodes.forEach(function(n){
+    n.members=opts.keepMembers?(n.members||[]).map(normalizeMember):[];
+    walk(n.children||[]);
+  });})(copy.structure||[]);
+  if(opts.archive&&o.status==="运行中")o.status="已归档";
+  o.updatedAt=new Date().toISOString();
+  /* 新学年写入学年管理，保证后续新增组织的学年下拉可选 */
+  if((DB.years||[]).indexOf(opts.year)<0){DB.years=DB.years||[];DB.years.push(opts.year);}
+  DB.orgs.unshift(copy);save();renderMain();
+  toast("已创建第"+copy.termNo+"届（"+copy.year+"）"+(opts.keepMembers?"，成员已沿用":"")+(opts.archive&&o.status==="已归档"?"，旧届已归档":""),"ok");
+  orgOpen(copy.id);
+}
+
+/* ---------- 组织架构编辑器 ---------- */
+function defaultStructure(cat){
+  if(cat==="other"){
+    /* 其他组织：自定义组织的通用起步架构，可自由增删改 */
+    return [
+      {id:uid("n"),name:"负责人",role:"统筹与对外联络",members:[],children:[{id:uid("n"),name:"副负责人",role:"协助负责人",members:[],children:[]}]},
+      {id:uid("n"),name:"秘书组",role:"日常事务与档案",members:[],children:[]},
+      {id:uid("n"),name:"活动组",role:"活动策划与执行",members:[],children:[]},
+      {id:uid("n"),name:"宣传组",role:"宣传与新媒体",members:[],children:[]}
+    ];
+  }
+  if(cat.indexOf("club")===0){
+    return [
+      {id:uid("n"),name:"社长",role:"负责人",members:[],children:[{id:uid("n"),name:"副社长",role:"协助负责人",members:[],children:[]}]},
+      {id:uid("n"),name:"秘书处",role:"日常事务与档案",members:[],children:[]},
+      {id:uid("n"),name:"宣传部",role:"活动宣传与新媒体",members:[],children:[]},
+      {id:uid("n"),name:"组织部",role:"成员发展与活动组织",members:[],children:[]},
+      {id:uid("n"),name:"外联部",role:"对外联络与协作",members:[],children:[]}
+    ];
+  }
+  return [
+    {id:uid("n"),name:"主席团",role:"统筹与决策（执行主席+主席团成员）",members:[],children:[]},
+    {id:uid("n"),name:"办公室",role:"综合事务与文书档案",members:[],children:[]},
+    {id:uid("n"),name:"组织部",role:"组织建设与骨干培养",members:[],children:[]},
+    {id:uid("n"),name:"宣传部",role:"宣传报道与新媒体",members:[],children:[]},
+    {id:uid("n"),name:"学习部",role:"学风建设与学术活动",members:[],children:[]},
+    {id:uid("n"),name:"文体部",role:"文艺体育活动",members:[],children:[]},
+    {id:uid("n"),name:"权益部",role:"学生权益与生活服务",members:[],children:[]},
+    {id:uid("n"),name:"外联部",role:"对外联络",members:[],children:[]}
+  ];
+}
+function orgOpen(id){
+  var o=DB.orgs.find(function(x){return x.id===id;});if(!o)return;
+  /* 每次打开组织架构都从完整树开始，避免上一次组织的搜索或折叠状态造成误解。 */
+  __treeQuery="";__treeCollapsed={};__orgRosterFilter={dept:"",status:"在职",q:""};window.__treeEditingNode=null;
+  /* 历史沿革：同名组织的全部届数，点击切换 */
+  var terms=DB.orgs.filter(function(x){return x.name===o.name;}).sort(function(a,b){return b.termNo-a.termNo;});
+  var termBar=terms.length>1?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:#f4f8f6;border-radius:8px"><b style="font-size:13px">🕘 历届沿革</b>'+terms.map(function(t){
+    var cur=t.id===o.id;
+    return '<span class="'+(cur?"tag":"")+'" style="'+(cur?"":"cursor:pointer;padding:2px 8px;border-radius:999px;font-size:11.5px;background:#fff;border:1px solid var(--border)")+'" onclick="'+(cur?"":"orgOpen('"+t.id+"')")+'" title="'+esc(t.year)+' · '+esc(t.status||"")+'">'+termLabel(t.termNo)+' '+t.year.slice(0,4)+(cur?" · 当前":"")+(t.status==="已归档"?" · 已归档":"")+'</span>';
+  }).join("")+'</div>':"";
+  var body=termBar+'<div class="muted" style="margin-bottom:10px">'+esc(ORG_CATS[o.cat])+' · '+esc(o.year)+' · '+termLabel(o.termNo)+''+(o.dept?' · '+esc(o.dept):'')+(o.advisor?' · 指导老师：'+esc(o.advisor):'')+'</div>'
+    +'<div class="toolbar" style="margin-bottom:10px"><button class="btn btn-sm btn-primary" onclick="nodeAdd(\''+o.id+'\',null)">＋ 添加一级部门</button><button class="btn btn-sm btn-ghost" onclick="structureReset(\''+o.id+'\')">重置为默认模板</button><button class="btn btn-sm btn-ghost" onclick="copyStructureForm(\''+o.id+'\')">📑 复制架构自…</button><button class="btn btn-sm btn-ghost" onclick="templateSave(\''+o.id+'\')">💾 存为模板</button><button class="btn btn-sm btn-ghost" onclick="templateListForm(\''+o.id+'\')">📚 应用模板</button><button class="btn btn-sm btn-ghost" onclick="memberTransferForm(\''+o.id+'\')">🔄 成员调动</button><button class="btn btn-sm btn-ghost" onclick="downloadTemplate(\'struct\')">🧾 成员模板</button><button class="btn btn-sm btn-primary" onclick="pickStructImport(\''+o.id+'\')">📥 导入成员/架构</button><button class="btn btn-sm btn-ghost" onclick="exportStructure(\''+o.id+'\')">导出架构文本</button><button class="btn btn-sm btn-ghost" onclick="exportMembers(\''+o.id+'\')">导出成员 Excel</button><button class="btn btn-sm btn-ghost" id="toggleViewBtn" onclick="toggleOrgView(\''+o.id+'\')">'+(__orgViewMode==="tree"?"切换为表格":"切换为树状图")+'</button></div>'
+    +'<div class="note" style="margin-bottom:10px">操作说明：「+下级」在部门下增设子部门/岗位；「编辑」修改名称、职责与成员（每行一人，可批量粘贴）；「⇠/⇢」调整层级，「↑/↓」调整顺序。多届组织可通过上方沿革条切换各届架构。</div>'
+    +'<div id="treeEditorPanel"></div><div id="orgViewContainer">'+(__orgViewMode==="tree"?treeViewHtml(o.id,o.structure||[]):renderOrgTable(o.id,o.structure||[]))+'</div><div id="orgRosterCard"></div>';
+  openModal("🏛️ 组织架构 · "+esc(o.name),body,"完成",function(){renderMain();return true;},"xl");
+  window.__structOrgId=o.id;
+  renderOrgRosterCard();
+  if(__orgViewMode==="tree"){__treeZoom=1;treeAutoFit();}
+}
+/* 树状架构下的干部花名册：只读取架构节点成员，不维护第二份数据。 */
+var __orgRosterFilter={dept:"",status:"在职",q:""};
+function orgRosterRows(org){
+  var rows=[];
+  (function walk(nodes,path){(nodes||[]).forEach(function(node){
+    var dept=path?path+" / "+node.name:node.name;
+    (node.members||[]).forEach(function(member,index){rows.push({member:member,dept:dept,nodeId:node.id,index:index});});
+    walk(node.children,dept);
+  });})(org&&org.structure||[],"");
+  return rows;
+}
+function orgRosterSetFilter(key,value){__orgRosterFilter[key]=String(value||"");refreshOrgRosterCard();}
+function orgRosterCardHtml(){
+  var org=structOrg();if(!org)return "";
+  var all=orgRosterRows(org),paths=Array.from(new Set(all.map(function(row){return row.dept;}))).sort(function(a,b){return a.localeCompare(b,"zh-CN");});
+  var f=__orgRosterFilter||{},query=String(f.q||"").trim().toLowerCase();
+  var rows=all.filter(function(row){
+    var m=row.member||{},status=normalizeMemberStatus(m.status);
+    if(f.dept&&row.dept!==f.dept)return false;
+    if(f.status&&status!==f.status)return false;
+    return !query||[m.name,m.sid,m.position,m.phone,row.dept,m.college,m.major,m.cls].join(" ").toLowerCase().indexOf(query)>=0;
+  });
+  var deptOptions='<option value="">全部部门/层级</option>'+paths.map(function(path){return '<option value="'+esc(path)+'"'+(f.dept===path?' selected':'')+'>'+esc(path)+'</option>';}).join("");
+  var statusOptions='<option value="在职"'+(f.status==="在职"?' selected':'')+'>在任干部</option><option value=""'+(!f.status?' selected':'')+'>全部状态</option>'+MEMBER_STATUSES.filter(function(s){return s!=="在职";}).map(function(status){return '<option value="'+status+'"'+(f.status===status?' selected':'')+'>'+status+'</option>';}).join("");
+  var table=rows.length?'<div class="list-scroll" style="margin-top:10px"><table style="min-width:1260px"><thead><tr><th>学号</th><th>姓名</th><th>学院</th><th>年级</th><th>专业</th><th>班级</th><th>所属部门/层级</th><th>职务</th><th>手机号</th><th>状态</th><th>入会日期</th><th style="min-width:76px">操作</th></tr></thead><tbody>'+rows.map(function(row){var m=row.member||{},status=normalizeMemberStatus(m.status);return '<tr><td>'+esc(m.sid||"—")+'</td><td><b>'+esc(m.name||"未命名")+'</b></td><td>'+esc(m.college||"—")+'</td><td>'+esc(m.grade||"—")+'</td><td>'+esc(m.major||"—")+'</td><td>'+esc(m.cls||"—")+'</td><td>'+esc(row.dept)+'</td><td>'+esc(m.position||"—")+'</td><td>'+esc(m.phone||"—")+'</td><td><span class="tag'+(status==="在职"?"":" mut")+'">'+esc(status)+'</span></td><td>'+esc(m.joined||"—")+'</td><td><button class="btn btn-sm btn-ghost btn-danger" onclick="orgRosterDeleteMember(\''+org.id+'\',\''+row.nodeId+'\','+row.index+')">删除</button></td></tr>';}).join("")+'</tbody></table></div>':'<div class="empty" style="padding:32px 16px">暂无符合条件的学生组织干部记录</div>';
+  return '<div class="card" style="margin-top:12px;padding:18px"><div class="toolbar" style="margin:0"><select class="in" style="min-width:190px" onchange="orgRosterSetFilter(\'dept\',this.value)">'+deptOptions+'</select><select class="in" style="min-width:135px" onchange="orgRosterSetFilter(\'status\',this.value)">'+statusOptions+'</select><input class="in" style="min-width:240px;flex:1" placeholder="搜索干部姓名/学号/职务/部门" value="'+esc(f.q||"")+'" oninput="orgRosterSetFilter(\'q\',this.value)"><span class="muted">共 '+rows.length+' / '+all.length+' 人</span><button class="btn btn-primary" onclick="pickStructImport(\''+org.id+'\')">📥 批量导入干部名册</button></div>'+table+'</div>';
+}
+async function orgRosterDeleteMember(orgId,nodeId,index){
+  var org=DB.orgs.find(function(item){return item.id===orgId;}),ref=org&&findNode(org.structure,nodeId),member=ref&&ref.node.members&&ref.node.members[index];
+  if(!member)return;
+  var label=(member.name||"未命名")+(member.sid?"（"+member.sid+"）":"");
+  if(!member._rid){member._rid=uid("member");save();}
+  if(await studentOrgRecycle("studentOrgMember","student_org_member",[orgId+"::"+nodeId+"::"+member._rid])){orgOpen(orgId);toast("干部任职记录已移入回收站","ok");}
+}
+function refreshOrgRosterCard(){var box=document.getElementById("orgRosterCard");if(box)box.innerHTML=orgRosterCardHtml();}
+function renderOrgRosterCard(){refreshOrgRosterCard();}
+function renderTree(orgId,nodes,depth){
+  return '<ul>'+((nodes||[]).map(function(n){return renderNode(orgId,n,depth||0);}).join(""))+'</ul>';
+}
+function renderNode(orgId,n,depth,visChildren){
+  if(window.__editingNode===n.id)return '<li class="org-editing">'+renderNodeEditor(orgId,n)+'</li>';
+  var children=visChildren||n.children||[];
+  var isCollapsed=!!(__treeCollapsed&&__treeCollapsed[n.id])&&!String(__treeQuery||"").trim();
+  var hasChildren=children.length>0;
+  var d="d"+Math.min(depth||0,3);
+  var mems=(n.members||[]).map(function(m){
+    var full=[m.name,m.sid,memberAttr(m),m.position,m.phone].filter(Boolean).join(" · ")+memberStatusSuffix(m);
+    var cls=memberIsActive(m)?"":" resigned";
+    return '<span class="org-mem-line'+cls+'" title="'+esc(full)+'">'+esc(m.name||"未命名")+(m.position?" · "+esc(m.position):"")+memberStatusSuffix(m)+'</span>';
+  }).join("");
+  var memBlock=(n.members&&n.members.length)?'<div class="org-node-mems">'+mems+'</div>':"";
+  return '<li><div class="org-node '+d+'">'
+    +'<div class="org-node-h"><b>'+esc(n.name)+'</b>'+(n.role?'<span class="org-node-role" title="'+esc(n.role)+'">'+esc(n.role.length>14?n.role.slice(0,14)+"…":n.role)+'</span>':'')+'</div>'
+    +memBlock
+    +'<div class="org-node-ops">'
+    +'<button class="btn btn-sm btn-ghost" title="增设下级" onclick="nodeAdd(\''+orgId+'\',\''+n.id+'\')">＋</button>'
+    +'<button class="btn btn-sm btn-ghost" title="编辑" onclick="nodeEditTree(\''+orgId+'\',\''+n.id+'\')">✎</button>'
+    +'<button class="btn btn-sm btn-ghost" title="上移" onclick="nodeMove(\''+orgId+'\',\''+n.id+'\',-1)">↑</button>'
+    +'<button class="btn btn-sm btn-ghost" title="下移" onclick="nodeMove(\''+orgId+'\',\''+n.id+'\',1)">↓</button>'
+    +'<button class="btn btn-sm btn-ghost" title="升级" onclick="nodeLevel(\''+orgId+'\',\''+n.id+'\',-1)">⇠</button>'
+    +'<button class="btn btn-sm btn-ghost" title="降级" onclick="nodeLevel(\''+orgId+'\',\''+n.id+'\',1)">⇢</button>'
+    +(hasChildren?'<button class="btn btn-sm btn-ghost" title="'+(isCollapsed?'展开下级':'收起下级')+'" onclick="treeToggleNode(\''+orgId+'\',\''+n.id+'\')">'+(isCollapsed?'＋':'−')+'</button>':'')
+    +'<button class="btn btn-sm btn-ghost btn-danger" title="删除" onclick="nodeDel(\''+orgId+'\',\''+n.id+'\')">✕</button>'
+    +'</div></div>'
+    +(hasChildren&&!isCollapsed?renderTree(orgId,children,(depth||0)+1):'')
+    +'</li>';
+}
+/* 节点内嵌编辑器：名称 / 职责 + 干部成员表（含职务后的手机号）。 */
+function memberEditorRowHtml(member){
+  var m=member||{};
+  return '<td><input class="m-sid" oninput="studentOrgMemberSidChanged(this)" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.sid||"")+'" placeholder="学号"></td>'
+    +'<td><input class="m-name" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.name||"")+'" placeholder="姓名"></td>'
+    +'<td><input class="m-college" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.college||"")+'" placeholder="学院"></td>'
+    +'<td><input class="m-grade" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.grade||"")+'" placeholder="年级"></td>'
+    +'<td><input class="m-major" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.major||"")+'" placeholder="专业"></td>'
+    +'<td><input class="m-cls" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.cls||"")+'" placeholder="班级"></td>'
+    +'<td><input class="m-pos" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.position||"")+'" placeholder="如 部长/干事"></td>'
+    +'<td><input class="m-phone" inputmode="tel" maxlength="20" style="width:100%;border:0;background:transparent;font:inherit" value="'+esc(m.phone||"")+'" placeholder="手机号"></td>'
+    +'<td><select class="m-status">'+memberStatusOptions(m.status)+'</select></td>'
+    +'<td><input class="m-joined" type="date" style="width:120px;border:0;background:transparent;font:inherit" value="'+esc(m.joined||today())+'"></td>';
+}
+function renderNodeEditor(orgId,n){
+  var rows=(n.members&&n.members.length?n.members:[{sid:"",name:"",position:"",phone:"",joined:"",status:"在职"}]).concat(window.__extraRows||[]);
+  var memberRows=rows.map(function(m){return '<tr>'+memberEditorRowHtml(m)+'</tr>';}).join("");
+  return '<div class="node" style="border-color:#36c08a;box-shadow:0 0 0 2px rgba(54,192,138,.12)">'
+    +'<div class="node-h"><input id="editNodeName" style="font-weight:700;border:1px solid var(--border);border-radius:6px;padding:4px 8px;width:170px" value="'+esc(n.name)+'"><input id="editNodeRole" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;flex:1;min-width:130px" value="'+esc(n.role||"")+'" placeholder="职责说明">'
+    +'<span class="ops"><button class="btn btn-sm btn-primary" onclick="nodeEditSave(\''+orgId+'\',\''+n.id+'\')">保存</button><button class="btn btn-sm btn-ghost" onclick="nodeEditCancel()">取消</button></span></div>'
+    +'<div style="padding:4px 10px 10px;margin-left:26px"><div class="list-scroll" style="border:0;max-height:220px"><table style="font-size:13px"><thead><tr><th style="width:110px">学号</th><th style="width:90px">姓名</th><th style="width:90px">学院</th><th style="width:80px">年级</th><th style="width:100px">专业</th><th style="width:80px">班级</th><th>职务</th><th style="width:115px">手机号</th><th style="width:70px">状态</th><th style="width:120px">入会日期</th></tr></thead><tbody id="memberRows">'+memberRows+'</tbody></table></div>'
+    +'<button class="btn btn-sm btn-ghost" style="margin-top:6px" onclick="nodeMemberRowAdd()">＋ 添加成员行</button><button class="btn btn-sm btn-ghost" style="margin-top:6px" onclick="nodeMemberPaste()">📋 批量粘贴成员</button></div></div>';
+}
+function nodeMemberPaste(){
+  var raw=prompt("批量添加成员，每行一人，格式：姓名,学号,职务,手机号（后两项可空，其余字段可保存后单独补）\n例如：\n张三,20230101,部长,13800000000\n李四,20230102,干事","");
+  if(!raw)return;
+  var tb=document.getElementById("memberRows");if(!tb)return;
+  var n=0;
+  raw.split(/[\n;；]+/).forEach(function(line){
+    var p=line.split(/[,，]/);
+    var name=(p[0]||"").trim(),sid=(p[1]||"").trim(),pos=(p[2]||"").trim(),phone=(p[3]||"").trim();
+    if(!name&&!sid)return;
+    var tr=document.createElement("tr");
+    tr.innerHTML=memberEditorRowHtml({sid:sid,name:name,position:pos,phone:phone,status:"在职",joined:today()});
+    tb.appendChild(tr);studentOrgFillMemberInputs(sid,tr);n++;
+  });
+  if(n)toast("已添加 "+n+" 行，保存后生效","ok");
+}
+function nodeMemberRowAdd(){
+  var tb=document.getElementById("memberRows");if(!tb)return;
+  var tr=document.createElement("tr");
+  tr.innerHTML=memberEditorRowHtml({status:"在职",joined:today()});
+  tb.appendChild(tr);
+}
+function nodeEdit(orgId,id){window.__treeEditingNode=null;window.__editingNode=id;refreshTree();}
+/* 树状图不在分支内展开编辑表，编辑面板固定在图表上方，避免横向节点被撑出页面。 */
+function nodeEditTree(orgId,id){window.__editingNode=null;window.__treeEditingNode=id;renderTreeEditorPanel();}
+function renderTreeEditorPanel(){
+  var box=document.getElementById("treeEditorPanel"),o=structOrg();if(!box)return;
+  var id=window.__treeEditingNode,r=id&&o?findNode(o.structure,id):null;
+  if(!r){box.innerHTML="";return;}
+  box.innerHTML='<div class="card" style="margin:0 0 10px;padding:10px 12px"><div class="muted" style="margin:0 0 8px">正在编辑部门 / 岗位：编辑区固定在组织架构图上方，保存后自动收起。</div>'+renderNodeEditor(o.id,r.node)+'</div>';
+}
+function nodeEditCancel(){window.__editingNode=null;window.__treeEditingNode=null;window.__extraRows=null;refreshTree();renderTreeEditorPanel();}
+function nodeEditSave(orgId,id){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var r=findNode(o.structure,id);if(!r)return;
+  var nameEl=document.getElementById("editNodeName"),roleEl=document.getElementById("editNodeRole");
+  var name=String(nameEl&&nameEl.value||"").trim();
+  if(!name){toast("请填写部门 / 岗位名称","warn");return;}
+  r.node.name=name;r.node.role=String(roleEl&&roleEl.value||"").trim();
+  var rows=document.querySelectorAll("#memberRows tr"),members=[];
+  rows.forEach(function(tr){
+    var g=function(c){var el=tr.querySelector("."+c);return String(el&&el.value||"").trim();};
+    var m={sid:g("m-sid"),name:g("m-name"),college:g("m-college"),grade:g("m-grade"),major:g("m-major"),cls:g("m-cls"),position:g("m-pos"),phone:g("m-phone"),joined:g("m-joined"),status:g("m-status")||"在职"};
+    if(m.name||m.sid)members.push(normalizeMember(studentOrgHydrateMember(m)));
+  });
+  r.node.members=members;
+  window.__editingNode=null;window.__treeEditingNode=null;window.__extraRows=null;
+  /* 同组织内学号重复提醒（跨部门兼任时人工确认） */
+  var seen={},dups=[];
+  (function collect(nodes){(nodes||[]).forEach(function(n){(n.members||[]).forEach(function(m){if(m.sid){if(seen[m.sid])dups.push(m.sid);seen[m.sid]=1;}});collect(n.children);});})(o.structure);
+  refreshTree();renderTreeEditorPanel();
+  toast(dups.length?"已保存；注意学号重复："+Array.from(new Set(dups)).join("、")+"（如为兼任请忽略）":"已保存架构节点",dups.length?"warn":"ok");
+}
+function findNode(nodes,id,parent){
+  for(var i=0;i<nodes.length;i++){
+    if(nodes[i].id===id)return {list:nodes,index:i,node:nodes[i],parent:parent||null};
+    var r=findNode(nodes[i].children||[],id,nodes[i]);
+    if(r)return r;
+  }
+  return null;
+}
+function structOrg(){return DB.orgs.find(function(x){return x.id===window.__structOrgId;});}
+function refreshTree(){
+  var o=structOrg();if(!o)return;save();
+  var c=document.getElementById("orgViewContainer");if(!c)return;
+  if(__orgViewMode==="table")c.innerHTML=renderOrgTable(o.id,o.structure||[]);
+  else{c.innerHTML=treeViewHtml(o.id,o.structure||[]);treeApplyZoom();}
+  refreshOrgRosterCard();
+}
+/* ---------- 树状图缩放（zoom 影响布局，滚动条自适应） ---------- */
+var __treeZoom=1;
+var __treeQuery="";
+var __treeCollapsed={};
+function treeFilterNodes(nodes,q){
+  q=String(q||"").trim().toLowerCase();
+  if(!q)return nodes||[];
+  return (nodes||[]).reduce(function(out,n){
+    var children=treeFilterNodes(n.children||[],q);
+    var hay=[n.name,n.role].concat((n.members||[]).map(function(m){return [m.name,m.sid,m.position,m.college,m.major,m.cls].join(" ");})).join(" ").toLowerCase();
+    if(hay.indexOf(q)>=0){out.push(n);}
+    else if(children.length){var copy=Object.assign({},n);copy.children=children;out.push(copy);}
+    return out;
+  },[]);
+}
+function enterpriseTreeHtml(orgId,nodes){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return '';
+  var visible=treeFilterNodes(nodes,__treeQuery);
+  var root='<div class="org-root-node"><b>🏛️ '+esc(o.name)+'</b><div class="root-meta">'+esc(ORG_CATS[o.cat]||'学生组织')+' · '+esc(o.year||'—')+' · '+esc(termLabel(o.termNo))+(o.dept?' · '+esc(o.dept):'')+'</div><div class="root-meta">指导老师：'+esc(o.advisor||'未填写')+'</div><div class="root-stats"><span>部门 '+treeCount(nodes)+'</span><span>成员 '+treeMembers(nodes)+'</span><span>在职 '+treeActiveMembers(nodes)+'</span></div></div>';
+  var branches=visible.length?renderTree(orgId,visible,0):'<div class="empty" style="padding:20px">未找到匹配的部门或成员</div>';
+  return '<div class="tree-chart"><ul><li class="org-root-chart">'+root+branches+'</li></ul></div>';
+}
+function treeViewHtml(orgId,nodes){
+  return '<div class="toolbar" style="margin-bottom:8px"><input class="in" style="min-width:180px;flex:1" placeholder="搜索部门、职责、成员或学号…" value="'+esc(__treeQuery)+'" oninput="treeSearch(this.value)"><span class="muted">缩放</span>'
+    +'<button class="btn btn-sm btn-ghost" onclick="treeZoom(-0.05)">−</button>'
+    +'<b id="treeZoomVal" style="min-width:42px;text-align:center;font-size:13px">100%</b>'
+    +'<button class="btn btn-sm btn-ghost" onclick="treeZoom(0.05)">＋</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="treeZoomFit()">⟲ 适应宽度</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="__treeZoom=1;treeApplyZoom()">100%</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="treeSetCollapsed(true)">全部收起</button><button class="btn btn-sm btn-ghost" onclick="treeSetCollapsed(false)">全部展开</button><span class="muted">组织置顶，主席团与各部门为直属分支 · 悬停节点显示编辑操作</span></div>'
+    +enterpriseTreeHtml(orgId,nodes);
+}
+function treeRefresh(){var o=structOrg();if(!o)return;var c=document.getElementById("orgViewContainer");if(!c)return;c.innerHTML=treeViewHtml(o.id,o.structure||[]);treeApplyZoom();treeAutoFit();}
+function treeSearch(v){__treeQuery=String(v||"");treeRefresh();}
+function treeToggleNode(orgId,nodeId){__treeCollapsed[nodeId]=!__treeCollapsed[nodeId];treeRefresh();}
+function treeSetCollapsed(collapsed){var o=structOrg();if(!o)return;__treeCollapsed={};if(collapsed){(function walk(nodes){(nodes||[]).forEach(function(n){if((n.children||[]).length)__treeCollapsed[n.id]=true;walk(n.children);});})(o.structure||[]);}treeRefresh();}
+function treeApplyZoom(){
+  var ch=document.querySelector("#orgViewContainer .tree-chart");if(!ch)return;
+  ch.style.zoom=__treeZoom;
+  var lab=document.getElementById("treeZoomVal");if(lab)lab.textContent=Math.round(__treeZoom*100)+"%";
+}
+function treeZoom(d){__treeZoom=Math.max(0.35,Math.min(2,Math.round((__treeZoom+d)*100)/100));treeApplyZoom();}
+function treeZoomFit(){
+  var ch=document.querySelector("#orgViewContainer .tree-chart");if(!ch)return;
+  ch.style.zoom=1;
+  /* 用根画布的实际宽度计算缩放；chart 自身的 scrollWidth 会受旧 zoom 影响，部门较多时会导致首尾节点被裁切。 */
+  var canvas=ch.querySelector(":scope > ul"),avail=Math.max(1,ch.clientWidth-64),need=canvas?Math.ceil(canvas.scrollWidth):ch.scrollWidth;
+  __treeZoom=need>avail?Math.max(0.35,Math.floor(avail/need*100)/100):1;
+  treeApplyZoom();
+}
+function treeAutoFit(){
+  var ch=document.querySelector("#orgViewContainer .tree-chart");
+  if(ch)treeZoomFit();
+}
+/* ---------- 层级表格视图（政企式） ---------- */
+/* 组织架构默认以企业式树状图呈现；表格仅作为人员明细的切换视图。 */
+var __orgViewMode="tree";
+var __collapsedNodes={};
+function toggleOrgView(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  if(__orgViewMode==="table"){
+    document.getElementById("orgViewContainer").innerHTML=treeViewHtml(orgId,o.structure||[]);
+    __orgViewMode="tree";__treeZoom=1;
+    document.getElementById("toggleViewBtn").textContent="切换为表格";
+    treeAutoFit();
+  }else{
+    document.getElementById("orgViewContainer").innerHTML=renderOrgTable(orgId,o.structure||[]);
+    __orgViewMode="table";
+    document.getElementById("toggleViewBtn").textContent="切换为树状图";
+  }
+}
+function renderOrgTable(orgId,nodes,depth){
+  if(!nodes||!nodes.length)return '<div class="empty" style="padding:14px">暂无架构，请添加一级部门或重置为默认模板</div>';
+  var rows=nodes.map(function(n){return renderOrgTableRow(orgId,n,depth||0);}).join("");
+  return '<div class="list-scroll"><table class="org-table"><thead><tr><th style="min-width:36%">部门 / 岗位</th><th>成员</th><th style="width:220px">操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function renderOrgTableRow(orgId,n,depth){
+  if(window.__editingNode===n.id){
+    return '<tr class="org-editing" data-id="'+n.id+'"><td colspan="3" style="background:#f7fdfb;border-color:#36c08a">'+renderNodeEditor(orgId,n)+'</td></tr>';
+  }
+  var hasChildren=(n.children&&n.children.length>0);
+  var isCollapsed=__collapsedNodes[n.id];
+  var expandHtml='<span class="expand-btn '+(hasChildren?(isCollapsed?"collapsed":""):
+    "empty")+'" onclick="'+(hasChildren?"toggleOrgNode('"+n.id+"','"+orgId+"')":"")+'">'+(hasChildren?"▼":"")+'</span>';
+  var indent='<span style="display:inline-block;width:'+(depth*28)+'px;flex:none"></span>';
+  var nameHtml=indent+expandHtml+'<span class="dept-name">'+esc(n.name)+'</span>'
+    +(n.role?'<span class="dept-role">· '+esc(n.role.length>20?n.role.slice(0,20)+"…":n.role)+'</span>':'');
+  var mems=(n.members||[]).map(function(m){
+    var cls=memberIsActive(m)?" org-mem-chip":" org-mem-chip resigned";
+    return '<span class="'+cls+'">'+esc(m.name)+(m.position?" · "+esc(m.position):"")+(m.sid?" ("+esc(m.sid)+")":"")+(memberAttr(m)?" · "+esc(memberAttr(m)):"")+memberStatusSuffix(m)+'</span>';
+  }).join("");
+  var memHtml=mems||'<span class="muted">—</span>';
+  var opsHtml='<div class="org-ops">'
+    +'<button class="btn btn-sm btn-ghost" onclick="nodeAdd(\''+orgId+'\',\''+n.id+'\')">＋下级</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="nodeEdit(\''+orgId+'\',\''+n.id+'\')">编辑</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="nodeMove(\''+orgId+'\',\''+n.id+'\',-1)">↑</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="nodeMove(\''+orgId+'\',\''+n.id+'\',1)">↓</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="nodeLevel(\''+orgId+'\',\''+n.id+'\',-1)">⇠</button>'
+    +'<button class="btn btn-sm btn-ghost" onclick="nodeLevel(\''+orgId+'\',\''+n.id+'\',1)">⇢</button>'
+    +'<button class="btn btn-sm btn-ghost btn-danger" onclick="nodeDel(\''+orgId+'\',\''+n.id+'\')">删除</button>'
+    +'</div>';
+  var cls=isCollapsed?" collapsed":"";
+  var childRows="";
+  if(hasChildren&&!isCollapsed){
+    childRows=n.children.map(function(c){return renderOrgTableRow(orgId,c,depth+1);}).join("");
+  }
+  return '<tr class="'+cls+'" data-id="'+n.id+'"><td>'+nameHtml+'</td><td>'+memHtml+'</td><td>'+opsHtml+'</td></tr>'+childRows;
+}
+function toggleOrgNode(nodeId,orgId){
+  __collapsedNodes[nodeId]=!__collapsedNodes[nodeId];
+  var o=structOrg();if(!o)return;
+  document.getElementById("orgViewContainer").innerHTML=renderOrgTable(o.id,o.structure||[]);
+}
+function nodeAdd(orgId,parentId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var name=prompt("新部门 / 岗位名称：","");if(!name)return;
+  var role=prompt("职责说明（可空）：","");
+  var node={id:uid("n"),name:name,role:role||"",members:[],children:[]};
+  if(!parentId){o.structure=o.structure||[];o.structure.push(node);}
+  else{var r=findNode(o.structure,parentId);if(!r)return;r.node.children=r.node.children||[];r.node.children.push(node);}
+  refreshTree();
+}
+async function nodeDel(orgId,id){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var r=findNode(o.structure,id);if(!r)return;
+  if(await studentOrgRecycle("studentOrgNode","student_org_node",[orgId+"::"+id])){orgOpen(orgId);toast("架构节点及其下级已移入回收站","ok");}
+}
+function nodeMove(orgId,id,dir){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var r=findNode(o.structure,id);if(!r)return;
+  var ni=r.index+dir;if(ni<0||ni>=r.list.length)return;
+  var tmp=r.list[r.index];r.list[r.index]=r.list[ni];r.list[ni]=tmp;refreshTree();
+}
+function nodeLevel(orgId,id,dir){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var r=findNode(o.structure,id);if(!r)return;
+  if(dir===1){ /* 降级：挂到前一个兄弟下 */
+    if(r.index===0)return;
+    var prev=r.list[r.index-1];prev.children=prev.children||[];
+    r.list.splice(r.index,1);prev.children.push(r.node);
+  }else{ /* 升级：移到父级之后 */
+    if(!r.parent){toast("一级部门无法再升级","warn");return;}
+    var pr=findNode(o.structure,r.parent.id);
+    r.list.splice(r.index,1);
+    var pi=pr.list.indexOf(r.parent);pr.list.splice(pi+1,0,r.node);
+  }
+  refreshTree();
+}
+function structureReset(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  if(!confirm("重置为默认架构模板将清空当前全部架构与成员，确认？"))return;
+  o.structure=defaultStructure(o.cat);refreshTree();
+}
+function exportStructure(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var lines=[ORG_CATS[o.cat]+" · "+o.name+"（"+o.year+" 第"+o.termNo+"届）"];
+  (function walk(nodes,depth){
+    (nodes||[]).forEach(function(n){
+      var pre="  ".repeat(depth)+(depth?"└ ":"");
+      lines.push(pre+n.name+(n.role?"（"+n.role+"）":"")+(n.members&&n.members.length?"："+n.members.map(function(m){return (m.name||m.sid||"未命名")+(m.sid?"("+m.sid+")":"");}).join("、"):""));
+      walk(n.children,depth+1);
+    });
+  })(o.structure,0);
+  downloadFile(o.name+"_组织架构.txt",lines.join("\r\n"),"text/plain");
+}
+
+/* ---------- 架构复制 / 模板库 / 成员调动 ---------- */
+function copyStructureForm(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var others=DB.orgs.filter(function(x){return x.id!==orgId;});
+  if(!others.length){toast("没有其他组织可复制","warn");return;}
+  var opts=others.sort(function(a,b){return String(a.name).localeCompare(String(b.name),"zh-CN");}).map(function(x){
+    return '<option value="'+x.id+'">'+esc(ORG_CATS[x.cat]+" · "+x.name+"（"+x.year+" 第"+x.termNo+"届 · "+treeMembers(x.structure)+" 人）")+'</option>';
+  }).join("");
+  var body='<div class="field"><label>选择来源组织<span class="req"> *</span></label><select id="cp_src">'+opts+'</select></div>'
+    +'<div class="field"><label style="font-weight:400"><input type="checkbox" id="cp_members"> 同时复制成员名单（保留学号、职务等信息）</label></div>'
+    +'<div class="muted">将用来源组织的架构<b>替换</b>当前组织（'+termLabel(o.termNo)+'）的架构；当前架构将被覆盖且不可撤销。</div>';
+  openModal("📑 复制架构自其他组织",body,"复制并替换",function(){
+    var src=DB.orgs.find(function(x){return x.id===Val("cp_src");});if(!src){toast("请选择来源组织","warn");return false;}
+    var withMembers=!!document.getElementById("cp_members").checked;
+    o.structure=JSON.parse(JSON.stringify(src.structure||[]));
+    if(!withMembers)(function strip(nodes){(nodes||[]).forEach(function(n){n.members=[];strip(n.children);});})(o.structure);
+    o.updatedAt=new Date().toISOString();save();
+    closeModal();orgOpen(o.id);toast("架构已从「"+src.name+"」复制","ok");return true;
+  });
+}
+function templateSave(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var name=prompt("模板名称：",o.name+"架构模板");if(!name)return;
+  DB.templates=DB.templates||[];
+  DB.templates.unshift({id:uid("tpl"),name:name,cat:o.cat,structure:JSON.parse(JSON.stringify(o.structure||[])),from:ORG_CATS[o.cat]+" · "+o.name+"（第"+o.termNo+"届）",createdAt:new Date().toISOString()});
+  save();toast("模板已保存，可在任意组织「应用模板」复用","ok");
+}
+function templateListForm(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  DB.templates=DB.templates||[];
+  if(!DB.templates.length){toast("暂无模板；可先在架构编辑器中「存为模板」","warn");return;}
+  var body=DB.templates.map(function(t){
+    return '<div class="rp-card"><b>'+esc(t.name)+'</b><span class="muted" style="display:block;margin-top:2px">'+esc(t.from||"")+' · '+treeCount(t.structure)+' 部门 / '+treeMembers(t.structure)+' 人 · '+esc((t.createdAt||"").slice(0,10))+'</span><div class="tk-ops"><button class="btn btn-sm btn-primary" onclick="templateApply(\''+orgId+'\',\''+t.id+'\')">应用</button><button class="btn btn-sm btn-ghost btn-danger" onclick="templateDelete(\''+t.id+'\')">删除模板</button></div></div>';
+  }).join("");
+  openModal("📚 架构模板库",'<div class="rp-grid">'+body+'</div>',"关闭",function(){orgOpen(orgId);return false;},true);
+}
+function templateApply(orgId,tplId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;}),t=(DB.templates||[]).find(function(x){return x.id===tplId;});
+  if(!o||!t)return;
+  if(!confirm("用模板「"+t.name+"」替换当前架构？成员名单不复制，当前架构将被覆盖。"))return;
+  o.structure=JSON.parse(JSON.stringify(t.structure||[]));
+  (function strip(nodes){(nodes||[]).forEach(function(n){n.members=[];strip(n.children);});})(o.structure);
+  o.updatedAt=new Date().toISOString();save();
+  closeModal();orgOpen(orgId);toast("已应用模板「"+t.name+"」","ok");
+}
+async function templateDelete(tplId){
+  var t=(DB.templates||[]).find(function(x){return x.id===tplId;});
+  if(await studentOrgRecycle("studentOrgTemplate","student_org_template",[tplId])){closeModal();toast("模板已移入回收站","ok");}
+}
+/* 成员调动：批量把成员移动到其他部门 */
+function memberTransferForm(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var list=orgFlatMembers(o);
+  if(!list.length){toast("该组织暂无成员可调动","warn");return;}
+  var deptNodes=[];
+  (function walk(nodes,path){(nodes||[]).forEach(function(n){deptNodes.push({node:n,path:path?path+" / "+n.name:n.name});walk(n.children,path?path+" / "+n.name:n.name);});})(o.structure||[]);
+  var deptOpts=deptNodes.map(function(d,i){return '<option value="'+d.node.id+'">'+esc(d.path)+'</option>';}).join("");
+  var rows=list.map(function(it){
+    var cur=deptNodes.find(function(d){return d.node.id===it.node.id;});
+    return '<tr><td>'+esc(it.member.name||"未命名")+'</td><td class="muted">'+esc(it.member.sid||"—")+'</td><td>'+esc(it.dept)+'</td><td>'+esc(it.member.position||"—")+'</td><td><select class="tf-dept" data-from="'+it.node.id+'" data-sid="'+esc(it.member.sid||"")+'" data-name="'+esc(it.member.name||"")+'"><option value="">— 不变动 —</option>'+deptOpts+'</select></td></tr>';
+  }).join("");
+  var body='<div class="muted" style="margin-bottom:8px">为需要调动的成员选择新部门（保持「— 不变动 —」则不变），保存后立即生效。</div><div class="list-scroll" style="border:0"><table style="font-size:13px"><thead><tr><th>姓名</th><th>学号</th><th>现部门</th><th>职务</th><th>调动至</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  openModal("🔄 成员调动 · "+esc(o.name),body,"执行调动",function(){
+    var moves=0;
+    document.querySelectorAll(".tf-dept").forEach(function(sel){
+      var toId=sel.value;if(!toId)return;
+      var from=findNode(o.structure,sel.getAttribute("data-from"));
+      var target=findNode(o.structure,toId);
+      if(!from||!target||from.node.id===target.node.id)return;
+      var sid=sel.getAttribute("data-sid"),name=sel.getAttribute("data-name");
+      var idx=(from.node.members||[]).findIndex(function(m){return (sid&&m.sid===sid)||(!sid&&m.name===name);});
+      if(idx<0)return;
+      var member=from.node.members.splice(idx,1)[0];
+      target.node.children=target.node.children||[];
+      target.node.members=target.node.members||[];
+      target.node.members.push(member);
+      moves++;
+    });
+    if(!moves){toast("没有选择任何调动","warn");return false;}
+    o.updatedAt=new Date().toISOString();save();closeModal();orgOpen(orgId);
+    toast("已调动 "+moves+" 名成员","ok");return true;
+  },true);
+}
+
+/* ---------- 通用台账（活动/会议/培训/第二课堂） ---------- */
+var LIST_META={
+  activity:{title:"🎉 活动管理",sub:"学生组织开展的各类活动台账；含协办单位、负责老师、经费与参与名单，附件留档（方案 / 总结 / 照片）。",fields:[
+    {k:"orgId",label:"主办组织",type:"org",req:true},
+    {k:"name",label:"活动名称",req:true},
+    {k:"type",label:"活动类型",type:"sel",opts:ACT_TYPES,req:true},
+    {k:"date",label:"活动日期",type:"date",req:true},
+    {k:"place",label:"地点"},
+    {k:"zone",label:"活动范围",type:"sel",opts:["校内","校外"]},
+    {k:"coUnit",label:"协办单位"},
+    {k:"teacher",label:"负责老师"},
+    {k:"scale",label:"参与人数",type:"num"},
+    {k:"leader",label:"负责人"},
+    {k:"budget",label:"经费（元）",type:"num"},
+    {k:"expense",label:"实际支出（元）",type:"num"},
+    {k:"sponsor",label:"赞助（元）",type:"num"},
+    {k:"attendees",label:"参与名单（每行一人：姓名,学号）",type:"textarea"},
+    {k:"status",label:"状态",type:"sel",opts:ACT_STATUS},
+    {k:"intro",label:"活动简介 / 总结",type:"textarea"}
+  ],filters:[{k:"type",label:"活动类型",opts:ACT_TYPES},{k:"status",label:"状态",opts:ACT_STATUS},{k:"year",label:"学年",type:"year"},{k:"zone",label:"活动范围",opts:["校内","校外"]}],listCols:["orgName","name","type","date","place","zone","scale","budget","expense","status"],csvHead:["主办组织","活动名称","活动类型","活动日期","地点","活动范围","协办单位","负责老师","参与人数","负责人","经费（元）","实际支出（元）","赞助（元）","状态","活动简介 / 总结"]},
+  meeting:{title:"📝 会议记录",sub:"组织例会、主席团会、全体会等会议纪要台账；含应到 / 实到 / 请假 / 缺席考核（参考学生会办公室管理系统）。",fields:[
+    {k:"orgId",label:"组织",type:"org",req:true},
+    {k:"title",label:"会议主题",req:true},
+    {k:"datetime",label:"时间",type:"datetime",req:true},
+    {k:"place",label:"地点"},
+    {k:"host",label:"主持人"},
+    {k:"recorder",label:"记录人"},
+    {k:"expected",label:"应到人数",type:"num"},
+    {k:"actual",label:"实到人数",type:"num"},
+    {k:"leave",label:"请假人数",type:"num"},
+    {k:"absent",label:"缺席人数",type:"num"},
+    {k:"attendees",label:"出席人员",type:"textarea"},
+    {k:"agenda",label:"议题",type:"textarea",req:true},
+    {k:"resolutions",label:"决议事项",type:"textarea"}
+  ],filters:[{k:"year",label:"学年",type:"year"},{k:"kw2",label:"主持人",type:"kw2"}],listCols:["orgName","title","datetime","place","host","expected","actual","leave","absent"],csvHead:["组织","会议主题","时间","地点","主持人","记录人","应到人数","实到人数","请假人数","缺席人数","出席人员","议题","决议事项"]},
+  training:{title:"📖 培训记录",sub:"骨干培训、技能培训、新人培训等记录。",fields:[
+    {k:"orgId",label:"组织",type:"org",req:true},
+    {k:"name",label:"培训主题",req:true},
+    {k:"date",label:"日期",type:"date",req:true},
+    {k:"trainer",label:"讲师 / 主讲人"},
+    {k:"target",label:"培训对象"},
+    {k:"count",label:"参训人数",type:"num"},
+    {k:"hours",label:"学时",type:"num"},
+    {k:"content",label:"内容摘要",type:"textarea"}
+  ],filters:[{k:"year",label:"学年",type:"year"}],listCols:["orgName","name","date","trainer","target","count","hours"],csvHead:["组织","培训主题","日期","讲师 / 主讲人","培训对象","参训人数","学时","内容摘要"]},
+  classroom:{title:"🏅 第二课堂管理",sub:"按团中央八模块记录第二课堂学分/学时与认定情况。",fields:[
+    {k:"sid",label:"学号"},
+    {k:"sname",label:"姓名"},
+    {k:"college",label:"学院"},
+    {k:"grade",label:"年级"},
+    {k:"major",label:"专业"},
+    {k:"cls",label:"班级"},
+    {k:"year",label:"学年",type:"year",req:true},
+    {k:"module",label:"模块",type:"sel",opts:CLASSROOM_MODULES,req:true},
+    {k:"item",label:"项目名称",req:true},
+    {k:"hours",label:"学时",type:"num"},
+    {k:"credit",label:"学分",type:"num"},
+    {k:"status",label:"认定状态",type:"sel",opts:CLASSROOM_STATUS},
+    {k:"date",label:"获得日期",type:"date"}
+  ],filters:[{k:"module",label:"模块",opts:CLASSROOM_MODULES},{k:"status",label:"认定状态",opts:CLASSROOM_STATUS},{k:"year",label:"学年",type:"year"}],listCols:["sid","sname","college","grade","major","cls","year","module","item","hours","credit","status"],csvHead:["学号","姓名","学院","年级","专业","班级","学年","模块","项目名称","学时","学分","认定状态","获得日期"]}
+};
+var listFilters={};
+/* 各列表页当前筛选结果缓存：导出 Excel 时导出所见（当前筛选）结果 */
+var __viewCache={};
+function kindKey(k){return {activity:"activities",meeting:"meetings",training:"trainings",classroom:"classrooms"}[k]||k;}
+function orgName(id){var o=DB.orgs.find(function(x){return x.id===id;});return o?o.name:"";}
+/* 业务录入统一仅选用运行中的组织；datalist 支持按名称、学年、类别直接输入搜索。 */
+function runningOrgs(){return DB.orgs.filter(function(o){return o.status==="运行中";}).sort(function(a,b){return String(a.name||"").localeCompare(String(b.name||""),"zh-Hans-CN");});}
+function orgPickerLabel(o){return o?o.name+"（"+o.year+" · "+(ORG_CATS[o.cat]||"其他组织")+"）":"";}
+function findRunningOrgByLabel(label){return runningOrgs().find(function(o){return orgPickerLabel(o)===label;})||null;}
+function orgPickerHtml(inputId,selectedId,optional){
+  var selected=DB.orgs.find(function(o){return o.id===selectedId;}),listId=inputId+"_running_orgs";
+  return '<input id="'+inputId+'" list="'+listId+'" value="'+esc(orgPickerLabel(selected))+'" placeholder="输入名称搜索（仅运行中）" autocomplete="off"><datalist id="'+listId+'">'+runningOrgs().map(function(o){return '<option value="'+esc(orgPickerLabel(o))+'"></option>';}).join("")+'</datalist>'+(optional?'<div class="muted" style="margin-top:4px">可留空；如需关联，仅可选择运行中的组织。</div>':'<div class="muted" style="margin-top:4px">仅显示运行中的组织，可输入名称、学年或类别搜索。</div>');
+}
+function listHtml(kind){
+  var M=LIST_META[kind];
+  listFilters[kind]=listFilters[kind]||{};
+  var f=listFilters[kind];
+  var kw=(f.kw||"").toLowerCase();
+  var list=DB[kindKey(kind)].filter(function(r){
+    var hay=[r.sname,r.sid,r.name,r.title,r.item,r.type,r.module,r.place,r.host,r.trainer,r.target,r.content,r.intro,r.agenda,r.resolutions,r.attendees,orgName(r.orgId)].join(" ").toLowerCase();
+    var okKw=!kw||hay.indexOf(kw)>=0,okF=true;
+    (M.filters||[]).forEach(function(fl){
+      if(fl.k==="kw2"){ if(f.kw2&&String(r.host||"").indexOf(f.kw2)<0)okF=false; }
+      else if(fl.type==="year"){ if(f.year){var ry=recYear(r);if(ry&&!fl_yearMatch(ry,f.year))okF=false;} }
+      else if(fl.opts){ if(f[fl.k]&&r[fl.k]!==f[fl.k])okF=false; }
+    });
+    return okKw&&okF;
+  }).sort(function(a,b){return String(b.datetime||b.date||b.createdAt||"").localeCompare(String(a.datetime||a.date||a.createdAt||""));});
+  __viewCache[kind]=list;
+  var pages=Math.max(1,Math.ceil(list.length/PAGE_SIZE));
+  f.page=Math.min(Math.max(1,f.page||1),pages);
+  var rows=list.slice((f.page-1)*PAGE_SIZE,f.page*PAGE_SIZE).map(function(r){
+    var rowOps='<td style="white-space:nowrap"><a href="javascript:void(0)" onclick="recForm(\''+kind+'\',\''+r.id+'\')">编辑</a>'+(kind==="meeting"?'　<a href="javascript:void(0)" onclick="exportMeeting(\''+r.id+'\')">纪要</a>':"")+'　<a href="javascript:void(0)" onclick="recDelete(\''+kind+'\',\''+r.id+'\')" style="color:var(--danger)">删除</a></td>';
+    var cbCell=(kind==="classroom")?'<td><input type="checkbox" class="cc-sel" data-id="'+r.id+'" onchange="ccSelToggle(\''+r.id+'\',this.checked)"'+(window.__ccSel&&window.__ccSel[r.id]?" checked":"")+'></td>':"";
+    return '<tr>'+(cbCell?cbCell:"")+M.listCols.map(function(c){
+      var v=c==="orgName"?orgName(r.orgId):r[c];
+      if(c==="datetime"&&typeof v==="string"&&v.indexOf("T")>=0)v=v.replace("T"," ");
+      if((c==="type"||c==="module")&&v==="其他"&&r[c+"Other"])v="其他："+r[c+"Other"];
+      if(c==="status"&&typeof v==="string"&&/状态|待审核|已认定|未通过|筹备|进行|结束|取消/.test(v))v='<span class="tag'+(v==="未通过"||v==="已取消"?" bad":v==="待审核"||v==="筹备中"?" warn":"")+'">'+esc(v)+'</span>';
+      else if(c==="module"||c==="type")v='<span class="tag mut">'+esc(v||"—")+'</span>';
+      else v=esc(v==null||v===""?"—":v);
+      return '<td>'+v+'</td>';
+    }).join("")+rowOps+'</tr>';
+  }).join("")||'<tr><td colspan="'+(M.listCols.length+(kind==="classroom"?2:1))+'" class="empty">暂无记录；可点击右上角「＋ 新增」创建，或使用本页的「导入 Excel」批量导入</td></tr>';
+  var filterBar='<input class="in" id="listKw" style="flex:1;min-width:170px" placeholder="搜索关键词…" value="'+esc(f.kw||"")+'" oninput="listSetFilter(\''+kind+'\',\'kw\',this.value)">';
+  (M.filters||[]).forEach(function(fl){
+    if(fl.type==="year"){
+      var ys=Array.from(new Set(DB[kindKey(kind)].map(function(r){return recYear(r);}).filter(Boolean))).sort().reverse();
+      filterBar+='<select class="in" onchange="listSetFilter(\''+kind+'\',\'year\',this.value)"><option value="">全部学年</option>'+ys.map(function(y){return '<option value="'+esc(y)+'"'+(f.year===y?" selected":"")+'>'+esc(y)+' 学年</option>';}).join("")+'</select>';
+    }else if(fl.type==="kw2"){
+      filterBar+='<input class="in" id="listKw2" placeholder="主持人" value="'+esc(f.kw2||"")+'" oninput="listSetFilter(\''+kind+'\',\'kw2\',this.value)">';
+    }else{
+      filterBar+='<select class="in" onchange="listSetFilter(\''+kind+'\',\''+fl.k+'\',this.value)"><option value="">'+esc(fl.label+'(全部)')+'</option>'+fl.opts.map(function(o){return '<option value="'+esc(o)+'"'+(f[fl.k]===o?" selected":"")+'>'+esc(o)+'</option>';}).join("")+'</select>';
+    }
+  });
+  return '<h2 class="ptitle">'+M.title+'</h2><p class="sub">'+esc(M.sub)+'</p>'
+    +(kind==="classroom"?classroomSummaryHtml():"")
+    +'<div class="card" style="padding:12px"><div class="toolbar">'+filterBar+'<button class="btn btn-sm btn-ghost" onclick="listResetFilter(\''+kind+'\')">重置</button><span style="flex:1"></span><button class="btn btn-sm btn-ghost" onclick="downloadTemplate(\''+kind+'\')">导入模板</button><button class="btn btn-sm btn-primary" onclick="pickCsv(\''+kind+'\')">导入 Excel</button><button class="btn btn-sm btn-ghost" onclick="exportCsv(\''+kind+'\',null,1)">导出 Excel</button><button class="btn btn-primary" onclick="recForm(\''+kind+'\',null)">＋ 新增</button></div></div>'
+    +'<div class="list-scroll"><table><thead><tr>'+(kind==="classroom"?"<th><input id=\"ccSelectAll\" type=\"checkbox\" onchange=\"ccSelAll(this.checked)\" title=\"全选本页\"></th>":"")+M.listCols.map(function(c){return "<th>"+esc(colLabel(kind,c))+"</th>";}).join("")+'<th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +(kind==="classroom"?'<div class="pager"><span id="ccSelectionCount" class="muted">已选 '+(window.__ccSel?Object.keys(window.__ccSel).filter(function(k){return window.__ccSel[k];}).length:0)+' 条</span><button class="btn btn-sm btn-primary" onclick="ccBatchApprove()">将选中标记为已认定</button><button class="btn btn-sm btn-ghost" onclick="window.__ccSel={};renderMain()">清除选择</button><span style="flex:1"></span>':'')
+    +'<div class="pager"><span>共 '+list.length+' 条 · 第 '+f.page+" / "+pages+' 页</span><button class="btn btn-sm btn-ghost" '+(f.page<=1?"disabled":"")+' onclick="listPage(\''+kind+'\','+(f.page-1)+')">上一页</button><button class="btn btn-sm btn-ghost" '+(f.page>=pages?"disabled":"")+' onclick="listPage(\''+kind+'\','+(f.page+1)+')">下一页</button></div>';
+}
+window.__ccSel=window.__ccSel||{};
+function ccSelectionRefresh(){
+  var boxes=Array.from(document.querySelectorAll('.cc-sel:not(:disabled)')),checked=boxes.filter(function(box){return box.checked;}).length;
+  var master=document.getElementById('ccSelectAll'),count=document.getElementById('ccSelectionCount');
+  if(master){master.checked=boxes.length>0&&checked===boxes.length;master.indeterminate=checked>0&&checked<boxes.length;master.disabled=boxes.length===0;}
+  if(count)count.textContent='已选 '+Object.keys(window.__ccSel||{}).filter(function(id){return window.__ccSel[id];}).length+' 条';
+}
+function ccSelToggle(id,checked){window.__ccSel[id]=checked;ccSelectionRefresh();}
+function ccSelAll(checked){
+  document.querySelectorAll(".cc-sel").forEach(function(cb){cb.checked=checked;window.__ccSel[cb.getAttribute("data-id")]=checked;});
+  ccSelectionRefresh();
+}
+function ccBatchApprove(){
+  var ids=Object.keys(window.__ccSel).filter(function(k){return window.__ccSel[k];});
+  if(!ids.length){toast("请先勾选需要认定的记录","warn");return;}
+  if(!confirm("将选中的 "+ids.length+" 条第二课堂记录标记为「已认定」？"))return;
+  var n=0;
+  ids.forEach(function(id){var r=DB.classrooms.find(function(x){return x.id===id;});if(r&&r.status!=="已认定"){r.status="已认定";r.updatedAt=new Date().toISOString();n++;}});
+  window.__ccSel={};save();renderMain();
+  toast("已认定 "+n+" 条"+(ids.length-n?"，其余已是已认定状态":""),"ok");
+}
+function recYear(r){
+  if(r.year)return r.year;
+  /* 无 year 字段的台账（活动/会议/培训）按日期推导学年：9 月及以后归入新学年 */
+  var m=String(r.date||r.datetime||"").match(/^(\d{4})-(\d{2})/);
+  if(m){var y=Number(m[1]),mo=Number(m[2]);return mo>=8?y+"-"+(y+1):(y-1)+"-"+y;}
+  return "";
+}
+function fl_yearMatch(ry,sel){
+  if(!ry)return true;
+  var y1=String(sel).slice(0,4);
+  var y2=String(sel).slice(5,9);
+  var r=String(ry);
+  return r===sel||r===y1||r===y2;
+}
+/* 第二课堂按学生汇总：学号/姓名查询学时学分与模块分布 */
+window.__ccQ="";
+function classroomSummaryHtml(){
+  var q=String(window.__ccQ||"").trim().toLowerCase();
+  var summary="";
+  if(q){
+    var rows=DB.classrooms.filter(function(r){return String(r.sid||"").toLowerCase()===q||String(r.sname||"").toLowerCase()===q;});
+    var hours=rows.reduce(function(s,r){return s+(Number(r.hours)||0);},0);
+    var credit=rows.reduce(function(s,r){return s+(Number(r.credit)||0);},0);
+    var okN=rows.filter(function(r){return r.status==="已认定";}).length,pending=rows.filter(function(r){return r.status==="待审核";}).length;
+    var byModule={};rows.forEach(function(r){if(r.module)byModule[r.module]=(byModule[r.module]||0)+(Number(r.hours)||0);});
+    var detail=rows.map(function(r){return '<tr><td>'+esc(r.year||"—")+'</td><td><span class="tag mut">'+esc(r.module||"—")+'</span></td><td>'+esc(r.item||"—")+'</td><td>'+esc(r.hours||0)+'</td><td>'+esc(r.credit||0)+'</td><td>'+esc(r.status||"—")+'</td><td class="muted">'+esc(r.date||"—")+'</td></tr>';}).join("")||'<tr><td colspan="7" class="empty">该学生暂无第二课堂记录</td></tr>';
+    summary='<div class="card" style="padding:12px"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><b>🎓 学生第二课堂汇总'+(rows.length?'（'+esc(rows[0].sname||q)+' / '+esc(rows[0].sid||"—")+'）':"")+'</b><span style="flex:1"></span><button class="btn btn-sm btn-ghost" onclick="window.__ccQ=\'\';renderMain()">清除查询</button></div>'
+      +'<div class="stat-grid" style="margin-bottom:8px"><div><small>记录数</small><b>'+rows.length+'</b></div><div><small>累计学时</small><b>'+hours+'</b></div><div><small>累计学分</small><b>'+Math.round(credit*100)/100+'</b></div><div><small>已认定 / 待审核</small><b>'+okN+' / '+pending+'</b></div></div>'
+      +(Object.keys(byModule).length?'<div class="muted" style="margin-bottom:8px">模块学时分布：'+Object.keys(byModule).map(function(m){return '<span class="tag" style="margin:2px 6px 2px 0">'+esc(m)+' '+byModule[m]+' 学时</span>';}).join("")+'</div>':"")
+      +'<div class="list-scroll" style="border:0"><table><thead><tr><th>学年</th><th>模块</th><th>项目</th><th>学时</th><th>学分</th><th>状态</th><th>日期</th></tr></thead><tbody>'+detail+'</tbody></table></div></div>';
+  }
+  return '<div class="card" style="padding:12px"><div class="toolbar"><input class="in" id="ccQuery" style="flex:1;min-width:170px" placeholder="输入学号或姓名汇总查询该生第二课堂学时学分…" value="'+esc(window.__ccQ)+'" onkeydown="if(event.key===\'Enter\'&&!event.isComposing){window.__ccQ=this.value;renderMain();}"><button class="btn btn-sm btn-primary" onclick="window.__ccQ=document.getElementById(\'ccQuery\').value;renderMain()">汇总查询</button></div></div>'+summary;
+}
+function colLabel(kind,c){
+  var M=LIST_META[kind];
+  if(c==="orgName")return "组织";
+  var f=M.fields.find(function(x){return x.k===c;});
+  return f?f.label:c;
+}
+function listSetFilter(kind,k,v){listFilters[kind][k]=String(v||"").trim();listFilters[kind].page=1;scheduleRender();}
+function listResetFilter(kind){listFilters[kind]={page:1};renderMain();}
+function listPage(kind,p){listFilters[kind].page=p;renderMain();}
+function toggleOtherField(selectId,wrapId){var sel=document.getElementById(selectId),wrap=document.getElementById(wrapId);if(wrap)wrap.style.display=sel&&sel.value==="其他"?"block":"none";}
+
+function recForm(kind,id){
+  var M=LIST_META[kind];
+  var r=id?DB[kindKey(kind)].find(function(x){return x.id===id;}):null;
+  var body='<div class="grid2">'+M.fields.map(function(f){
+    var v=r?r[f.k]:(f.type==="year"?curAcademicYear():f.type==="datetime"?today()+"T19:00":f.type==="date"?today():"");
+    var input="";
+    if(f.type==="org")input=orgPickerHtml("fld_"+f.k,r?r.orgId:"",!f.req);
+    else if(f.type==="sel"){
+      var supportsOther=f.opts.indexOf("其他")>=0,otherKey=f.k+"Other",otherValue=r?r[otherKey]||"":"";
+      input='<select id="fld_'+f.k+'"'+(supportsOther?' onchange="toggleOtherField(\'fld_'+f.k+'\',\'fld_'+f.k+'_other_wrap\')"':'')+'><option value="">请选择</option>'+f.opts.map(function(o){return '<option'+(v===o?" selected":"")+'>'+esc(o)+'</option>';}).join("")+'</select>'
+        +(supportsOther?'<div id="fld_'+f.k+'_other_wrap" style="margin-top:8px;display:'+(v==="其他"?"block":"none")+'"><input id="fld_'+otherKey+'" value="'+esc(otherValue)+'" placeholder="请填写其他'+esc(f.label)+'名称"></div>':'');
+    }
+    else if(f.type==="year")input='<select id="fld_'+f.k+'">'+yearOptions(v)+'</select>';
+    else if(f.type==="textarea")input='<textarea id="fld_'+f.k+'" rows="3">'+esc(v)+'</textarea>';
+    else if(f.type==="date")input='<input id="fld_'+f.k+'" type="date" value="'+esc(v)+'">';
+    else if(f.type==="datetime")input='<input id="fld_'+f.k+'" type="datetime-local" value="'+esc(v)+'">';
+    else input='<input id="fld_'+f.k+'" type="'+(f.type==="num"?"number":"text")+'"'+(f.type==="num"?' min="0" step="any"':"")+(f.k==="sid"?' oninput="studentOrgApplyRecordStudent(this)"':"")+' value="'+esc(v)+'">';
+    return '<div class="field"><label>'+esc(f.label)+(f.req?'<span class="req"> *</span>':"")+'</label>'+input+(f.k==="sid"?'<span class="muted" id="studentOrgMatchHint"></span>':"")+'</div>';
+  }).join("")+'</div>'+(r?attEditorHtml(r.atts,kind,r.id):'<div class="muted">保存后可上传附件。</div>');
+  openModal((r?"编辑":"新增")+" · "+M.title.replace(/^[^\s]+\s/,""),body,r?"保存":"创建",function(){
+    var row={};var org2="";
+    for(var i=0;i<M.fields.length;i++){
+      var f=M.fields[i],el=document.getElementById("fld_"+f.k);
+      var v=String(el&&el.value!=null?el.value:"").trim();
+      if(f.req&&!v){toast("请填写「"+f.label+"」","warn");return false;}
+      if(f.type==="org"){
+        if(!v){row[f.k]="";continue;}
+        var selectedOrg=findRunningOrgByLabel(v);
+        if(!selectedOrg){toast("「"+f.label+"」请选择状态为「运行中」的组织","warn");return false;}
+        row[f.k]=selectedOrg.id;continue;
+      }
+      if(f.type==="num"){
+        if(v===""){row[f.k]="";continue;}
+        if(isNaN(Number(v))||Number(v)<0){toast("「"+f.label+"」应为非负数字","warn");return false;}
+        v=Number(v);
+      }
+      row[f.k]=v;
+      if(f.type==="sel"&&f.opts.indexOf("其他")>=0){
+        var custom=Val("fld_"+f.k+"Other");
+        if(v==="其他"&&!custom){toast("请填写「其他"+f.label+"名称」","warn");return false;}
+        row[f.k+"Other"]=v==="其他"?custom:"";
+      }
+    }
+    if(kind==="classroom")studentOrgHydrateClassroom(row);
+    if(r){Object.assign(r,row);r.updatedAt=new Date().toISOString();}
+    else{row.id=uid(kind);row.atts=[];row.createdAt=new Date().toISOString();DB[kindKey(kind)].unshift(row);}
+    save();renderMain();toast("已保存","ok");
+    if(kind==="meeting"&&Number(row.expected)>0&&Number(row.actual)>Number(row.expected))toast("提示：实到（"+row.actual+"）大于应到（"+row.expected+"），请核对出勤数据","warn");
+    return true;
+  });
+}
+async function recDelete(kind,id){
+  var r=DB[kindKey(kind)].find(function(x){return x.id===id;});if(!r)return;
+  var label=r.name||r.title||r.item||"该记录";
+  var config={activities:["studentOrgActivity","student_org_activity"],meetings:["studentOrgMeeting","student_org_meeting"],trainings:["studentOrgTraining","student_org_training"],classrooms:["studentOrgClassroom","student_org_classroom"]}[kindKey(kind)];
+  if(!config){toast("该类记录暂不支持删除","warn");return;}
+  if(await studentOrgRecycle(config[0],config[1],[id]))toast("已将「"+label+"」移入回收站，附件继续保留","ok");
+}
+
+/* ---------- 附件 ---------- */
+var attCtx=null;
+function attEditorHtml(atts,kind,recId){
+  atts=atts||[];
+  var chips=atts.map(function(a,i){return '<span class="att-chip">📎 <a href="javascript:void(0)" onclick="attDownload(\''+kind+'\',\''+recId+'\',\''+a.id+'\')">'+esc(a.name)+'</a> <span class="muted">'+fmtSize(a.size)+'</span><span class="x" onclick="attRemove(\''+kind+'\',\''+recId+'\',\''+a.id+'\')">✕</span></span>';}).join("");
+  return '<div class="field"><label>附件（方案 / 总结 / 照片等，单个 ≤ 100MB）</label><div class="att-drop" id="attDrop">'+(chips||"暂无附件")+'</div><button class="btn btn-sm btn-ghost" type="button" onclick="attPick(\''+kind+'\',\''+recId+'\')">＋ 上传附件</button><span class="muted">附件将加密保存到数智学工系统，单个文件最大 100MB。</span></div>';
+}
+function attPick(kind,recId){
+  attCtx={kind:kind,recId:recId};
+  var fp=document.getElementById("filePick");
+  fp.onchange=async function(){
+    var files=Array.from(fp.files||[]);
+    fp.value="";
+    if(!files.length)return;
+    var rec=DB[kindKey(attCtx.kind)].find(function(x){return x.id===attCtx.recId;});if(!rec)return;
+    var workbench=systemWorkbench();
+    if(!(workbench&&workbench.legacy&&workbench.legacy.attachmentUploadFile)){
+      toast("系统附件服务尚未就绪，请刷新页面后重试","warn");return;
+    }
+    var added=0,failed=[];
+    for(var i=0;i<files.length;i++){
+      var file=files[i];
+      if(file.size>100*1024*1024){failed.push("「"+file.name+"」超过 100MB");continue;}
+      try{
+        var uploaded=await workbench.legacy.attachmentUploadFile(file.name,file);
+        rec.atts=rec.atts||[];
+        rec.atts.push({id:uploaded.id,name:uploaded.name||file.name,size:uploaded.size||file.size,mime:file.type,url:uploaded.url,ts:new Date().toISOString()});
+        added++;
+      }catch(error){failed.push("「"+file.name+"」："+(error.message||"上传失败"));}
+    }
+    if(added){save();refreshAtt(kind,recId);}
+    if(added)toast("已上传 "+added+" 个附件到系统附件库","ok");
+    if(failed.length)toast(failed.join("；"),"warn");
+  };
+  fp.click();
+}
+function refreshAtt(kind,recId){
+  var rec=DB[kindKey(kind)].find(function(x){return x.id===recId;});if(!rec)return;
+  var drop=document.getElementById("attDrop");
+  if(drop)drop.innerHTML=(rec.atts||[]).map(function(a){return '<span class="att-chip">📎 <a href="javascript:void(0)" onclick="attDownload(\''+kind+'\',\''+recId+'\',\''+a.id+'\')">'+esc(a.name)+'</a> <span class="muted">'+fmtSize(a.size)+'</span><span class="x" onclick="attRemove(\''+kind+'\',\''+recId+'\',\''+a.id+'\')">✕</span></span>';}).join("")||"暂无附件";
+}
+async function attRemove(kind,recId,attId){
+  var rec=DB[kindKey(kind)].find(function(x){return x.id===recId;});if(!rec)return;
+  var a=(rec.atts||[]).find(function(x){return x.id===attId;});if(!a)return;
+  if(!confirm("确认移除附件「"+a.name+"」？移除后不可恢复。"))return;
+  var before=(rec.atts||[]).slice();
+  rec.atts=(rec.atts||[]).filter(function(x){return x.id!==attId;});
+  save();refreshAtt(kind,recId);
+  var workbench=systemWorkbench();
+  if(a.url&&workbench&&workbench.legacy){
+    try{
+      await workbench.legacy.flushStore();
+      await workbench.legacy.attachmentDelete(a.id);
+    }catch(error){
+      rec.atts=before;save();refreshAtt(kind,recId);
+      toast("附件删除失败："+(error.message||"请稍后重试"),"warn");return;
+    }
+  }
+  toast("已移除附件","ok");
+}
+function attDownload(kind,recId,attId){
+  var rec=DB[kindKey(kind)].find(function(x){return x.id===recId;});if(!rec)return;
+  var a=(rec.atts||[]).find(function(x){return x.id===attId;});if(!a)return;
+  var link=document.createElement("a");link.href=a.url;link.download=a.name;document.body.appendChild(link);link.click();link.remove();
+}
+
+/* ---------- Excel / 模板 / 导入 ---------- */
+function downloadFile(name,content,mime){
+  var blob=content instanceof Blob?content:new Blob([content],{type:(mime||"text/plain")+";charset=utf-8"});
+  var url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){a.remove();URL.revokeObjectURL(url);},200);
+}
+function exportCsv(kind,cat,useView){
+  var rows,head;
+  if(kind==="orgs"){
+    var list=useView?(__viewCache["orgs:"+cat]||DB.orgs):DB.orgs.filter(function(o){return !cat||o.cat===cat;});
+    head=["类别","名称","社团类别","所属学院","学年","届数","指导老师","状态","部门数","成员数","简介"];
+    rows=list.map(function(o){return [ORG_CATS[o.cat],o.name,o.clubType||"",o.dept||"",o.year,o.termNo,o.advisor||"",o.status,treeCount(o.structure),treeMembers(o.structure),o.intro||""];});
+  }else if(kind==="task"){
+    var taskList=useView?(__viewCache.task||DB.tasks):DB.tasks;
+    head=["所属组织","任务标题","状态","优先级","负责人","截止日期","进度（%）","任务说明"];
+    rows=taskList.map(function(t){return [orgName(t.orgId),t.title||"",TASK_STAGE_LABELS[t.stage||"todo"]||"待办",(TASK_PRIORITIES.find(function(p){return p.k===t.priority;})||TASK_PRIORITIES[1]).label,t.assignee||"",t.due||"",t.progress==null?"":t.progress,t.desc||""];});
+  }else{
+    var M=LIST_META[kind];
+    head=M.csvHead;
+    var list=useView?(__viewCache[kind]||DB[kindKey(kind)]):DB[kindKey(kind)];
+    rows=list.map(function(r){return M.csvHead.map(function(h){var lab=h;var f=M.fields.find(function(x){return x.label===lab;});if(!f){return h==="组织"||h==="主办组织"||h==="相关组织"?orgName(r.orgId):r[h]||"";}var v=r[f.k];if((f.k==="type"||f.k==="module")&&v==="其他"&&r[f.k+"Other"])v="其他："+r[f.k+"Other"];if(f.type==="datetime"&&typeof v==="string")v=v.replace("T"," ");return v==null?"":v;});});
+  }
+  if(!rows.length){toast("暂无可导出的数据","warn");return;}
+  var exportName=({orgs:"组织",activity:"活动",meeting:"会议记录",training:"培训记录",classroom:"第二课堂",task:"任务"})[kind]||"导出";
+  downloadXlsxFile(({orgs:"学生组织",activity:"活动",meeting:"会议记录",training:"培训记录",classroom:"第二课堂",task:"任务"})[kind]||"导出", [head].concat(rows), (kind==="orgs"?(cat?ORG_CATS[cat]:"学生组织"):"")+"_"+exportName+"_"+today()+".xlsx");
+  toast("已导出 "+rows.length+" 条"+(useView?"（当前筛选结果）":""),"ok");
+}
+function downloadTemplate(kind){
+  if(kind==="orgs"){
+    downloadXlsxFile("导入模板_组织",[ORG_IMPORT_HEAD,["校级学生会","示例学生委员会","","","2026-2027","1","王老师","运行中","示例备注"]],"导入模板_组织.xlsx");
+    toast("模板已下载；「类别」有效值：校级学生会 / 校级社团 / 院级学生会 / 院级社团 / 其他组织；同类别同名同学年组织不会重复导入","ok");
+    return;
+  }
+  if(kind==="struct"){
+    downloadXlsxFile("导入模板_架构成员",[STRUCT_IMPORT_HEAD,
+      ["主席团","统筹组织工作","张三","20230101","信息工程学院","2023级","计算机应用","2301","执行主席","13800000000","在职","2026-09-01"]],
+    "导入模板_架构成员.xlsx");
+    toast("模板已下载；「部门路径」用 / 分层（如 办公室/文书组），状态可填 在职 / 已卸任 / 退出 / 开除；同名部门自动合并；同学号/同名成员不重复导入；仅填部门路径的行只创建部门","ok");
+    return;
+  }
+  if(kind==="task"){
+    downloadXlsxFile("导入模板_任务",[TASK_IMPORT_HEAD,["示例任务","校学生委员会","张三","2026-09-30","高","0","待办","示例任务备注"]],"导入模板_任务.xlsx");
+    toast("模板已下载；「优先级」填 高/中/低，「阶段」填 待办/进行中/已完成","ok");
+    return;
+  }
+  var M=LIST_META[kind];
+  var head=M.csvHead;
+  var fixed={"学号":"20240001","姓名":"示例学生","学院":"示例学院","年级":"2024级","专业":"示例专业","班级":"示例班级","学年":"2026-2027","活动日期":"2026-10-14","日期":"2026-10-14","获得日期":"2026-10-14","时间":"2026-10-14 14:00","主办组织":"示例学生委员会","组织":"示例学生委员会"};
+  var sample=head.map(function(h){var field=M.fields.find(function(item){return item.label===h;});if(Object.prototype.hasOwnProperty.call(fixed,h))return fixed[h];if(field&&field.type==="sel"&&field.opts&&field.opts.length)return field.opts[0];if(field&&field.type==="num")return "1";return "示例"+h;});
+  downloadXlsxFile("导入模板_"+({activity:"活动",meeting:"会议记录",training:"培训记录",classroom:"第二课堂"})[kind], [head,sample], "导入模板_"+({activity:"活动",meeting:"会议记录",training:"培训记录",classroom:"第二课堂"})[kind]+".xlsx");
+  toast("模板已下载；填写后用「导入 Excel」上传（首行表头需保持一致）","ok");
+}
+function parseCsv(text){
+  var rows=[],row=[],cur="",q=false;
+  text=String(text||"").replace(/^\ufeff/,"");
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"')q=true;
+    else if(c===","){row.push(cur);cur="";}
+    else if(c==="\n"){row.push(cur);rows.push(row);row=[];cur="";}
+    else if(c!=="\r")cur+=c;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(x){return String(x).trim()!=="";});});
+}
+/* ---------- Excel(.xlsx) 读取：zip 解包（stored/deflate-raw）+ sharedStrings/inlineStr ---------- */
+function xlsxText(s){return String(s||"").replace(/<[^>]+>/g,"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,"&");}
+function zipEntries(buf){
+  var dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength),e=-1;
+  for(var i=buf.length-22;i>=Math.max(0,buf.length-22-65536);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break;}}
+  if(e<0)throw new Error("不是有效的 xlsx（zip）文件");
+  var count=dv.getUint16(e+10,true),off=dv.getUint32(e+16,true),out=[],p=off;
+  for(var c=0;c<count;c++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    var ent={method:dv.getUint16(p+10,true),csize:dv.getUint32(p+20,true),namelen:dv.getUint16(p+28,true),extralen:dv.getUint16(p+30,true),comlen:dv.getUint16(p+32,true),lho:dv.getUint32(p+42,true)};
+    ent.name=new TextDecoder().decode(buf.subarray(p+46,p+46+ent.namelen));
+    out.push(ent);p+=46+ent.namelen+ent.extralen+ent.comlen;
+  }
+  return out;
+}
+async function zipRead(buf,ent){
+  var dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+  if(dv.getUint32(ent.lho,true)!==0x04034b50)throw new Error("zip 本地文件头损坏");
+  var namelen=dv.getUint16(ent.lho+26,true),extralen=dv.getUint16(ent.lho+28,true);
+  var start=ent.lho+30+namelen+extralen,data=buf.subarray(start,start+ent.csize);
+  if(ent.method===0)return data;
+  if(ent.method===8){
+    if(typeof DecompressionStream==="undefined")throw new Error("当前浏览器不支持该压缩方式，请另存为 CSV 导入");
+    var stream=new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  throw new Error("不支持的 zip 压缩方式");
+}
+function xlsxShared(xml){
+  var out=[],siRe=/<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g,m;
+  while((m=siRe.exec(xml)))out.push(xlsxText(m[1]));
+  return out;
+}
+function xlsxSheetRows(xml,shared){
+  var rows=[],rowRe=/<row[^>]*?>([\s\S]*?)<\/row>|<row[^>]*?\/>/g,m;
+  while((m=rowRe.exec(xml))){
+    var cells=[],cellRe=/<c([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g,cm;
+    while((cm=cellRe.exec(m[1]||""))){
+      var attrs=cm[1]||"",inner=cm[2]||"",col=0;
+      var refM=attrs.match(/r="([A-Z]+)\d+"/);
+      if(refM){for(var k=0;k<refM[1].length;k++)col=col*26+(refM[1].charCodeAt(k)-64);col-=1;}
+      var tM=attrs.match(/t="([^"]+)"/),t=tM?tM[1]:"",val="";
+      if(t==="inlineStr"){var isM=inner.match(/<is(?:\s[^>]*)?>([\s\S]*?)<\/is>/);val=xlsxText(isM?isM[1]:"");}
+      else{
+        var vM=inner.match(/<v(?:\s[^>]*)?>([\s\S]*?)<\/v>/);val=vM?vM[1]:"";
+        if(t==="s")val=shared[Number(val)]||"";
+        else if(t==="b")val=val==="1"?"TRUE":"FALSE";
+        else val=xlsxText(val);
+      }
+      if(col>=0)cells[col]=val;
+    }
+    var filled=[];for(var k2=0;k2<cells.length;k2++)filled[k2]=cells[k2]==null?"":String(cells[k2]);
+    rows.push(filled);
+  }
+  return rows;
+}
+async function readXlsxRows(ab){
+  var buf=new Uint8Array(ab),ents=zipEntries(buf),byName={};
+  ents.forEach(function(e){byName[e.name]=e;});
+  var sheetPath=null;
+  try{
+    var wb=new TextDecoder().decode(await zipRead(buf,byName["xl/workbook.xml"]));
+    var ridM=wb.match(/<sheet(?:\s[^>]*?)?\sr:id="([^"]+)"/);
+    if(ridM&&byName["xl/_rels/workbook.xml.rels"]){
+      var rels=new TextDecoder().decode(await zipRead(buf,byName["xl/_rels/workbook.xml.rels"]));
+      var tm=rels.match(new RegExp('Id="'+ridM[1]+'"[^>]*?Target="([^"]+)"'))||rels.match(new RegExp('Target="([^"]+)"[^>]*?Id="'+ridM[1]+'"'));
+      if(tm){sheetPath="xl/"+tm[1].replace(/^\//,"").replace(/^xl\//,"");}
+    }
+  }catch(e){}
+  if(!sheetPath||!byName[sheetPath])sheetPath=Object.keys(byName).filter(function(n){return /^xl\/worksheets\/sheet1\.xml$/i.test(n);})[0];
+  if(!sheetPath)throw new Error("未找到工作表");
+  var shared=[];
+  if(byName["xl/sharedStrings.xml"])shared=xlsxShared(new TextDecoder().decode(await zipRead(buf,byName["xl/sharedStrings.xml"])));
+  return xlsxSheetRows(new TextDecoder().decode(await zipRead(buf,byName[sheetPath])),shared);
+}
+/* 统一导入入口：.xlsx 走 zip 解包；.csv 优先 UTF-8（含 BOM），解码失败回退 GBK（Excel 另存 CSV 常为 ANSI） */
+/* 统一文件解析：.xlsx 走 zip 解包；.csv 优先 UTF-8（含 BOM），失败回退 GBK（Excel 另存 CSV 常为 ANSI） */
+async function parseImportFile(file){
+  var rows,name=String(file.name||"").toLowerCase();
+  if(Number(file.size||0)>20*1024*1024){toast("导入文件不能超过 20MB，请拆分文件后重试","warn");return null;}
+  if(/\.xlsx$/.test(name)){
+    try{
+      var parentReader=null;try{parentReader=window.parent&&window.parent!==window&&window.parent.smartReadWorkbook;}catch(_parentError){}
+      if(typeof parentReader==="function"){
+        var sheets=await parentReader(file);rows=sheets&&sheets[0]&&sheets[0].rows||[];
+      }else rows=await readXlsxRows(await file.arrayBuffer());
+    }
+    catch(e){toast("Excel 读取失败："+e.message,"warn");return null;}
+  }else if(/\.xls$/.test(name)){
+    toast("暂不支持旧版 .xls 格式，请在 Excel 中「另存为」.xlsx 或 .csv 后再导入","warn");return null;
+  }else{
+    var ab=await file.arrayBuffer(),text;
+    try{text=new TextDecoder("utf-8",{fatal:true}).decode(ab);}
+    catch(e){try{text=new TextDecoder("gbk").decode(ab);}catch(e2){text=new TextDecoder("utf-8").decode(ab);}}
+    rows=parseCsv(text);
+  }
+  if(rows&&rows.length>20050){toast("导入文件超过 20000 行，请拆分文件后重试","warn");return null;}
+  if(rows&&rows.some(function(row){return (row||[]).length>200;})){toast("导入文件超过 200 列，请删除无关列后重试","warn");return null;}
+  return rows;
+}
+function studentOrgImportProgress(title,message){try{return window.parent&&window.parent.WorkbenchProgress?window.parent.WorkbenchProgress.begin({title:title,message:message}):null;}catch(_error){return null;}}
+function studentOrgSmartMatchFields(kind){
+  if(kind==="orgs")return [{label:"类别",options:Object.keys(ORG_CATS).map(function(key){return ORG_CATS[key];})},{label:"社团类别",options:CLUB_TYPES},{label:"状态",options:ORG_STATUS}];
+  if(kind==="task")return [{label:"优先级",options:TASK_PRIORITIES.map(function(item){return item.label;})},{label:"阶段",options:Object.keys(TASK_STAGE_LABELS).map(function(key){return TASK_STAGE_LABELS[key];})}];
+  if(kind==="struct")return [{label:"状态",options:MEMBER_STATUSES}];
+  var meta=LIST_META[kind];return meta?meta.fields.filter(function(field){return field.type==="sel"&&Array.isArray(field.opts)&&field.opts.length;}).map(function(field){return {label:field.label,options:field.opts};}):[];
+}
+async function confirmStudentOrgImportMatches(kind,rows){
+  var fields=studentOrgSmartMatchFields(kind);if(!fields.length||!rows||rows.length<2)return true;
+  var parentConfirm=null;try{parentConfirm=window.parent&&window.parent!==window&&window.parent.importConfirmApproximateMatches;}catch(_parentError){}
+  if(typeof parentConfirm!=="function")return true;
+  var headers=(rows[0]||[]).map(function(value){return String(value==null?"":value).trim();}),mapped=[],locations=[];
+  for(var i=1;i<rows.length;i++){
+    var row=Object.create(null),location=Object.create(null);
+    fields.forEach(function(field){var column=headers.indexOf(field.label);if(column>=0){row[field.label]=String(rows[i][column]==null?"":rows[i][column]).trim();location[field.label]=column;}});
+    Object.defineProperty(row,"__importRowNumber",{value:Number(rows[i]&&rows[i].__importRowNumber)||i+1,enumerable:false});mapped.push(row);locations.push(location);
+  }
+  var result=await parentConfirm("学生组织管理",mapped,fields);if(!result.confirmed)return false;
+  mapped.forEach(function(row,rowIndex){Object.keys(locations[rowIndex]).forEach(function(label){rows[rowIndex+1][locations[rowIndex][label]]=row[label];});});
+  return true;
+}
+async function importFile(kind,file){
+  var progress=studentOrgImportProgress("学生组织数据导入","正在读取并校验 "+file.name+"…");
+  try{
+    var rows=await parseImportFile(file);
+    if(!rows){if(progress)progress.fail("文件读取或格式校验未通过，请修正后重试");return;}
+    if(!await confirmStudentOrgImportMatches(kind,rows)){if(progress)progress.fail("已取消导入，原数据未修改");return;}
+    if(progress)progress.update(35,"正在校验并写入 "+Math.max(0,rows.length-1)+" 行数据…");
+    var imported=kind==="orgs"?importOrgRows(rows):(kind==="task"?importTaskRows(rows):importRows(kind,rows));
+    if(imported===false){if(progress)progress.fail("导入校验未通过，请按页面提示修正后重试");return;}
+    if(progress)progress.update(85,"正在确认学生组织数据已经完整保存…");
+    var bridge=window.parent&&window.parent.workbench&&window.parent.workbench.legacy;if(bridge&&bridge.flushStore)await bridge.flushStore();
+    if(progress)progress.succeed("学生组织数据导入完成");
+  }catch(error){if(progress)progress.fail("学生组织数据导入失败："+(error.message||error));toast("导入失败："+(error.message||error),"warn");}
+}
+function importRows(kind,rows){
+  var M=LIST_META[kind];
+  if(rows.length<2){toast("文件没有数据行","warn");return false;}
+  var head=rows[0].map(function(x){return String(x).trim();});
+    /* 表头 → 字段映射：按 csvHead 名称对应 fields.label（组织列按名称匹配） */
+    var map=head.map(function(h){
+      if(["组织","主办组织","相关组织"].indexOf(h)>=0)return M.fields.some(function(f){return f.k==="orgId";})?"orgId":null;
+      var f=M.fields.find(function(x){return x.label===h;});
+      return f?f.k:null;
+    });
+    /* 表头缺少必填列时整批终止，避免产生不完整记录 */
+    var reqCols=M.fields.filter(function(f){return f.req&&map.indexOf(f.k)<0;});
+    if(reqCols.length){toast("表头缺少必填列："+reqCols.map(function(f){return "「"+f.label+"」";}).join("、")+"，已终止导入","warn");return false;}
+    var added=0,skipped=0,dupSkipped=0,unknownOrgs={};
+    /* 已有记录全字段签名：防止同一文件重复导入导致记录翻倍（内容有改动的行仍可导入） */
+    var sig=function(r){return JSON.stringify(M.fields.map(function(f){return r[f.k];}));};
+    var seen=new Set(DB[kindKey(kind)].map(sig));
+    for(var i=1;i<rows.length;i++){
+      var row={id:uid(kind),atts:[],createdAt:new Date().toISOString()};
+      var valid=true;
+      for(var j=0;j<map.length;j++){
+        var k=map[j],v=String(rows[i][j]==null?"":rows[i][j]).trim();
+        if(!k)continue;
+        if(k==="orgId"){
+          row.orgId="";
+          if(v){
+            /* 业务导入仅关联状态为运行中的组织。 */
+            var cands=runningOrgs().filter(function(o){return o.name===v;});
+            if(cands.length){row.orgId=cands[0].id;}
+            else{valid=false;unknownOrgs[v]=1;}
+          }else{
+            var fo=M.fields.find(function(x){return x.k==="orgId";});
+            if(fo&&fo.req)valid=false;
+          }
+          continue;
+        }
+        var f=M.fields.find(function(x){return x.k===k;});
+        if(f&&f.type==="sel"&&v&&Array.isArray(f.opts)&&f.opts.indexOf(v)<0)valid=false;
+        if(f&&f.type==="num")v=v===""?"":Math.max(0,Number(v)||0);
+        row[k]=v;
+        if(f&&f.req&&!v)valid=false;
+      }
+      if(valid){
+        if(kind==="classroom")studentOrgHydrateClassroom(row);
+        var s=sig(row);
+        if(seen.has(s)){dupSkipped++;}
+        else{seen.add(s);DB[kindKey(kind)].unshift(row);added++;}
+      }else skipped++;
+    }
+    save();renderMain();
+    var uk=Object.keys(unknownOrgs);
+    toast("导入完成：新增 "+added+" 条"+(dupSkipped?"，跳过重复 "+dupSkipped+" 条（与现有记录完全相同）":"")+(skipped?"，跳过 "+skipped+" 条（必填缺失、组织不存在或固定选项无效）":"")+(uk.length?"；未匹配组织："+uk.slice(0,5).join("、")+(uk.length>5?" 等":""):""),added?"ok":"warn");
+    return true;
+}
+function pickCsv(kind){
+  var fp=document.getElementById("filePick");
+  fp.onchange=function(){var f=fp.files[0];fp.value="";if(f)importFile(kind,f);};
+  fp.click();
+}
+/* ---------- 组织导入：类别按中文名映射，同名同学年去重，新组织套默认架构 ---------- */
+var ORG_IMPORT_HEAD=["类别","名称","社团类别","所属学院","学年","届数","指导老师","状态","简介"];
+function importOrgRows(rows){
+  if(rows.length<2){toast("文件没有数据行","warn");return false;}
+  var head=rows[0].map(function(x){return String(x).trim();});
+  var col=Object.create(null);head.forEach(function(h,i){col[h]=i;});
+  if(col["名称"]==null||col["学年"]==null){toast("表头缺少必填列：「名称」「学年」，已终止导入","warn");return false;}
+  var catMap={};Object.keys(ORG_CATS).forEach(function(k){catMap[ORG_CATS[k]]=k;});
+  var added=0,dup=0,skipped=0,badCat={},badYear=0;
+  for(var i=1;i<rows.length;i++){
+    var r=rows[i]||[];
+    var g=function(h){var v=col[h]==null?"":r[col[h]];return String(v==null?"":v).trim();};
+    var name=g("名称"),year=g("学年");
+    if(!name||!year){skipped++;continue;}
+    var cat=catMap[g("类别")];
+    if(!cat){if(g("类别"))badCat[g("类别")]=1;skipped++;continue;}
+    var mY=year.match(/^(\d{4})$/);
+    if(mY)year=mY[1]+"-"+(Number(mY[1])+1);
+    if(!/^\d{4}-\d{4}$/.test(year)){skipped++;badYear++;continue;}
+    if(DB.orgs.some(function(o){return o.cat===cat&&o.name===name&&o.year===year;})){dup++;continue;}
+    var st=g("状态"),clubType=g("社团类别");
+    if(st&&ORG_STATUS.indexOf(st)<0){skipped++;continue;}if(!st)st="运行中";
+    if(clubType&&CLUB_TYPES.indexOf(clubType)<0){skipped++;continue;}
+    var o={id:uid("org"),cat:cat,name:name,year:year,termNo:parseInt(g("届数"),10)||0,advisor:g("指导老师"),status:st,intro:g("简介"),clubType:clubType,dept:g("所属学院"),structure:defaultStructure(cat),atts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    if((DB.years||[]).indexOf(year)<0){DB.years=DB.years||[];DB.years.push(year);}
+    DB.orgs.unshift(o);added++;
+  }
+  save();renderMain();
+  var bk=Object.keys(badCat);
+  toast("组织导入完成：新增 "+added+" 个"+(dup?"，跳过重复 "+dup+" 个（同类别同名同学年已存在）":"")+(skipped?"，跳过 "+skipped+" 行（必填缺失/固定选项无效"+(badYear?"/学年格式错误":"")+"）":"")+(bk.length?"；无效类别："+bk.slice(0,5).join("、")+"（有效值：校级学生会 / 校级社团 / 院级学生会 / 院级社团 / 其他组织）":""),added?"ok":"warn");
+  return true;
+}
+/* ---------- 架构导入：部门路径分层（“一级/二级”），同名部门合并成员，成员按学号/姓名去重 ---------- */
+var STRUCT_IMPORT_HEAD=["部门路径","部门职责","姓名","学号","学院","年级","专业","班级","职务","手机号","状态","入会日期"];
+function pickStructImport(orgId){
+  var fp=document.getElementById("filePick");
+  fp.onchange=function(){var f=fp.files[0];fp.value="";if(f)importStructFile(orgId,f);};
+  fp.click();
+}
+async function importStructFile(orgId,file){
+  var progress=studentOrgImportProgress("学生组织架构导入","正在读取并校验 "+file.name+"…");
+  try{
+    var rows=await parseImportFile(file);
+    if(!rows){if(progress)progress.fail("文件读取或格式校验未通过，请修正后重试");return;}
+    if(!await confirmStudentOrgImportMatches("struct",rows)){if(progress)progress.fail("已取消导入，原数据未修改");return;}
+    if(progress)progress.update(35,"正在校验并写入 "+Math.max(0,rows.length-1)+" 行架构数据…");
+    var imported=importStructRows(orgId,rows);
+    if(imported===false){if(progress)progress.fail("架构导入校验未通过，请按页面提示修正后重试");return;}
+    if(progress)progress.update(85,"正在确认组织架构已经完整保存…");
+    var bridge=window.parent&&window.parent.workbench&&window.parent.workbench.legacy;if(bridge&&bridge.flushStore)await bridge.flushStore();
+    if(progress)progress.succeed("学生组织架构导入完成");
+  }catch(error){if(progress)progress.fail("学生组织架构导入失败："+(error.message||error));toast("架构导入失败："+(error.message||error),"warn");}
+}
+function importStructRows(orgId,rows){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return false;
+  if(rows.length<2){toast("文件没有数据行","warn");return false;}
+  var head=rows[0].map(function(x){return String(x).trim();});
+  var col=Object.create(null);head.forEach(function(h,i){col[h]=i;});
+  if(col["部门路径"]==null&&col["姓名"]==null){toast("表头至少需要「部门路径」或「姓名」列，已终止导入","warn");return false;}
+  var newDept=0,newMem=0,dupMem=0,skipped=0;
+  /* 按部门路径查找/创建节点链（“办公室/文书组”支持全角斜杠），返回末级节点 */
+  function ensureNode(path,role){
+    var segs=String(path||"").split(/[/／]/).map(function(s){return s.trim();}).filter(Boolean);
+    if(!segs.length)return null;
+    var list=o.structure;
+    var node=null;
+    segs.forEach(function(seg){
+      var found=list.find(function(n){return n.name===seg;});
+      if(!found){found={id:uid("n"),name:seg,role:role||"",members:[],children:[]};list.push(found);newDept++;}
+      else if(role&&!found.role)found.role=role;
+      node=found;list=found.children=found.children||[];
+    });
+    return node;
+  }
+  for(var i=1;i<rows.length;i++){
+    var r=rows[i]||[];
+    var g=function(h){var v=col[h]==null?"":r[col[h]];return String(v==null?"":v).trim();};
+    var name=g("姓名"),sid=g("学号"),path=g("部门路径");
+    if(!name&&!sid&&!path){skipped++;continue;}
+    var rawStatus=g("状态");if(rawStatus&&MEMBER_STATUSES.indexOf(rawStatus)<0){skipped++;continue;}
+    var node=ensureNode(path,g("部门职责"));
+    if(!node){skipped++;continue;}
+    if(!name&&!sid)continue; /* 仅建部门的行 */
+    if(node.members.some(function(m){return (sid&&m.sid===sid)||(!sid&&m.name===name);})){dupMem++;continue;}
+    var st=normalizeMemberStatus(rawStatus);
+    node.members.push(normalizeMember(studentOrgHydrateMember({sid:sid,name:name,position:g("职务"),phone:g("手机号"),joined:g("入会日期"),status:st,college:g("学院"),grade:g("年级"),major:g("专业"),cls:g("班级")})));
+    newMem++;
+  }
+  o.updatedAt=new Date().toISOString();
+  save();refreshTree();
+  toast("架构导入完成：新增部门 "+newDept+" 个、成员 "+newMem+" 名"+(dupMem?"，跳过重复成员 "+dupMem+" 名（同学号/同名已存在）":"")+(skipped?"，跳过无效行 "+skipped+" 行":""),(newDept+newMem)?"ok":"warn");
+  return true;
+}
+/* ---------- 任务导入：优先级/阶段中文映射，组织按名称匹配，全字段签名去重 ---------- */
+var TASK_IMPORT_HEAD=["任务标题","所属组织","负责人","截止日期","优先级","进度","阶段","任务说明"];
+function importTaskRows(rows){
+  if(rows.length<2){toast("文件没有数据行","warn");return false;}
+  var head=rows[0].map(function(x){return String(x).trim();});
+  var col=Object.create(null);head.forEach(function(h,i){col[h]=i;});
+  if(col["任务标题"]==null){toast("表头缺少必填列：「任务标题」，已终止导入","warn");return false;}
+  var priMap={"高":"high","中":"mid","低":"low"};
+  var stageMap={"待办":"todo","进行中":"doing","已完成":"done"};
+  var added=0,dup=0,skipped=0,unknownOrgs={};
+  var sig=function(t){return JSON.stringify([t.title,t.orgId,t.assignee,t.due,t.priority,t.progress,t.stage,t.desc]);};
+  var seen=new Set(DB.tasks.map(sig));
+  for(var i=1;i<rows.length;i++){
+    var r=rows[i]||[];
+    var g=function(h){var v=col[h]==null?"":r[col[h]];return String(v==null?"":v).trim();};
+    var title=g("任务标题");
+    if(!title){skipped++;continue;}
+    var rawPriority=g("优先级"),rawStage=g("阶段");
+    if(rawPriority&&!priMap[rawPriority]||rawStage&&!stageMap[rawStage]){skipped++;continue;}
+    var orgId="",ov=g("所属组织");
+    if(ov){
+      var cands=runningOrgs().filter(function(o){return o.name===ov;});
+      if(cands.length){orgId=cands[0].id;}
+      else{unknownOrgs[ov]=1;skipped++;continue;}
+    }
+    var stage=stageMap[rawStage]||"todo";
+    var progress=Math.max(0,Math.min(100,parseInt(g("进度"),10)||0));
+    if(stage==="done")progress=100;
+    var t={id:uid("task"),title:title,orgId:orgId,assignee:g("负责人"),due:g("截止日期"),priority:priMap[rawPriority]||"mid",progress:progress,stage:stage,desc:g("任务说明"),createdAt:new Date().toISOString()};
+    var s=sig(t);
+    if(seen.has(s)){dup++;continue;}
+    seen.add(s);DB.tasks.unshift(t);added++;
+  }
+  save();renderMain();
+  var uk=Object.keys(unknownOrgs);
+  toast("任务导入完成：新增 "+added+" 条"+(dup?"，跳过重复 "+dup+" 条":"")+(skipped?"，跳过 "+skipped+" 条（标题缺失、组织不存在或固定选项无效）":"")+(uk.length?"；未匹配组织："+uk.slice(0,5).join("、")+"（须与已建组织名称一致，留空则不关联）":""),added?"ok":"warn");
+  return true;
+}
+
+/* ---------- 任务看板（参考 -web-main：待办/进行中/已完成 + 负责人 + 优先级 + 进度） ---------- */
+var taskFilter={kw:"",orgId:""};
+function taskboardHtml(){
+  var kw=taskFilter.kw.toLowerCase();
+  var list=DB.tasks.filter(function(t){
+    return (!kw||[t.title,t.desc,t.assignee].join(" ").toLowerCase().indexOf(kw)>=0)&&(!taskFilter.orgId||t.orgId===taskFilter.orgId);
+  });
+  var cols=TASK_STAGES.map(function(stage){
+    var cards=list.filter(function(t){return (t.stage||"todo")===stage;}).map(function(t){
+      var pri=TASK_PRIORITIES.find(function(p){return p.k===t.priority;})||TASK_PRIORITIES[1];
+      var tOrg=orgName(t.orgId);
+      var org=tOrg?'<div class="muted" style="font-size:11.5px;margin-top:2px">🏛️ '+esc(tOrg)+'</div>':"";
+      var prog=t.stage==="done"?100:Number(t.progress)||0;
+      var overdueDays=(t.due&&t.stage!=="done")?Math.floor((Date.now()-new Date(t.due+"T23:59:59").getTime())/86400000):0;
+      var dueHtml=overdueDays>0?'<span style="color:#b3423a;font-weight:600">📅 已逾期 '+overdueDays+' 天</span>':'<span>📅 '+esc(t.due||"无期限")+'</span>';
+      return '<div class="tk-card" data-id="'+t.id+'"><div class="tk-card-h"><span class="tk-pri" style="background:'+pri.color+'">'+pri.label+'</span><b>'+esc(t.title)+'</b></div>'
+        +(t.desc?'<div class="muted" style="font-size:13px;margin-top:3px;white-space:pre-wrap">'+esc(t.desc)+'</div>':'')
+        +org
+        +'<div class="tk-meta"><span>👤 '+esc(t.assignee||"未指派")+'</span>'+dueHtml+'</div>'
+        +'<div class="tk-prog"><i style="width:'+prog+'%"></i></div><span class="muted" style="font-size:11.5px">'+prog+'%</span>'
+        +'<div class="tk-ops"><button class="btn btn-sm btn-ghost" onclick="taskForm(\''+t.id+'\')">编辑</button>'
+        +(stage!=="todo"?'<button class="btn btn-sm btn-ghost" onclick="taskMove(\''+t.id+'\',-1)">◀ 退回</button>':"")
+        +(stage!=="done"?'<button class="btn btn-sm btn-primary" onclick="taskMove(\''+t.id+'\',1)">推进 ▶</button>':"")
+        +'<button class="btn btn-sm btn-ghost btn-danger" onclick="taskDelete(\''+t.id+'\')">✕</button></div></div>';
+    }).join("")||'<div class="empty" style="padding:16px">暂无任务</div>';
+    return '<div class="tk-col"><div class="tk-col-h stage-'+stage+'"><b>'+TASK_STAGE_LABELS[stage]+'</b><span>'+(stage==="todo"?list.filter(function(t){return (t.stage||"todo")==="todo";}).length:stage==="doing"?list.filter(function(t){return t.stage==="doing";}).length:list.filter(function(t){return t.stage==="done";}).length)+'</span></div>'+cards+'</div>';
+  }).join("");
+  __viewCache.task=list;
+  return '<h2 class="ptitle">🗂️ 任务看板</h2><p class="sub">组织任务三栏看板：待办 → 进行中 → 已完成，支持负责人、优先级、期限与进度；点击「推进」单向流转。</p>'
+    +'<div class="card" style="padding:12px"><div class="toolbar"><input class="in" id="taskKw" style="flex:1;min-width:160px" placeholder="搜索任务、负责人…" value="'+esc(taskFilter.kw)+'" oninput="taskFilter.kw=this.value;scheduleRender()"><select class="in" onchange="taskFilter.orgId=this.value;renderMain()"><option value="">全部组织</option>'+DB.orgs.map(function(o){return '<option value="'+o.id+'"'+(taskFilter.orgId===o.id?" selected":"")+'>'+esc(o.name)+'</option>';}).join("")+'</select><span style="flex:1"></span><button class="btn btn-sm btn-ghost" onclick="downloadTemplate(\'task\')">任务模板</button><button class="btn btn-sm btn-primary" onclick="pickCsv(\'task\')">导入任务 Excel</button><button class="btn btn-sm btn-ghost" onclick="exportCsv(\'task\',null,1)">导出 Excel</button><button class="btn btn-primary" onclick="taskForm(null)">＋ 新建任务</button></div></div>'
+    +'<div class="tk-board">'+cols+'</div>';
+}
+function taskForm(id){
+  var t=id?DB.tasks.find(function(x){return x.id===id;}):null;
+  var body='<div class="grid2">'
+    +'<div class="field"><label>任务标题<span class="req"> *</span></label><input id="t_title" value="'+esc(t?t.title:"")+'"></div>'
+    +'<div class="field"><label>所属组织</label>'+orgPickerHtml("t_orgId",t?t.orgId:"",true)+'</div>'
+    +'<div class="field"><label>负责人</label><input id="t_assignee" value="'+esc(t?t.assignee||"":"")+'" placeholder="成员姓名"></div>'
+    +'<div class="field"><label>截止日期</label><input id="t_due" type="date" value="'+esc(t?t.due||"":"")+'"></div>'
+    +'<div class="field"><label>优先级</label><select id="t_priority">'+TASK_PRIORITIES.map(function(p){return '<option value="'+p.k+'"'+((t?t.priority:"mid")===p.k?" selected":"")+'>'+p.label+'</option>';}).join("")+'</select></div>'
+    +'<div class="field"><label>进度（%）</label><input id="t_progress" type="number" min="0" max="100" value="'+esc(t&&t.stage==="done"?100:(t?t.progress||0:0))+'"></div>'
+    +'</div><div class="field"><label>任务说明</label><textarea id="t_desc" rows="3">'+esc(t?t.desc||"":"")+'</textarea></div>';
+  openModal(t?"编辑任务":"新建任务",body,t?"保存":"创建",function(){
+    var title=Val("t_title");if(!title){toast("请填写任务标题","warn");return false;}
+    var orgLabel=Val("t_orgId"),selectedOrg=orgLabel?findRunningOrgByLabel(orgLabel):null;
+    if(orgLabel&&!selectedOrg){toast("所属组织请选择状态为「运行中」的组织","warn");return false;}
+    var row={title:title,orgId:selectedOrg?selectedOrg.id:"",assignee:Val("t_assignee"),due:Val("t_due"),priority:Val("t_priority")||"mid",progress:Math.max(0,Math.min(100,parseInt(Val("t_progress"),10)||0)),desc:Val("t_desc")};
+    if(t){Object.assign(t,row);t.updatedAt=new Date().toISOString();}
+    else{row.id=uid("task");row.stage="todo";row.createdAt=new Date().toISOString();DB.tasks.unshift(row);}
+    save();renderMain();toast("已保存","ok");return true;
+  });
+}
+function taskMove(id,dir){
+  var t=DB.tasks.find(function(x){return x.id===id;});if(!t)return;
+  var i=TASK_STAGES.indexOf(t.stage||"todo")+dir;
+  if(i<0||i>=TASK_STAGES.length)return;
+  t.stage=TASK_STAGES[i];
+  if(t.stage==="done")t.progress=100;else if(t.stage==="doing"&&!Number(t.progress))t.progress=10;
+  save();renderMain();
+}
+async function taskDelete(id){
+  var t=DB.tasks.find(function(x){return x.id===id;});if(!t)return;
+  if(await studentOrgRecycle("studentOrgTask","student_org_task",[id]))toast("任务已移入回收站","ok");
+}
+
+
+/* ---------- 资料库（全局附件聚合，参考 -web-main 资料页：搜索 + 类型筛选） ---------- */
+var libraryFilter={kw:"",type:""};
+function attType(name){
+  var m=String(name||"").toLowerCase().match(/\.([a-z0-9]+)$/);
+  var ext=m?m[1]:"";
+  if(["jpg","jpeg","png","gif","webp","bmp"].indexOf(ext)>=0)return "图片";
+  if(ext==="pdf")return "PDF";
+  if(["doc","docx"].indexOf(ext)>=0)return "Word";
+  if(["xls","xlsx","csv"].indexOf(ext)>=0)return "表格";
+  if(["ppt","pptx"].indexOf(ext)>=0)return "演示";
+  if(["zip","rar","7z"].indexOf(ext)>=0)return "压缩包";
+  return "其他";
+}
+function libraryHtml(){
+  var kw=libraryFilter.kw.toLowerCase();
+  var items=[];
+  [["orgs","组织",function(r){return r.name;}],["activities","活动",function(r){return r.name;}],["meetings","会议",function(r){return r.title;}],["trainings","培训",function(r){return r.name;}],["classrooms","第二课堂",function(r){return (r.sname||"")+" · "+(r.item||"");}]].forEach(function(cfg){
+    DB[cfg[0]].forEach(function(r){
+      (r.atts||[]).forEach(function(a){
+        items.push({kind:cfg[0],kindLabel:cfg[1],recId:r.id,recName:cfg[2](r),att:a});
+      });
+    });
+  });
+  items=items.filter(function(it){
+    return (!kw||[it.att.name,it.recName,it.kindLabel].join(" ").toLowerCase().indexOf(kw)>=0)&&(!libraryFilter.type||attType(it.att.name)===libraryFilter.type);
+  }).sort(function(a,b){return String(b.att.ts||"").localeCompare(String(a.att.ts||""));});
+  var types=["图片","PDF","Word","表格","演示","压缩包","其他"];
+  var rows=items.map(function(it){
+    return '<tr><td style="min-width:150px"><b>'+esc(it.att.name)+'</b></td><td><span class="tag mut">'+attType(it.att.name)+'</span></td><td>'+esc(it.kindLabel)+'</td><td>'+esc(it.recName||"—")+'</td><td class="muted">'+fmtSize(it.att.size)+'</td><td class="muted">'+esc((it.att.ts||"").slice(0,10)||"—")+'</td><td style="white-space:nowrap"><a href="javascript:void(0)" onclick="attDownload(\''+it.kind+'\',\''+it.recId+'\',\''+it.att.id+'\')">下载</a>　<a href="javascript:void(0)" onclick="jumpToRecord(\''+it.kind+'\',\''+it.recId+'\')">打开记录</a></td></tr>';
+  }).join("")||'<tr><td colspan="7" class="empty">暂无附件；在各记录的编辑弹窗中可上传</td></tr>';
+  return '<h2 class="ptitle">📁 资料库</h2><p class="sub">全部记录附件的聚合视图，支持按名称、来源和类型检索下载。</p>'
+    +'<div class="card" style="padding:12px"><div class="toolbar"><input class="in" id="libKw" style="flex:1;min-width:170px" placeholder="搜索文件名或来源记录…" value="'+esc(libraryFilter.kw)+'" oninput="libraryFilter.kw=this.value;scheduleRender()"><select class="in" onchange="libraryFilter.type=this.value;renderMain()"><option value="">全部类型</option>'+types.map(function(t){return '<option value="'+t+'"'+(libraryFilter.type===t?" selected":"")+'>'+t+'</option>';}).join("")+'</select><span style="flex:1"></span><span class="muted">共 '+items.length+' 个附件</span></div></div>'
+    +'<div class="list-scroll"><table><thead><tr><th>文件名</th><th>类型</th><th>来源模块</th><th>来源记录</th><th>大小</th><th>上传日期</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function jumpToRecord(kind,id){
+  if(kind==="orgs"){orgForm(id);return;}
+  /* 资料库的 kind 是存储键（activities 等），映射回台账页签键 */
+  var map={activities:"activity",meetings:"meeting",trainings:"training",classrooms:"classroom"};
+  var k=map[kind]||kind;
+  if(LIST_META[k]){go(k);recForm(k,id);}
+}
+/* ---------- 成员考评（参考 -web-main：三分数加权 30/35/35 + 条形图） ---------- */
+function orgFlatMembers(o){
+  var out=[];
+  (function walk(nodes,path){(nodes||[]).forEach(function(n){
+    var p=path?path+" / "+n.name:n.name;
+    (n.members||[]).forEach(function(m){out.push({member:m,dept:p,node:n});});
+    walk(n.children,p);
+  });})(o.structure||[]);
+  return out;
+}
+/* 学号在活动参与名单中出现的次数（attendees 每行：姓名,学号） */
+function memberActCount(sid){
+  if(!sid)return 0;
+  return DB.activities.filter(function(a){
+    return String(a.attendees||"").split(/[\n;；]+/).some(function(line){
+      /* 兼容「姓名,学号」「姓名，学号」「姓名 学号」等写法，学号出现在任一段即计入 */
+      return line.split(/[,，\s]+/).some(function(p){return p.trim()===sid;});
+    });
+  }).length;
+}
+function orgReview(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var list=orgFlatMembers(o);
+  if(!list.length){toast("该组织暂无成员，请先在架构中添加","warn");return;}
+  var rows=list.map(function(it,i){
+    var m=it.member,sc=m.score||{};
+    var total=Math.round(((Number(sc.act)||0)*0.3+(Number(sc.peer)||0)*0.35+(Number(sc.svc)||0)*0.35)*10)/10;
+    return '<tr data-idx="'+i+'" data-sid="'+esc(m.sid)+'"><td>'+(i+1)+'</td><td><b>'+esc(m.name||"未命名")+'</b></td><td class="muted">'+esc(m.sid||"—")+'</td><td>'+esc(it.dept)+'</td><td>'+esc(m.position||"—")+'</td><td>'+memberActCount(m.sid)+'</td>'
+      +'<td><input class="rv rv-act" type="number" min="0" max="100" style="width:64px" value="'+esc(sc.act||"")+'" placeholder="0-100"></td>'
+      +'<td><input class="rv rv-peer" type="number" min="0" max="100" style="width:64px" value="'+esc(sc.peer||"")+'" placeholder="0-100"></td>'
+      +'<td><input class="rv rv-svc" type="number" min="0" max="100" style="width:64px" value="'+esc(sc.svc||"")+'" placeholder="0-100"></td>'
+      +'<td class="rv-total" style="font-weight:700">'+total+'</td></tr>';
+  }).join("");
+  var body='<div class="muted" style="margin-bottom:8px">综合总分 = 活动参与分×30% + 互评分×35% + 服务反馈分×35%（参考学业发展中心考评模型）；输入分数即时重算，保存后写入成员档案。活动数为该学号出现在活动「参与名单」中的次数。</div>'
+    +'<div class="list-scroll"><table style="font-size:13.5px"><thead><tr><th>#</th><th>姓名</th><th>学号</th><th>部门</th><th>职务</th><th>活动数</th><th>活动参与分</th><th>互评分</th><th>服务反馈分</th><th>综合总分</th></tr></thead><tbody id="rvRows" data-org="'+orgId+'">'+rows+'</tbody></table></div>'
+    +'<div id="rvChart" style="margin-top:10px"></div>'
+    +'<div class="toolbar" style="margin-top:10px"><button class="btn btn-sm btn-ghost" onclick="exportReviewCsv(\''+orgId+'\')">📄 导出考评 Excel</button><span class="muted">导出当前分数（含未保存的输入不会包含，请先保存）</span></div>';
+  openModal("📈 成员考评 · "+esc(o.name),body,"保存考评",function(){orgReviewSave();orgOpen(orgId);return false;},true);
+  orgReviewChart();
+  var mb=document.getElementById("modalBody");
+  if(mb&&!mb.__rvBound){
+    mb.__rvBound=true;
+    mb.addEventListener("input",function(e){
+      if(e.target&&e.target.classList&&e.target.classList.contains("rv")&&e.target.closest)orgReviewRow(e.target.closest("tr"));
+    });
+  }
+}
+function orgReviewRow(tr){
+  if(!tr)return;
+  var clamp=function(sel){return Math.max(0,Math.min(100,Number(tr.querySelector(sel).value)||0));};
+  var act=clamp(".rv-act"),peer=clamp(".rv-peer"),svc=clamp(".rv-svc");
+  tr.querySelector(".rv-total").textContent=Math.round((act*0.3+peer*0.35+svc*0.35)*10)/10;
+}
+function orgReviewChart(){
+  var box=document.getElementById("rvChart");if(!box)return;
+  var trs=Array.from(document.querySelectorAll("#rvRows tr"));
+  var data=trs.map(function(tr){
+    var tds=tr.querySelectorAll("td");
+    return {name:tds[1].textContent,sid:tds[2].textContent,total:Number(tr.querySelector(".rv-total").textContent)||0};
+  }).sort(function(a,b){return b.total-a.total;}).slice(0,12);
+  var max=Math.max(1,...data.map(function(d){return d.total;}));
+  box.innerHTML='<b style="font-size:13px">综合总分排行（前 12）</b>'+data.map(function(d){
+    return '<div style="display:grid;grid-template-columns:110px 1fr 44px;gap:8px;align-items:center;margin:5px 0;font-size:12.5px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(d.name)+'</span><i style="height:9px;background:#e8f3ee;border-radius:99px;overflow:hidden"><b style="display:block;height:100%;width:'+Math.round(d.total/max*100)+'%;background:linear-gradient(90deg,#16815f,#36c08a)"></b></i><strong style="text-align:right">'+d.total+'</strong></div>';
+  }).join("");
+}
+function orgReviewSave(){
+  var tbody=document.getElementById("rvRows");if(!tbody)return;
+  var orgId=tbody.getAttribute("data-org"),o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  /* 按行索引对应 orgFlatMembers 展开序，无学号成员也能保存考评 */
+  var flat=orgFlatMembers(o);
+  var n=0;
+  Array.from(tbody.querySelectorAll("tr")).forEach(function(tr){
+    var it=flat[Number(tr.getAttribute("data-idx"))];if(!it||!it.member)return;
+    it.member.score={act:Math.max(0,Math.min(100,Number(tr.querySelector(".rv-act").value)||0)),peer:Math.max(0,Math.min(100,Number(tr.querySelector(".rv-peer").value)||0)),svc:Math.max(0,Math.min(100,Number(tr.querySelector(".rv-svc").value)||0))};
+    n++;
+  });
+  save();toast("已保存 "+n+" 名成员的考评","ok");
+}
+function exportReviewCsv(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var list=orgFlatMembers(o);if(!list.length){toast("暂无成员","warn");return;}
+  var head=["学号","姓名","学院","年级","专业","班级","职务","部门","状态","活动数","活动参与分","互评分","服务反馈分","综合总分"];
+  var rows=list.map(function(it){var m=it.member,sc=m.score||{};return [m.sid,m.name,m.college,m.grade,m.major,m.cls,m.position,it.dept,m.status,memberActCount(m.sid),sc.act||"",sc.peer||"",sc.svc||"",Math.round(((Number(sc.act)||0)*0.3+(Number(sc.peer)||0)*0.35+(Number(sc.svc)||0)*0.35)*10)/10];});
+  downloadXlsxFile(o.name+"_成员考评",[head].concat(rows),o.name+"_成员考评_"+today()+".xlsx");
+  toast("已导出 "+rows.length+" 名成员考评","ok");
+}
+
+/* ---------- 组织学年小结（文本报告） ---------- */
+function exportOrgReport(orgId){
+  var o=DB.orgs.find(function(x){return x.id===orgId;});if(!o)return;
+  var acts=DB.activities.filter(function(a){return a.orgId===orgId;});
+  var meets=DB.meetings.filter(function(a){return a.orgId===orgId;});
+  var trains=DB.trainings.filter(function(a){return a.orgId===orgId;});
+  var num=function(v){return Number(v)||0;};
+  var budget=acts.reduce(function(s,a){return s+num(a.budget);},0),expense=acts.reduce(function(s,a){return s+num(a.expense);},0),sponsor=acts.reduce(function(s,a){return s+num(a.sponsor);},0);
+  var expected=meets.reduce(function(s,m){return s+num(m.expected);},0),actual=meets.reduce(function(s,m){return s+num(m.actual);},0);
+  var lines=[];
+  lines.push("=== "+ORG_CATS[o.cat]+" · "+o.name+" 学年小结 ===");
+  lines.push("学年："+o.year+"　届数：第"+o.termNo+"届"+(o.dept?"　学院："+o.dept:""));
+  lines.push("指导老师："+(o.advisor||"—")+"　状态："+o.status);
+  lines.push("生成时间："+new Date().toLocaleString());
+  lines.push("");
+  lines.push("【组织概况】");
+  lines.push("部门/岗位数："+treeCount(o.structure)+"　成员数："+treeMembers(o.structure)+"（在职 "+treeActiveMembers(o.structure)+"）");
+  lines.push("");
+  lines.push("【活动开展】共 "+acts.length+" 项；预算合计 "+budget+" 元，实际支出 "+expense+" 元，赞助 "+sponsor+" 元，结余 "+(budget+sponsor-expense)+" 元");
+  acts.forEach(function(a){lines.push("　· "+(a.date||"—")+"　"+(a.name||"未命名")+"（"+(a.type||"")+" / "+(a.status||"")+"，"+(num(a.scale))+"人"+(num(a.expense)?"，支出"+a.expense+"元":"")+"）");});
+  lines.push("");
+  lines.push("【会议情况】共 "+meets.length+" 次；应到合计 "+expected+" 人次，实到 "+actual+" 人次，出勤率 "+(expected?Math.round(actual/expected*1000)/10:0)+"%");
+  meets.forEach(function(m){lines.push("　· "+m.datetime+"　"+m.title+"（应到"+(m.expected||0)+"/实到"+(m.actual||0)+"）");});
+  lines.push("");
+  lines.push("【培训情况】共 "+trains.length+" 次，累计 "+trains.reduce(function(s,t){return s+num(t.hours);},0)+" 学时、"+trains.reduce(function(s,t){return s+num(t.count);},0)+" 人次");
+  trains.forEach(function(t){lines.push("　· "+t.date+"　"+t.name+"（"+(t.count||0)+"人 / "+(t.hours||0)+"学时）");});
+  lines.push("【组织架构】");
+  (function walk(nodes,depth){(nodes||[]).forEach(function(n){
+    lines.push("  ".repeat(depth)+(depth?"└ ":"")+(n.name||"未命名")+(n.role?"（"+n.role+"）":"")+(n.members&&n.members.length?"："+n.members.map(function(m){return (m.name||m.sid||"未命名")+(m.position?"("+m.position+")":"");}).join("、"):""));
+    walk(n.children,depth+1);
+  });})(o.structure,0);
+  downloadFile(o.name+"_学年小结_"+today()+".txt",lines.join("\r\n"),"text/plain");
+  toast("学年小结已导出","ok");
+}
+
+/* ---------- 会议纪要导出 ---------- */
+function exportMeeting(id){
+  var m=DB.meetings.find(function(x){return x.id===id;});if(!m)return;
+  var lines=["=== 会议纪要 ===","组织："+orgName(m.orgId),"主题："+m.title,"时间："+(m.datetime||"—")+"　地点："+(m.place||"—"),"主持人："+(m.host||"—")+"　记录人："+(m.recorder||"—"),
+  "出勤：应到 "+(m.expected||0)+" 人，实到 "+(m.actual||0)+" 人，请假 "+(m.leave||0)+" 人，缺席 "+(m.absent||0)+" 人","",
+  "【出席人员】",(m.attendees||"未记录"),"",
+  "【议题】",(m.agenda||"无"),"",
+  "【决议事项】",(m.resolutions||"无"),"",
+  "导出时间："+new Date().toLocaleString()];
+  downloadFile("会议纪要_"+(m.title||"未命名")+"_"+today()+".txt",lines.join("\r\n"),"text/plain");
+  toast("会议纪要已导出","ok");
+}
+/* ---------- 学年管理（总览：增删学年，所有学年下拉从此读取） ---------- */
+function yearManageHtml(){
+  var yrs=(DB.years||[]).slice();
+  yrs.sort(function(a,b){return String(b).localeCompare(String(a));});
+  var rows=yrs.map(function(y){
+    var cnt=DB.orgs.filter(function(o){return o.year===y;}).length;
+    var ccN=DB.classrooms.filter(function(c){return c.year===y;}).length;
+    var usage=(cnt?cnt+" 个组织":"")+(ccN?(cnt?" · ":"")+"第二课堂 "+ccN+" 条":"");
+    return '<tr><td><b>'+esc(y)+'</b> 学年</td><td>'+(usage||"未被使用")+'</td><td style="white-space:nowrap"><a href="javascript:void(0)" onclick="yearDelete(\''+y.replace(/'/g,"\\'")+'\')">删除</a></td></tr>';
+  }).join("")||'<tr><td colspan="3" class="empty">暂无学年，请点击下方「＋ 新增学年」</td></tr>';
+  return '<h2 class="ptitle">🗓️ 学年管理</h2><p class="sub">管理部门可用学年列表。新增组织、第二课堂等模块的下拉学年从此处读取。删除学年不会改动已登记组织的数据，但会使其不再出现在新增下拉框中。</p>'
+    +'<div class="card"><div class="toolbar"><b>当前学年列表（'+yrs.length+'）</b><span style="flex:1"></span><button class="btn btn-primary btn-sm" onclick="yearAdd()">＋ 新增学年</button></div>'
+    +'<div class="list-scroll" style="margin-top:10px"><table><thead><tr><th>学年</th><th>使用情况</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="muted" style="margin-top:10px">提示：学年采用「起始年-(起始年+1)」的学年制（如 2026-2027），与组织、第二课堂的学年口径一致。</div></div>';
+}
+function yearAdd(){
+  var y=Number(curAcademicYear().slice(0,4));
+  var body='<div class="field"><label>起始学年</label><input id="y_start" type="number" min="2000" max="2100" value="'+y+'" oninput="yearPreview()"><div class="muted" style="margin-top:4px">将自动生成「起始年 - (起始年+1)」学年制</div></div>'
+    +'<div class="field"><label>将添加的学年</label><div id="y_preview" style="padding:8px 0;font-size:17px">'+y+'-'+(y+1)+'</div></div>';
+  openModal("新增学年",body,"添加",function(){
+    var s=parseInt(Val("y_start"),10);
+    if(!s||s<2000||s>2100){toast("请输入 2000–2100 之间的起始学年","warn");return false;}
+    var val=s+"-"+(s+1);
+    if((DB.years||[]).indexOf(val)>=0){toast("该学年已存在","warn");return false;}
+    DB.years=DB.years||[];DB.years.push(val);save();renderMain();toast("已添加 "+val+" 学年","ok");return true;
+  });
+}
+function yearPreview(){
+  var s=parseInt(Val("y_start"),10);
+  var el=document.getElementById("y_preview");
+  if(el)el.innerHTML=(s||"")+'-'+((s||0)+1);
+}
+async function yearDelete(y){
+  var cnt=DB.orgs.filter(function(o){return o.year===y;}).length;
+  var ccN=DB.classrooms.filter(function(c){return c.year===y;}).length;
+  if((cnt||ccN)&&!confirm("当前有 "+cnt+" 个组织、"+ccN+" 条第二课堂记录使用该学年；移入回收站后这些记录仍保留原学年值。是否继续？"))return;
+  if(await studentOrgRecycle("studentOrgYear","student_org_year",[y]))toast(y+" 学年已移入回收站","ok");
+}
+
+/* ---------- 模态与提示 ---------- */
+function Val(id){var el=document.getElementById(id);return String(el&&el.value!=null?el.value:"").trim();}
+/* 模态链令牌：onOk 内部再打开新模态（如保存后进入架构编辑器）时，
+ * 旧模态的收尾 closeModal 不得关掉新模态；以令牌比对跳过 */
+var __modalSeq=0;
+function openModal(title,body,okText,onOk,wide){
+  var tok=++__modalSeq;
+  document.getElementById("modalTitle").innerHTML=title;
+  document.getElementById("modalBody").innerHTML=body;
+  document.getElementById("modalFoot").innerHTML='<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" id="modalOk">'+esc(okText||"确定")+'</button>';
+  document.getElementById("modal").className="modal"+(wide==="xl"?" xl":wide?" wide":"");
+  document.getElementById("modalOk").onclick=function(){if(onOk&&onOk()===false)return;if(tok===__modalSeq)closeModal();};
+  document.getElementById("mask").classList.add("open");
+}
+function closeModal(){
+  document.getElementById("mask").classList.remove("open");
+  /* 清理未保存的节点编辑态，避免残留到下次打开的弹窗 */
+  window.__editingNode=null;window.__extraRows=null;
+}
+/* 遮罩点击不再关闭弹窗：仅 X 按钮（modal-h 内）与弹窗内按钮可关闭 */
+/* ESC 不再关闭弹窗：仅 X 按钮与弹窗内按钮可关闭 */
+function toast(msg,type){
+  var colors={ok:["#126b49","#edf8f2"],warn:["#99600c","#fff5e3"],info:["#1d5b91","#edf5fd"]};
+  var c=colors[type]||colors.info;
+  var t=document.createElement("div");
+  t.textContent=msg;
+  t.style.cssText="position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:99;padding:9px 16px;border-radius:8px;color:"+c[0]+";background:"+c[1]+";box-shadow:0 4px 14px rgba(0,0,0,.12);font-size:13px;max-width:80vw";
+  document.body.appendChild(t);
+  setTimeout(function(){t.remove();},2600);
+}
+
+/* ---------- 启动 ---------- */
+renderNav();renderMain();
+</script>
+<script src="/searchable-filter-selects.js"></script>
+</body>
+</html>

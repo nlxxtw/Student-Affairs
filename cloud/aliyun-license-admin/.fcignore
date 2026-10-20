@@ -1,0 +1,12 @@
+.s/
+.git/
+tests/
+admin-secrets.json
+prepare-admin-secrets.cjs
+configure-admin.ps1
+disable-deploy-access.cjs
+provision-admin-ram.cjs
+init-admin-table.js
+deploy.ps1
+README.md
+*.log

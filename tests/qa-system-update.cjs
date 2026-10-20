@@ -1,0 +1,74 @@
+"use strict";
+
+const assert = require("assert");
+const crypto = require("crypto");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { UpdateClient, compareVersion, platformId, releaseSignaturePayload } = require("../update-client");
+const { validateManifest } = require("../cloud/aliyun-license/update-release");
+
+async function main() {
+  assert.strictEqual(compareVersion("V5.1.0", "V5.0.9"), 1);
+  assert.strictEqual(compareVersion("V5.0.0", "V5.0.0"), 0);
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "shuzhi-update-qa-"));
+  try {
+    fs.writeFileSync(path.join(temp, "update-config.json"), JSON.stringify({ enabled: true, channel: "stable", checkIntervalHours: 24 }), "utf8");
+    const packageBytes = Buffer.from("persisted-update-package");
+    const packageHash = crypto.createHash("sha256").update(packageBytes).digest("hex");
+    const release = { version: "V5.1.0", platform: platformId(), downloadUrl: "https://example.invalid/releases/V5.1.0.zip", downloadExpiresAt: new Date(Date.now() + 60000).toISOString(), sha256: packageHash, size: packageBytes.length, releaseNotes: "测试更新", publishedAt: new Date().toISOString() };
+    const client = new UpdateClient({ root: temp, dataDir: path.join(temp, "data"), appVersion: "V5.0.0", licenseClient: { requestAuthorized: async () => ({ available: true, release }) } });
+    const status = await client.check(true);
+    assert.strictEqual(status.available, true);
+    assert.strictEqual(status.latest.version, "V5.1.0");
+    assert.ok(!Object.prototype.hasOwnProperty.call(status.latest, "downloadUrl"), "public status must not expose temporary download URL");
+    const downloadDir = path.join(temp, "data", "updates", "downloads");
+    const fileName = `数智学工-V5.1.0-${platformId()}.zip`;
+    fs.mkdirSync(downloadDir, { recursive: true });
+    fs.writeFileSync(path.join(downloadDir, fileName), packageBytes);
+    fs.writeFileSync(path.join(temp, "data", "update-state.json"), JSON.stringify({ version: 1, lastCheckedAt: new Date().toISOString(), lastError: "", latest: Object.assign({}, release, { downloadUrl: undefined }), downloaded: { version: "V5.1.0", fileName, size: packageBytes.length, verifiedAt: new Date().toISOString() } }), "utf8");
+    const restarted = new UpdateClient({ root: temp, dataDir: path.join(temp, "data"), appVersion: "V5.0.0", licenseClient: { requestAuthorized: async () => ({ available: true, release }) } });
+    assert.ok(restarted.downloadedPackage(), "verified package must be restored after service restart");
+    assert.strictEqual(restarted.publicStatus().downloaded.fileName, fileName);
+    assert.strictEqual((await restarted.check(true)).downloaded.fileName, fileName, "checking the same release must not discard a verified download");
+    const signedKeys = crypto.generateKeyPairSync("ed25519", { privateKeyEncoding: { type: "pkcs8", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } });
+    const signedRelease = Object.assign({}, release, { channel: "stable", objectKey: "releases/V5.1.0/test.zip" });
+    signedRelease.signature = crypto.sign(null, Buffer.from(releaseSignaturePayload(signedRelease), "utf8"), signedKeys.privateKey).toString("base64url");
+    const signedClient = new UpdateClient({ root: temp, dataDir: path.join(temp, "signed-data"), appVersion: "V5.0.0", licenseClient: { config: { publicKey: signedKeys.publicKey }, requestAuthorized: async () => ({ available: true, release: signedRelease }) } });
+    assert.strictEqual((await signedClient.check(true)).available, true, "valid release signature must be accepted");
+    const tamperedClient = new UpdateClient({ root: temp, dataDir: path.join(temp, "tampered-data"), appVersion: "V5.0.0", licenseClient: { config: { publicKey: signedKeys.publicKey }, requestAuthorized: async () => ({ available: true, release: Object.assign({}, signedRelease, { size: signedRelease.size + 1 }) }) } });
+    await assert.rejects(() => tamperedClient.check(true), /数字签名验证失败/, "tampered signed release must be rejected");
+    let refreshedForDownload = 0;
+    const refreshClient = new UpdateClient({ root: temp, dataDir: path.join(temp, "refresh-data"), appVersion: "V5.0.0", licenseClient: { requestAuthorized: async () => { refreshedForDownload++; return { available: false }; } } });
+    await assert.rejects(() => refreshClient.download(), /当前没有可下载的更新版本/);
+    assert.strictEqual(refreshedForDownload, 1, "download after restart must automatically refresh its temporary URL");
+    const manifest = { schemaVersion: 1, releases: [{ version: "V5.1.0", channel: "stable", platform: platformId(), objectKey: "releases/windows/V5.1.0/shuzhi-xuegong.zip", sha256: "b".repeat(64), size: 2048, releaseNotes: "测试" }] };
+    assert.strictEqual(validateManifest(manifest, platformId(), "stable", "V5.0.0").version, "V5.1.0");
+    assert.strictEqual(validateManifest(manifest, platformId(), "stable", "V5.1.0"), null);
+    assert.strictEqual(validateManifest({ schemaVersion: 1, releases: [{ version: "V5.1.0", channel: "stable", platform: platformId(), objectKey: "../data/workbench.db", sha256: "b".repeat(64), size: 2048 }] }, platformId(), "stable", "V5.0.0"), null, "unsafe package paths must never become release candidates");
+    const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+    const serverSource = fs.readFileSync(path.join(__dirname, "..", "web-server.js"), "utf8");
+    const installerSource = fs.readFileSync(path.join(__dirname, "..", "scripts", "install-workbench-update.ps1"), "utf8");
+    const packageBuilderSource = fs.readFileSync(path.join(__dirname, "..", "scripts", "build-update-package.ps1"), "utf8");
+    for (const marker of ['role="progressbar"', "系统升级进度", "systemUpdateMonitorInstall", "已使用本机保存的升级包"]) assert.ok(appSource.includes(marker), `missing update UI marker: ${marker}`);
+    for (const marker of ["installProgress", "UPDATE_INSTALL_PROGRESS_PATH", "writeUpdateInstallProgress"]) assert.ok(serverSource.includes(marker), `missing update server marker: ${marker}`);
+    for (const marker of ["updateInstallScheduled", "ensureUpdateInstallSpace", "系统升级已经启动", "installer-launch.log", "更新启动程序启动失败", "takeoverTimer", "launchWindowsUpdater"]) assert.ok(serverSource.includes(marker), `missing update execution guard: ${marker}`);
+    assert.ok(!serverSource.includes("detached: true, windowsHide: true, stdio: [\"ignore\", installerLogHandle, installerLogHandle]"), "Windows update launcher must not use detached PowerShell");
+    assert.ok(appSource.includes('["ready","completed"].includes') && appSource.includes("升级包已经准备完成，尚未安装") && appSource.includes("请点击下方绿色的“立即更新并重启”"), "download completion must clearly distinguish ready-to-install from installation progress");
+    assert.ok(appSource.includes("systemUpdateMonitorToken") && appSource.includes("PAGES.update_init=async function"), "installation monitoring must be non-overlapping and resume after reopening the page");
+    assert.ok(appSource.includes('["ready","completed"]') && appSource.includes("systemUpdateMonitorToken"), "update UI must recognize ready downloads and use non-overlapping install polling");
+    for (const marker of ["child.once(\"exit\"", "const protectedDataBytes = pathTreeBytes(DB_PATH)"]) assert.ok(serverSource.includes(marker), `missing fast update preparation marker: ${marker}`);
+    const installStart=serverSource.indexOf("function scheduleDownloadedUpdateInstall()"),installEnd=serverSource.indexOf("function loadWebdavSecret",installStart);
+    assert.ok(installStart>=0&&installEnd>installStart,"update install function must exist");
+    const installSource=serverSource.slice(installStart,installEnd);
+    assert.ok(!installSource.includes("createBackup("), "system update must not create an implicit business-data backup");
+    assert.ok(installerSource.indexOf("正在预先解压升级包") < installerSource.indexOf("Stop-Process -Id $ParentProcessId"), "update package must be staged before stopping the old service");
+    for (const marker of ["Write-UpdateProgress 'extracting'", "Write-UpdateProgress 'installing'", "Write-UpdateProgress 'completed' 100"]) assert.ok(installerSource.includes(marker), `missing installer progress marker: ${marker}`);
+    for (const marker of ["verifying-install", "temporaryTarget", "rollbackErrors", "active-install.json", "-NoBrowser"]) assert.ok(installerSource.includes(marker), `missing atomic install or rollback marker: ${marker}`);
+    assert.ok(packageBuilderSource.includes("$folders = @('assets')") && !packageBuilderSource.includes("$folders = @('assets','runtime')"), "online update packages must not contain the locked Node runtime");
+    assert.ok(packageBuilderSource.includes("update-launcher.js") && packageBuilderSource.includes("recover-interrupted-update.ps1") && installerSource.includes("update-launcher.js"), "the tested update launcher and interrupted-update recovery must be included in online packages");
+    for (const asset of ["dorm-spatial-module.js","dorm-spatial-module.css","academic-public.css","workbench-database.js"]) assert.ok(packageBuilderSource.includes(asset) && installerSource.includes(asset), `business asset must be included in the online package and installer whitelist: ${asset}`);
+    console.log("qa-system-update: passed (version, persisted download, auto-refresh, signed release, progress, private URL, package boundary)");
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });

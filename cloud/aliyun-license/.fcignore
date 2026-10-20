@@ -1,0 +1,14 @@
+.s/
+.deploy-tools/
+.tools/
+.git/
+tests/
+deployment-secrets.json
+generated-public-key.pem
+ram-policy-template.json
+prepare-deployment.cjs
+provision-ram.cjs
+deploy.ps1
+init-table.js
+README.md
+*.log

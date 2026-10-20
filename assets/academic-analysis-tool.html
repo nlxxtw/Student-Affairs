@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>学业分析助手（个人定制）</title>
+  <link rel="stylesheet" href="/assets/academic-analysis-tool.css">
+</head>
+<body>
+  <main class="analysis-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">LOCAL ACADEMIC ANALYSIS</p>
+        <h1>学业分析助手（个人定制）</h1>
+        <p class="lead">上传单学期成绩表，在本机生成统计表、每班学业分析 Word 报告和校验报告。</p>
+      </div>
+      <a class="rules-link" href="/assets/academic-analysis-rules.docx" download="统计规则（更新版）.docx">📘 下载统计规则（更新版）</a>
+    </section>
+
+    <section class="privacy-note">
+      <b>数据边界：</b>Excel 原表、学生身份和课程明细不发送给 AI；固定统计与文件生成不依赖 AI。AI 辅助仅使用匿名汇总数字，结果须人工审核。
+    </section>
+
+    <section class="upload-grid" aria-label="学业分析输入文件">
+      <label id="drop" class="drop" for="file">
+        <input id="file" type="file" accept=".xlsx">
+        <strong>选择单学期成绩表</strong>
+        <span>必填 · 支持非锁定的 .xlsx 文件 · 本机处理</span>
+        <em id="fileName">尚未选择文件</em>
+      </label>
+      <label id="teacherDrop" class="drop teacher-drop" for="teacherFile">
+        <input id="teacherFile" type="file" accept=".xlsx">
+        <strong>班主任名单</strong>
+        <span>可选 · 上传后自动写入统计表和班级报告</span>
+        <em id="teacherFileName">暂不使用班主任名单</em>
+      </label>
+    </section>
+
+    <section class="field-reference" aria-labelledby="fieldReferenceTitle">
+      <div class="field-reference-head">
+        <div>
+          <p class="eyebrow">FIELD REFERENCE</p>
+          <h2 id="fieldReferenceTitle">字段参考</h2>
+          <p>第一行为字段表头，第二行为虚构示例；录入前请替换示例，每行填写一名学生的一门课程成绩。字段名称请保持不变。</p>
+        </div>
+        <a class="template-link" href="/assets/academic-analysis-field-template.xlsx" download="单学期成绩导入模板.xlsx">下载字段模板</a>
+      </div>
+      <div class="field-groups">
+        <div class="field-group">
+          <b>必填字段（13项）</b>
+          <div class="field-tags" aria-label="必填字段">
+            <span>学年</span><span>学期</span><span>学号</span><span>姓名</span><span>性别</span><span>课程名称</span><span>课程性质</span><span>总评成绩</span><span>补考成绩</span><span>学院</span><span>年级</span><span>专业</span><span>班级</span>
+          </div>
+        </div>
+        <div class="field-group optional">
+          <b>可选字段</b>
+          <div class="field-tags" aria-label="可选字段"><span>身份证号</span></div>
+          <small>“身份证号”用于自动匹配标准行政区生源地：省、自治区输出到所属市（州），直辖市输出到所属区（县），统一显示两级；为空、格式无效或地址码无法识别时，统计表中的生源地保持空白。模板由您提供的“单学期成绩.xlsx”制作，仅保留原表头、表头格式和第2行虚构示例。</small>
+        </div>
+      </div>
+      <div class="teacher-field-reference">
+        <div><b>班主任名单字段（可选上传）</b><p>按“班级”精确匹配本次成绩表；同一班级仅保留一位班主任。名单中的班级不在本次成绩表、重复班级或空值都会写入校验报告。</p></div>
+        <div class="field-tags" aria-label="班主任名单字段"><span>班级</span><span>班主任</span></div>
+        <button id="downloadTeacherTemplate" class="template-link" type="button">下载班主任名单模板</button>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="go" type="button" disabled>开始统计并生成文件</button>
+      <button id="clear" class="secondary" type="button">清空本次结果</button>
+    </div>
+    <div id="progress" class="progress" hidden><span></span></div>
+    <p id="status" role="status">请选择成绩文件</p>
+
+    <section id="result" class="result" hidden>
+      <div class="result-head"><div><p class="eyebrow">ANALYSIS COMPLETE</p><h2>生成完成</h2></div><span class="success">本机文件</span></div>
+      <div id="metrics" class="metrics"></div>
+      <div class="downloads">
+        <a id="summary">下载学业考试成绩分析统计表</a>
+        <a id="reports">下载各班学业分析报告 ZIP</a>
+        <a id="audit">下载校验报告 JSON</a>
+      </div>
+      <div id="issues" class="issues"></div>
+    </section>
+
+    <section class="history-card" aria-labelledby="historyTitle">
+      <div class="history-head">
+        <div><p class="eyebrow">LOCAL HISTORY</p><h2 id="historyTitle">历史生成记录</h2></div>
+        <div class="actions"><button id="refreshHistory" class="secondary compact" type="button">刷新记录</button><button id="clearHistory" class="secondary compact" type="button">清空历史</button></div>
+      </div>
+      <p id="historyStatus" class="history-status">正在读取本机历史记录……</p>
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead><tr><th>生成时间</th><th>源文件</th><th>数据概况</th><th>校验提示</th><th>下载</th><th>操作</th></tr></thead>
+          <tbody id="historyList"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <details>
+      <summary>页面内统计口径摘要</summary>
+      <ul>
+        <li>总评成绩低于 60 分判定为不及格；等级成绩按更新版规则映射。</li>
+        <li>课程性质“实践奖励、通识教育选择性必修”不纳入统计。</li>
+        <li>按学号识别学生，课程名统一空格和中英文括号后去重。</li>
+        <li>“二级学院不及格学生信息”中的生源地按身份证地址码自动匹配，统一显示两级标准行政区：省/自治区＋市（州），直辖市＋区（县）。</li>
+        <li>统计结果以本次上传并通过校验的成绩文件为唯一数据来源。</li>
+        <li>完整字段、校验、挂科率、补考状态和报告规则请下载“统计规则（更新版）”。</li>
+      </ul>
+    </details>
+  </main>
+  <script src="/xlsx.full.min.js"></script>
+  <script src="/assets/tool-history-client.js"></script>
+  <script src="/assets/academic-analysis-tool.js"></script>
+</body>
+</html>

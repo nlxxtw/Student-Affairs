@@ -1,0 +1,31 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const E=require('../academic-public-engine');
+test('course analysis uses selected stage, pending and partial evidence, and OR checkbox filters',()=>{
+ const Analysis=require('../academic-public-analysis');
+ const students=[{id:'001',name:'甲',dept:'学院',grade:'2022',cls:'1班'},{id:'002',name:'乙',dept:'学院',grade:'2022',cls:'2班'}];
+ const state={version:1,rules:{passScore:60,rank:'original',categories:[],thresholds:[1,2,3,4],enabled:[true,true,true,true]},courses:[{id:'a',sid:'001',term:'2025-2026-1',code:'C1',name:'数学',credit:3,category:'必修'},{id:'b',sid:'002',term:'2025-2026-1',code:'C1',name:'数学',credit:3,category:'必修'},{id:'c',sid:'001',term:'2025-2026-1',code:'C2',name:'实践',credit:1,category:'选修'}],attempts:[{courseId:'a',type:'original',score:'40',status:'已出分',scale:'百分制',order:1},{courseId:'a',type:'makeup',score:'80',status:'已出分',scale:'百分制',order:2},{courseId:'b',type:'original',score:'0',status:'已出分',scale:'百分制',order:3},{courseId:'c',type:'original',score:'',status:'缓考',scale:'百分制',order:4}]};
+ const sum=E.summarize(state,students,'2025-2026-1',{stage:'current'});
+ assert.equal(sum.rows[0].average,null);
+ let result=Analysis.build(sum.rows,{courseCode:['C1'],result:['通过','未通过']});
+ assert.equal(result.courses.length,2);assert.equal(result.courses[0].stageScore,80,'distribution must not use original ranking score');assert.equal(result.courseStats[0].average,40);assert.equal(result.courseStats[0].passRate,.5);assert.deepEqual(result.courseStats[0].bands,[1,0,0,1,0]);
+ assert.equal(Analysis.build(sum.rows,{result:['待核查']}).courses.length,1);
+ assert.throws(()=>Analysis.build(sum.rows,{courseCode:{bad:true}}),/格式无效/);
+ state.courses[1].coverageKind='failure-list';result=Analysis.build(E.summarize(state,students,'2025-2026-1').rows,{});
+ assert.equal(result.courseStats.find(c=>c.code==='C1').passRate,null);assert.equal(result.courseStats.find(c=>c.code==='C1').average,null);assert.equal(result.courseStats.find(c=>c.code==='C1').partial,1);
+ result=Analysis.build(E.summarize(state,students,'2025-2026-1',{stage:'original'}).rows,{courseCode:['C1']});assert.equal(result.courses[0].stageScore,40);
+ state.rules.absenceFail=true;state.attempts.find(a=>a.courseId==='c').status='缺考';result=Analysis.build(E.summarize(state,students,'2025-2026-1').rows,{courseCode:['C2']});assert.equal(result.courseStats[0].unscored,1);assert.equal(result.courseStats[0].unconverted,0);assert.equal(result.courseStats[0].numeric,0);assert.equal(result.courseStats[0].average,null);
+});
+test('import suggestions find title rows and aliases without ambiguous automatic mappings',()=>{
+ const Import=require('../academic-public-import');
+ const fields=['学号','姓名','原修读学期','课程代码','课程名称','总评成绩','学年','学期'];
+ const sheet={name:'成绩',sample:[{sourceRow:1,cells:[{value:'成绩表'}]},{sourceRow:2,cells:['学生学号','学生姓名','学年','学期','课程编号','课程名称','成绩'].map(value=>({value}))}]};
+ const guess=Import.suggest(sheet,fields);assert.equal(guess.headerRow,2);assert.equal(guess.mapping['总评成绩'],6);assert.equal(guess.mapping['学号'],0);assert.equal(guess.mapping['学年'],2);assert.equal(guess.mapping['学期'],3);
+ const duplicate=Import.suggest({sample:[{cells:['学号','学生学号','课程名称','成绩'].map(value=>({value}))}]},fields);assert.equal(duplicate.mapping['学号'],undefined);assert(duplicate.ambiguous.includes('学号'));
+ assert.equal(Import.term({学年:'2025-2026',学期:'1'}),'2025-2026-1');assert.equal(Import.term({原修读学期:'2025-2026-2学期'}),'2025-2026-2');
+ assert.throws(()=>Import.term({学年:'2025-2026',学期:'3'}),/学期/);
+ assert.throws(()=>Import.term({原修读学期:'2025-2026-1',学期:'2'}),/不一致/);
+ assert.throws(()=>Import.term({原修读学期:'2025-2026-1',学年:'2024-2025'}),/不一致/);
+ assert.throws(()=>Import.term({原修读学期:'2025-2026-1',学期:'2025-2026-2'}),/不一致/);
+ assert.deepEqual(Import.scoreFields('0','',''),{status:'已出分',scale:'百分制'});assert.deepEqual(Import.scoreFields('作弊','',''),{status:'违纪',scale:'百分制'});assert.deepEqual(Import.scoreFields('通过','',''),{status:'已出分',scale:'两级制'});
+});

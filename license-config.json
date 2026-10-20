@@ -1,0 +1,9 @@
+{
+  "enabled": false,
+  "apiUrl": "",
+  "product": "shuzhi-xuegong",
+  "verifyIntervalHours": 72,
+  "offlineGraceDays": 180,
+  "requestTimeoutMs": 10000,
+  "publicKey": ""
+}

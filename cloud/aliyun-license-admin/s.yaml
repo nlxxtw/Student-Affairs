@@ -1,0 +1,39 @@
+edition: 3.0.0
+name: shuzhi-xuegong-license-admin
+access: shuzhi-xuegong-deploy
+
+resources:
+  license_admin:
+    component: fc3
+    props:
+      region: ${env('ALIYUN_REGION')}
+      functionName: shuzhi-xuegong-license-admin
+      description: 数智学工独立授权管理后台（不接收学生业务数据）
+      runtime: nodejs20
+      code: ./
+      handler: index.handler
+      memorySize: 256
+      timeout: 30
+      internetAccess: true
+      role: ${env('FC_ADMIN_EXECUTION_ROLE_ARN')}
+      environmentVariables:
+        TABLESTORE_ENDPOINT: ${env('TABLESTORE_ENDPOINT')}
+        TABLESTORE_INSTANCE: ${env('TABLESTORE_INSTANCE')}
+        TABLESTORE_LICENSE_TABLE: shuzhi_licenses
+        TABLESTORE_AUDIT_TABLE: shuzhi_license_audit
+        LICENSE_PRODUCT: shuzhi-xuegong
+        LICENSE_CODE_PEPPER: ${env('LICENSE_CODE_PEPPER')}
+        LICENSE_CODE_ENCRYPTION_KEY: ${env('LICENSE_CODE_ENCRYPTION_KEY')}
+        ADMIN_USERNAME: ${env('ADMIN_USERNAME')}
+        ADMIN_PASSWORD_HASH: ${env('ADMIN_PASSWORD_HASH')}
+        ADMIN_SESSION_SECRET: ${env('ADMIN_SESSION_SECRET')}
+      triggers:
+        - triggerName: httpTrigger
+          triggerType: http
+          triggerConfig:
+            authType: anonymous
+            methods:
+              - GET
+              - POST
+              - PATCH
+              - DELETE

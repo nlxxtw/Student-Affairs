@@ -1,0 +1,65 @@
+{
+  "workbench": {
+    "body": 12.5,
+    ".logo .t1": 14,
+    ".nav-item": 13,
+    ".btn": 12.5
+  },
+  "tasks": {
+    "body": 12.5,
+    ".ptitle": 17,
+    ".btn": 12.5
+  },
+  "growth": {
+    "body": 12.5,
+    ".ptitle": 17,
+    ".btn": 12.5
+  },
+  "dorm": {
+    "body": 12.5,
+    ".btn": 12.5
+  },
+  "login": {
+    "body": 16,
+    ".brand-copy h1": 58,
+    ".auth-content h1": 22,
+    ".intro": 12,
+    ".btn": 16
+  },
+  "merge": {
+    "body": 14,
+    "h1": 16,
+    "button": 14,
+    "input": 14
+  },
+  "check": {
+    "body": 16,
+    "h1": 25,
+    "button": 13.3333,
+    "input": 13.3333
+  },
+  "match": {
+    "body": 16,
+    "h1": 25,
+    "button": 13.3333,
+    "input": 13.3333
+  },
+  "summary": {
+    "body": 14,
+    "h1": 23,
+    "button": 14,
+    "input": 13.3333
+  },
+  "analysis": {
+    "body": 11,
+    "h1": 27,
+    "button": 11,
+    "input": 13.3333
+  },
+  "organization": {
+    "body": 14,
+    "h1": 20,
+    "button": 12,
+    "input": 14
+  }
+}

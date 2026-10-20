@@ -1,0 +1,324 @@
+[
+  {
+    "template": "student",
+    "field": "性别",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "student",
+    "field": "民族",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "student",
+    "field": "政治面貌",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "student",
+    "field": "学历",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "student",
+    "field": "转专业备注",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "student",
+    "field": "学籍状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "party",
+    "field": "政治面貌",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "party",
+    "field": "团员身份",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "party",
+    "field": "当前发展阶段",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "party",
+    "field": "初级党课状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "party",
+    "field": "中级党课状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "party",
+    "field": "高级党课状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "dorm",
+    "field": "住宿情况",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "maint-class",
+    "field": "学历",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "民族",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "是否贫困生",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "困难评定等级",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "国家助学金",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "学院助学金",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "国家励志助学金",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "学院励志助学金",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "fund",
+    "field": "临时补助",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "classOfficer",
+    "field": "任职状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "course",
+    "field": "星期",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "gradeCourse",
+    "field": "性别",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "employmentIntention",
+    "field": "就业意向",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "employmentIntention",
+    "field": "英语四级通过（390分）情况和学位英语通过情况",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "employmentResource",
+    "field": "状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "subjectCompetition",
+    "field": "状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "counselorGrowth",
+    "field": "成果类别",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "counselorGrowth",
+    "field": "级别",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "counselorGrowth",
+    "field": "代表性成果",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "classroom",
+    "field": "类型",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "talks",
+    "field": "谈话方式",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "psych",
+    "field": "关怀等级",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "home",
+    "field": "渠道",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "events",
+    "field": "类型",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "events",
+    "field": "方式",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "events",
+    "field": "情绪",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "checkDorm",
+    "field": "卫生情况",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "checkDorm",
+    "field": "是否走访",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "help",
+    "field": "帮扶类型",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "help",
+    "field": "帮扶状态",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "xcm-employment",
+    "field": "去向类型",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "custom",
+    "field": "自定义选项",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  },
+  {
+    "template": "academicAnalysisStatic",
+    "field": "性别",
+    "validAccepted": true,
+    "invalidRejected": true,
+    "alertStyle": "Stop"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "channel": "stable",
+  "checkIntervalHours": 24,
+  "maxPackageBytes": 2147483648
+}

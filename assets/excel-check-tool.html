@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>数智学工 · Excel 表格核对</title>
+  <link rel="stylesheet" href="/assets/excel-check-style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">核</div>
+    <div class="brand-copy"><span>数智学工 · 工具箱</span><h1>Excel 表格核对工具</h1><p>两表核对 · 表头映射 · 联合基准 · 差异导出</p></div>
+    <div class="local-badge"><i></i><div><b>本地运行</b><small>文件不会上传网络</small></div></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div><span class="eyebrow">数智学工 · 工具箱</span><h2>以正确表格为标准，逐条核对另一份 Excel</h2><p>上传两份文件，确认工作表和表头，映射字段并指定基准字段，即可定位字段差异、缺少记录、多余记录和重复基准。</p></div>
+      <div class="hero-flow"><span>上传</span><i>→</i><span>映射</span><i>→</i><span>核对</span><i>→</i><span>导出</span></div>
+    </section>
+
+    <section class="step-card">
+      <div class="step-head"><span>01</span><div><h3>上传两份数据</h3><p>已读取的一份会保留，可单独替换另一份。支持 .xlsx、.xls、.et 等 Excel / WPS 全系列格式，及 CSV、TXT 文本（自动识别 UTF-8 / GBK 编码）。</p></div><button id="clearFiles" class="ghost" type="button">清空文件</button></div>
+      <div class="upload-grid">
+        <article class="upload-card reference">
+          <div class="upload-title"><b>1. 参考数据</b><em>正确的数据</em></div>
+          <p>所有差异均以这份表格为判断标准。</p>
+          <label class="file-button">选择参考文件<input id="referenceFile" type="file" accept=".xlsx,.xlsm,.xlsb,.xlt,.xltx,.xltm,.xls,.et,.ett,.ods,.fods,.ots,.csv,.txt,.dif,.prn,.xml,.htm,.html"></label>
+          <div id="referenceMeta" class="file-meta empty">尚未选择文件</div>
+        </article>
+        <article class="upload-card target">
+          <div class="upload-title"><b>2. 待核对数据</b><em>需要检查的数据</em></div>
+          <p>不会修改原文件，只生成差异报告。</p>
+          <label class="file-button">选择待核对文件<input id="targetFile" type="file" accept=".xlsx,.xlsm,.xlsb,.xlt,.xltx,.xltm,.xls,.et,.ett,.ods,.fods,.ots,.csv,.txt,.dif,.prn,.xml,.htm,.html"></label>
+          <div id="targetMeta" class="file-meta empty">尚未选择文件</div>
+        </article>
+      </div>
+      <div class="privacy">🔒 原始文件只在当前浏览器内存中读取；每次核对完成后，摘要与差异明细会单独保存到系统加密数据库。切换功能或刷新页面不会删除记录，只有在“历史记录”中手动删除或清空才会移除。</div>
+    </section>
+
+    <section id="mappingSection" class="step-card hidden">
+      <div class="step-head"><span>02</span><div><h3>映射表头并指定核对规则</h3><p>系统先按同名表头自动映射。可勾选多个基准字段组成联合基准，例如“学号＋学期”。</p></div><button id="aiMapButton" class="ghost" type="button">✨ AI 智能映射</button><button id="autoMap" class="ghost" type="button">重新自动映射</button></div>
+      <div class="mapping-wrap">
+        <table class="mapping-table">
+          <thead><tr><th>参考数据表头</th><th>待核对数据表头</th><th>设为基准</th><th>参与比较</th></tr></thead>
+          <tbody id="mappingBody"></tbody>
+        </table>
+      </div>
+      <div class="options">
+        <label><input id="trimOption" type="checkbox" checked><span><b>忽略首尾空格</b><small>“张三 ”视为“张三”</small></span></label>
+        <label><input id="spacesOption" type="checkbox"><span><b>忽略全部空格</b><small>适合编号或文本间空格</small></span></label>
+        <label><input id="caseOption" type="checkbox"><span><b>英文不区分大小写</b><small>ABC 与 abc 视为一致</small></span></label>
+        <label><input id="numericOption" type="checkbox" checked><span><b>数值等价</b><small>90 与 90.00 视为一致</small></span></label>
+        <label><input id="dateOption" type="checkbox" checked><span><b>日期等价</b><small>2023/1/5 与 2023-01-05 视为一致</small></span></label>
+      </div>
+      <div class="action-row"><p>重复或空白基准不会被强行匹配，将单独列为异常。</p><button id="compareButton" class="primary" type="button">开始核对</button></div>
+    </section>
+
+    <section id="resultSection" class="step-card hidden">
+      <div class="step-head"><span>03</span><div><h3>查看与导出核对结果</h3><p id="resultIntro">核对完成。</p></div><button id="aiReportButton" class="ghost small" type="button">🛡 AI 核查研判</button><button id="markedButton" class="ghost small" type="button">⬇ 下载核对标注件</button><button id="historyButton" class="ghost small" type="button">🗂 历史记录</button><button id="exportButton" class="primary small" type="button">导出核对报告</button></div>
+      <div id="kpis" class="kpis"></div>
+      <div class="result-tools">
+        <label>结果范围<select id="statusFilter"><option value="problems">仅看问题</option><option value="all">全部结果</option><option value="字段不一致">字段不一致</option><option value="待核对表缺少">待核对表缺少</option><option value="待核对表多余">待核对表多余</option><option value="参考表基准重复">参考表基准重复</option><option value="待核对表基准重复">待核对表基准重复</option><option value="基准值为空">基准值为空</option><option value="一致">一致</option></select></label>
+        <label class="search">搜索<input id="resultSearch" placeholder="基准值、字段或内容"></label>
+        <button id="searchButton" class="ghost" type="button">搜索</button>
+      </div>
+      <div class="result-wrap"><table class="result-table"><thead><tr><th>状态</th><th>基准值</th><th>字段</th><th>参考值（正确）</th><th>待核对值</th><th>参考表行号</th><th>待核对表行号</th></tr></thead><tbody id="resultBody"></tbody></table><div id="emptyResult" class="empty-result hidden">当前筛选条件下没有结果。</div></div>
+      <div class="load-more"><button id="loadMore" class="ghost hidden" type="button">显示更多</button></div>
+      <div id="resultFoot" class="result-foot"></div>
+    </section>
+  </main>
+
+  <section id="aiPanel" class="hidden" style="margin:18px 0"><div style="border:1px solid #cfe3d4;border-radius:10px;padding:14px 16px;background:#f6fbf8"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b id="aiPanelTitle">AI 智能辅助</b><button class="ghost" type="button" id="aiPanelClose">收起</button></div><div id="aiPanelContent"></div></div></section>
+    <section id="historyPanel" class="hidden" style="margin:18px 0"><div style="border:1px solid #d8e2dc;border-radius:10px;padding:14px 16px;background:#fbfdfc"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>🗂 核对历史记录</b><div style="display:flex;gap:8px"><button class="ghost small" type="button" id="historyClear">清空全部</button><button class="ghost" type="button" id="historyClose">收起</button></div></div><div id="historyContent"></div></div></section><div id="busy" class="busy hidden"><div class="spinner"></div><b>正在读取 Excel，请稍候…</b></div>
+  <div id="toast" class="toast"></div>
+  <script src="/xlsx.full.min.js"></script>
+  <script src="/assets/tool-history-client.js"></script>
+  <script src="/assets/excel-check-app.js"></script>
+</body>
+</html>

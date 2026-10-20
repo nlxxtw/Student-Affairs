@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Excel 表格合并助手</title>
+  <style>
+:root{--blue:#12805c;--blue2:#2f9e74;--ink:#1f2d29;--muted:#5f6e69;--line:#d3ddd8;--bg:#f2f5f4;--card:#fff;--danger:#d6453d;--warn:#e8830c;--ok:#18a36b;--ai:#8b5cf6;--shadow:0 16px 44px rgba(20,40,30,.09)}
+*{box-sizing:border-box}body{margin:0;font-size:15px;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,#eaf5f0 0,#f6f9f7 340px,#f3f7f5 100%);min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.topbar{min-height:70px;padding:10px max(20px,calc((100% - 1180px)/2));display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.9);border-bottom:1px solid rgba(180,196,188,.8);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10}.brand-mark{width:40px;height:40px;border-radius:12px;color:#fff;font-size:19px;font-weight:900;display:grid;place-items:center;background:linear-gradient(145deg,#12805c,#35a87f);box-shadow:0 8px 20px rgba(18,128,92,.3)}.topbar h1{font-size:17px;margin:0}.topbar p{margin:3px 0 0;color:var(--muted);font-size:12px}.topbar-badges{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.local-badge,.ai-badge{display:grid;grid-template-columns:10px auto;gap:0 8px;align-items:center;padding:8px 13px;border:1px solid #dce9f7;border-radius:12px;background:#f7faf8}.ai-badge{border-color:#e6defa;background:#f7f4ff;color:#6d46c8;cursor:pointer}.ai-badge b{font-size:11px;letter-spacing:.11em}.ai-badge small{color:var(--muted);font-size:11px}.local-badge span,.ai-badge span{width:8px;height:8px;border-radius:50%;background:#f2ad3d;grid-row:1/3}.ai-badge span.ok{background:var(--ok);box-shadow:0 0 0 4px rgba(24,163,107,.1)}.ai-badge span.warn{background:#f2ad3d}.local-badge b{font-size:11px;letter-spacing:.11em;color:#187a58}.local-badge small{color:var(--muted);font-size:11px}
+main{width:min(1180px,calc(100% - 32px));margin:0 auto 60px}.hero{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:30px 8px 22px}.eyebrow{font-size:12px;letter-spacing:.18em;color:var(--blue);font-weight:800}.hero h2{font-size:24px;margin:8px 0 8px;letter-spacing:-.03em}.hero p{color:var(--muted);margin:0;font-size:13px}.hero-stats{display:flex;background:rgba(255,255,255,.75);border:1px solid rgba(180,196,188,.8);border-radius:18px;padding:13px 4px;box-shadow:var(--shadow)}.hero-stats div{min-width:92px;text-align:center;border-right:1px solid var(--line)}.hero-stats div:last-child{border:0}.hero-stats b{display:block;color:var(--blue);font-size:19px}.hero-stats span{font-size:12px;color:var(--muted)}
+.step-card{background:var(--card);border:1px solid #dfe7e2;border-radius:20px;padding:24px 26px;margin-bottom:18px;box-shadow:var(--shadow)}.step-head{display:flex;align-items:center;gap:13px;margin-bottom:20px}.step-head>span{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#eaf4ef;color:var(--blue);font-weight:900;font-size:13px}.step-head h3{font-size:17px;margin:0}.step-head p{font-size:12px;margin:4px 0 0;color:var(--muted)}
+.rules-panel{padding:0;overflow:hidden}.rules-panel details{padding:0}.rules-panel summary{display:flex;align-items:center;gap:12px;padding:17px 26px;cursor:pointer;list-style:none}.rules-panel summary::-webkit-details-marker{display:none}.rules-panel summary .rules-icon{flex:0 0 auto;width:42px;height:38px;display:grid;place-items:center;border-radius:12px;background:#eaf4ef;color:var(--blue);font-size:12px;font-weight:900}.rules-panel summary strong{display:block;font-size:16px}.rules-panel summary small{display:block;margin-top:4px;color:var(--muted);font-size:12px}.rules-panel summary>b{margin-left:auto;color:var(--blue);font-size:21px;transition:transform .18s}.rules-panel details[open] summary{border-bottom:1px solid #e5edf7}.rules-panel details[open] summary>b{transform:rotate(180deg)}.rules-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px 26px 24px}.rule-block{border:1px solid #e0eaf5;border-radius:13px;padding:15px 16px;background:#fcfdfc}.rule-block h3{margin:0 0 9px;font-size:13px;color:#0c6044}.rule-block ol{margin:0;padding-left:20px;color:#566f64;font-size:12px;line-height:1.75}.rule-block li+li{margin-top:3px}.rule-block strong{color:var(--ink)}.rules-note{grid-column:1/-1;margin:0;padding:11px 13px;border-radius:10px;background:#fff7e8;color:#785b24;font-size:12px;line-height:1.6;border:1px solid #f7e3b7}.ai-rule{border-color:#e6defa;background:#fbfaff}.ai-rule h3{color:#6d46c8}
+.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.choice{display:grid;grid-template-columns:42px 1fr;gap:2px 12px;padding:17px;border:1px solid var(--line);border-radius:15px;cursor:pointer;position:relative;transition:.18s;background:#fcfdfc}.choice:hover{border-color:#9ed4bc}.choice.active{border:2px solid var(--blue);padding:16px;background:#f3f8ff;box-shadow:0 6px 20px rgba(18,128,92,.08)}.choice input{position:absolute;opacity:0}.choice i{font-style:normal;font-size:24px;grid-row:1/3;align-self:center}.choice b{font-size:14px}.choice small{font-size:12px;color:var(--muted)}.picker-row{display:flex;gap:14px;align-items:center;margin-top:16px;padding:17px;background:#f7fafe;border-radius:14px}.file-button{display:inline-flex;padding:10px 18px;border-radius:10px;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer}.file-button input{display:none}.picked-summary{display:flex;flex-direction:column;gap:4px}.picked-summary b{font-size:13px}.picked-summary span{font-size:12px;color:var(--muted)}.file-list{margin-top:13px;border:1px dashed #cbd9e9;border-radius:13px;max-height:190px;overflow:auto}.file-list.empty,.history-list.empty{padding:24px;text-align:center;color:#98a6b8;font-size:14px}.file-row{display:grid;grid-template-columns:32px 1fr auto auto;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #edf1ef}.file-row:last-child{border:0}.file-row i{font-style:normal}.file-row b{font-size:13px;word-break:break-all}.file-row small{color:var(--muted);font-size:12px}.remove-file{border:0;border-radius:7px;padding:5px 8px;background:#fff0f0;color:var(--danger);font-size:11px}
+.rule-fields{display:flex;gap:13px;margin-top:16px;padding:17px;background:#f8fbf9;border:1px solid #edf3fa;border-radius:14px}.rule-fields label,.output-settings>label:not(.check-option){flex:1}.rule-fields span,.output-settings label>span{display:block;font-weight:700;font-size:12px;margin-bottom:7px}.rule-fields input,.output-settings input,.header-editor input,.header-row-input{width:100%;padding:10px 12px;border:1px solid #c9d3cf;border-radius:9px;outline:none;background:#fff}.rule-fields input:focus,.output-settings input:focus,.header-editor input:focus,.header-row-input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(18,128,92,.1)}.rule-fields small{display:block;color:var(--muted);font-size:11px;margin-top:5px}.data-options{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px}.progress-box{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:12px;margin-top:13px;padding:10px 12px;border-radius:12px;background:#eef6ff}.progress-box>div{height:8px;border-radius:8px;background:#d9e8f8;overflow:hidden}.progress-box>div span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--blue),var(--blue2));transition:width .2s}.progress-box>b{font-size:12px;color:#416457;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress-box button{padding:7px 10px}.action-row{display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:14px}.action-row p{color:var(--muted);font-size:12px;margin:0}.action-row .action-buttons{display:flex;gap:10px;flex-wrap:wrap}.primary,.secondary,.ghost,.danger-ghost,.ai-btn{border:0;border-radius:10px;padding:11px 19px;font-weight:800;font-size:13px}.primary{background:linear-gradient(135deg,var(--blue),#2f9e74);color:white;box-shadow:0 8px 18px rgba(18,128,92,.22)}.primary:disabled,.secondary:disabled,.ai-btn:disabled{opacity:.5;cursor:not-allowed}.secondary{background:#eaf3ef;color:var(--blue)}.ghost{background:#f1f6f2;color:#3f6b5a}.danger-ghost{background:#fff1f1;color:var(--danger)}.ai-btn{background:linear-gradient(135deg,var(--ai),#9d7bff);color:#fff;box-shadow:0 8px 18px rgba(139,92,246,.2)}.ai-ghost{background:#f3efff;color:#6d46c8}
+.summary-banner{padding:14px 16px;border-radius:12px;background:#edf8f3;color:#167b56;font-size:13px;margin-bottom:15px}.summary-banner.warn{background:#fff7e9;color:#9b6500}.standard-box{border:1px solid var(--line);border-radius:15px;padding:17px}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;gap:10px;flex-wrap:wrap}.section-title b{display:block}.section-title small{display:block;color:var(--muted);font-size:12px;margin-top:3px}.section-title .title-buttons{display:flex;gap:8px}.header-editor{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.header-item{position:relative}.header-item input{padding-right:88px}.header-actions{position:absolute;right:5px;top:6px;display:flex}.header-actions button{border:0;background:none;color:#8d9aac;font-size:14px;padding:3px}.header-actions button:disabled{opacity:.25;cursor:not-allowed}.review-list{display:flex;flex-direction:column;gap:13px;margin-top:15px}.review-file{border:1px solid var(--line);border-radius:15px;overflow:hidden}.review-file.has-issue{border-color:#f0bd60}.review-file-head{display:flex;align-items:center;gap:11px;padding:14px 16px;background:#f8fbf9;flex-wrap:wrap}.file-order{width:31px;height:31px;display:grid;place-items:center;border-radius:9px;background:#e7f2ff;color:var(--blue);font-weight:900;font-size:13px}.file-title{flex:1;min-width:200px}.review-file-head b{display:block;font-size:13px}.review-file-head small{color:var(--muted);font-size:12px}.standard-button{border:0;border-radius:7px;padding:5px 8px;margin-top:6px;background:#eaf3ef;color:var(--blue);font-size:11px;font-weight:700}.standard-button.current{background:#e8f8f1;color:#16825a}.sheet-control{width:170px}.sheet-control label,.head-row-control label{font-size:11px;color:var(--muted)}.sheet-control select{display:block;width:100%;margin-top:3px;padding:7px;border:1px solid #c9d3cf;border-radius:8px;background:#fff}.head-row-control{width:120px}.header-row-input{padding:7px 9px;margin-top:3px}.issue-pill{padding:5px 9px;border-radius:20px;background:#fff2d8;color:#a36500;font-size:11px;font-weight:800}.ok-pill{background:#e8f8f1;color:#16825a}.file-warnings{padding:9px 16px;background:#fff9ee;color:#9b6500;font-size:12px;border-top:1px solid #fae3b9}.issue-list{margin:0;padding:10px 16px 10px 34px;color:#9b6500;font-size:12px;background:#fffdf7}.issue-list li{margin:4px 0}.mapping-table{width:100%;border-collapse:collapse}.mapping-table th,.mapping-table td{text-align:left;padding:9px 13px;border-top:1px solid #edf1ef;font-size:12px}.mapping-table th{color:var(--muted);background:#fcfdff}.mapping-table td:first-child{width:36px;color:#94a2b4}.mapping-table select{width:100%;border:1px solid #c9d3cf;border-radius:8px;padding:7px 8px;background:white}.mapping-table select.invalid{border-color:#e15d5d;background:#fff7f7}.review-actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-top:17px}.confirm-line{display:flex;align-items:center;gap:9px;font-size:12px;color:#9b6500}.confirm-line input{width:17px;height:17px}
+.output-settings{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}.check-option{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--line);border-radius:12px}.check-option input{width:18px;height:18px}.check-option span{margin:0!important}.check-option b,.check-option small{display:block}.check-option small{color:var(--muted);font-size:11px;margin-top:3px}.message{padding:14px 16px;border-radius:12px;margin-top:15px;background:#e9f8f1;color:#167b56}.message.error{background:#fff0f0;color:#b22f2f}.message.warning{background:#fff7e9;color:#9b6500}.message small{display:block;margin-top:5px}.inline-download{border:0;background:none;color:inherit;font-weight:900;text-decoration:underline;margin-left:10px}
+.data-preview{border-top:1px solid #edf1ef;background:#fcfdfc}.data-preview summary{padding:10px 14px;color:#4a7263;font-size:12px;font-weight:700;cursor:pointer}.data-preview>div{overflow:auto;padding:0 14px 13px}.data-preview table{border-collapse:collapse;min-width:100%}.data-preview th,.data-preview td{border:1px solid #dfe7e3;padding:6px 8px;font-size:11px;white-space:nowrap}.data-preview th{background:#eef5f1;color:#4a7263}
+.history-list{border:1px solid var(--line);border-radius:14px;overflow:hidden}.history-item{display:grid;grid-template-columns:45px 1fr auto;gap:13px;align-items:center;padding:14px 16px;border-bottom:1px solid #edf1ef}.history-item:last-child{border:0}.history-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#eaf7ef}.history-main b{font-size:13px}.history-main p{margin:5px 0 0;font-size:11px;color:var(--muted)}.history-actions{display:flex;gap:8px}.history-actions button{padding:7px 10px;border-radius:8px;border:0;font-size:12px;font-weight:700}.history-actions button.download-history{background:#eaf3ef;color:var(--blue)}.history-actions button{background:#fff0f0;color:var(--danger)}.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:#1f2b3d;color:white;padding:11px 17px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;z-index:30;font-size:12px;box-shadow:0 8px 30px rgba(0,0,0,.22)}.toast.show{opacity:1;transform:translate(-50%,0)}
+.ai-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.ai-panel-head h3{margin:0;font-size:15px}.ai-summary{font:12px/1.7 inherit;color:#6d46c8;background:#f6f2ff;border:1px solid #e6defa;border-radius:10px;padding:10px 12px;margin-bottom:10px;white-space:pre-wrap;word-break:break-word}.ai-report{white-space:pre-wrap;word-break:break-word;background:#f8f7ff;border:1px solid #e6defa;border-radius:12px;padding:14px 16px;color:#32265e;font-size:12.5px;line-height:1.8}.ai-note{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.6}.ai-file-list{margin:10px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px}.ai-file-list li{font-size:12px;color:#41506b;background:#f7faf8;border:1px solid #e3edf7;border-radius:8px;padding:6px 9px;word-break:break-all}.ai-file-list li.skipped{background:#fff7f7;border-color:#f3d8d8;color:#a34040}.ai-suggest-table{width:100%;border-collapse:collapse;margin-top:8px}.ai-suggest-table th,.ai-suggest-table td{border:1px solid #dfe7e3;padding:7px 10px;font-size:12.5px;text-align:left}.ai-suggest-table th{background:#f4f1ff;color:#6d46c8}.ai-suggest-table td.changed{color:#7b3fd4;font-weight:700}
+.output-settings select{width:100%;margin-top:7px;padding:10px 12px;border:1px solid #c9d3cf;border-radius:9px;background:#fff;outline:none}.output-settings select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(18,128,92,.1)}.dedup-box{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fcfdfc}.dedup-box .check-option{padding:0;border:0;background:none}.dedup-detail{margin-top:12px;display:grid;gap:11px;border-top:1px dashed var(--line);padding-top:12px}.dedup-line{display:flex;align-items:center;gap:12px;font-size:13px;font-weight:700;flex-wrap:wrap}.dedup-line>span:first-child{color:var(--muted);font-size:12px}.dedup-line select{padding:8px 10px;border:1px solid #c9d3cf;border-radius:8px;background:#fff;font-weight:400;font-size:13px}.dedup-radios{display:flex;gap:16px;font-weight:400}.dedup-radios label{display:flex;align-items:center;gap:6px;cursor:pointer}.dedup-keys{display:flex;flex-wrap:wrap;gap:8px}.key-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #cfe0d8;background:#f3f9f6;border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer;user-select:none}.key-chip input{margin:0;width:14px;height:14px}.picker-clear{border:0;border-radius:8px;padding:8px 12px;background:#fff0f0;color:var(--danger);font-size:12px;font-weight:700;white-space:nowrap}#fileCard.drag-over{outline:2px dashed var(--blue);outline-offset:-6px;background:#f0f9f4}
+@media(max-width:800px){.hero{display:block}.hero-stats{margin-top:18px}.rules-content{grid-template-columns:1fr}.mode-grid,.output-settings,.data-options{grid-template-columns:1fr}.rule-fields{display:grid;grid-template-columns:1fr 1fr}.header-editor{grid-template-columns:repeat(2,1fr)}.action-row{align-items:flex-start;gap:15px;flex-direction:column}.ai-file-list{grid-template-columns:1fr}.local-badge{display:none}}@media(max-width:520px){main{width:calc(100% - 20px)}.step-card{padding:18px 14px}.rules-panel summary{padding:16px 14px}.rules-content{padding:14px 14px 17px}.topbar{padding:10px 14px}.hero h2{font-size:21px}.hero-stats div{min-width:0;flex:1}.rule-fields,.header-editor{grid-template-columns:1fr}.picker-row{flex-direction:column;align-items:stretch}.review-file-head{flex-wrap:wrap}.progress-box{grid-template-columns:1fr auto}.progress-box>b{grid-column:1/3;grid-row:2}.history-item{grid-template-columns:38px 1fr}.history-actions{grid-column:2}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">X</div>
+    <div><h1>Excel 表格合并助手</h1><p>本地批量合并 · 表头校验 · AI 辅助映射与核查</p></div>
+    <div class="topbar-badges">
+      <button type="button" class="ai-badge" id="aiBadge" title="点击打开 AI 配置"><span id="aiBadgeDot"></span><b>AI 智能辅助</b><small id="aiBadgeText">正在检测</small></button>
+      <div class="local-badge"><span id="healthDot"></span><b>LOCAL EXCEL TOOL</b><small id="healthText">正在加载离线组件</small></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div><span class="eyebrow">数智学工 · 工具箱</span><h2>把不同文件中的同类表格，准确合并成一张表</h2><p>先识别并确认每个文件的表头，再按列名映射合并。文件不会上传到互联网。</p></div>
+      <div class="hero-stats"><div><b>2</b><span>种导入模式</span></div><div><b>3</b><span>项 AI 辅助</span></div><div><b>100</b><span>个文件上限</span></div></div>
+    </section>
+
+    <section class="step-card rules-panel">
+      <details>
+        <summary>
+          <span class="rules-icon">规则</span>
+          <span><strong>使用规则</strong><small>展开查看文件要求、表头识别、差异处理、AI 边界和输出规则。</small></span>
+          <b aria-hidden="true">⌄</b>
+        </summary>
+        <div class="rules-content">
+          <div class="rule-block">
+            <h3>一、文件选择与支持范围</h3>
+            <ol>
+              <li>每次选择 <strong>2–100 个</strong>同类 Excel 文件，可选择整个文件夹，也可一次多选文件。</li>
+              <li>支持 <strong>.xlsx、.xlsm、.xlsb、.xls（含 Excel 5.0/95/97–2003 老版本）、.xltx、.xltm、.xlt、WPS .et/.ett、.ods/.fods/.ots、Excel 2003 XML、.csv 与 .txt</strong>（制表符分隔）。CSV/TXT 自动识别 UTF-8、GBK、UTF-16 编码，中文不乱码。</li>
+              <li>含宏文件只读取已保存的单元格结果，不执行或保留宏；密码保护、严重损坏或仅含外部连接而未保存结果的文件无法合并。</li>
+              <li>单文件不超过 50MB，总输入不超过 150MB；文件只在当前浏览器本机处理，不会上传网络。</li>
+            </ol>
+          </div>
+          <div class="rule-block">
+            <h3>二、表头与数据范围</h3>
+            <ol>
+              <li>“自动识别表头”会在设定的前若干行中寻找标题；识别不准确时，可逐文件修改表头行后重新识别。</li>
+              <li>“指定标题行”按输入行号读取标题；标题上方内容不合并，数据从标题下一行开始。</li>
+              <li>“末尾几行不合并”按每个文件末尾的非空数据行分别扣除；完全空白行始终忽略。</li>
+              <li>数据区中与表头完全相同的行（常见于把以前的合并结果再次混入）会被自动剔除并提示。</li>
+            </ol>
+          </div>
+          <div class="rule-block">
+            <h3>三、表头差异与列映射</h3>
+            <ol>
+              <li>默认以第一个文件作为标准表头，也可将其他文件设为标准，并调整最终输出列顺序和名称。</li>
+              <li>列名不完全一致时，会按常见同义词（如“姓名/学生姓名”“联系电话/手机号”“班级/行政班级”）自动建议映射，合并前仍需人工核对。</li>
+              <li>列名或列顺序不一致时会标出具体文件和问题列；必须核对列映射后才能合并。</li>
+              <li>某个文件确实缺少标准列时，应选择“该文件此列留空”，避免把数据对应到错误列。</li>
+            </ol>
+          </div>
+          <div class="rule-block ai-rule">
+            <h3>四、AI 辅助边界</h3>
+            <ol>
+              <li>AI 仅接收<strong>表头名称、行数等统计元数据</strong>，不发送任何单元格数据。</li>
+              <li>AI 建议仅作辅助：<strong>智能映射</strong>给出来源列建议，<strong>表头规范</strong>给出输出列名建议，<strong>合并前核查</strong>输出风险报告；应用前均可人工确认。</li>
+              <li>需在系统「AI 智能 → API配置」配置模型并开启“Excel 合并智能助手”后方可使用；未配置不影响本机合并功能。</li>
+            </ol>
+          </div>
+          <div class="rule-block">
+            <h3>五、内容格式、输出与历史</h3>
+            <ol>
+              <li>建议保留 Excel 显示内容，以避免学号等编号丢失前导零；隐藏行是否合并按页面勾选项执行；合并单元格会按左上角的值自动填充后再合并。</li>
+              <li>公式只读取文件中已保存的计算结果；若发现未缓存公式，请先用 Excel/WPS 计算并保存。</li>
+              <li>可选<strong>合并后去重</strong>（整行相同或按关键列判断，保留首次出现或仅标记）、<strong>按文件分工作表</strong>和 <strong>CSV 输出</strong>。</li>
+              <li>Excel 结果包含“合并结果”和“合并说明”两个工作表；运行记录保存到系统数据库，结果文件进入加密附件库，可再次下载，只有手动删除历史记录才会清除。</li>
+            </ol>
+          </div>
+          <p class="rules-note"><strong>提示：</strong>合并前请确认各文件属于同一类表格，并检查所选工作表、表头行和列映射。不要把以前生成的“Excel合并结果.xlsx”与原始文件放在同一待选文件夹中重复合并。</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="step-card" id="fileCard">
+      <div class="step-head"><span>01</span><div><h3>选择 Excel 文件</h3><p>可选择整个文件夹、一次多选，或直接拖拽文件/文件夹到本区域。</p></div></div>
+      <div class="mode-grid" id="inputModes">
+        <label class="choice active"><input type="radio" name="inputMode" value="folder" checked><i>📁</i><b>选择文件夹</b><small>读取文件夹中的 Excel、WPS 及模板文件</small></label>
+        <label class="choice"><input type="radio" name="inputMode" value="files"><i>📚</i><b>多选文件</b><small>按住 Ctrl 或 Shift 一次选择多个</small></label>
+      </div>
+      <div class="picker-row">
+        <label class="file-button" id="folderButton">选择文件夹<input id="folderInput" type="file" webkitdirectory directory multiple accept=".xlsx,.xlsm,.xlsb,.xls,.xltx,.xltm,.xlt,.et,.ett,.ods,.fods,.ots,.xml,.csv,.txt"></label>
+        <label class="file-button hidden" id="filesButton">选择多个文件<input id="filesInput" type="file" multiple accept=".xlsx,.xlsm,.xlsb,.xls,.xltx,.xltm,.xlt,.et,.ett,.ods,.fods,.ots,.xml,.csv,.txt"></label>
+        <div class="picked-summary"><b id="pickedCount">尚未选择文件</b><span id="pickedSize">支持 Excel 新旧格式、WPS .et/.ett、ODS、模板、Excel XML、CSV/TXT；单文件不超过 50MB，总计不超过 150MB；也可直接拖拽文件或文件夹到下方区域</span></div>
+        <button id="clearPicked" class="picker-clear" type="button" hidden>清空全部</button>
+      </div>
+      <div id="fileList" class="file-list empty">选择后将在这里显示文件清单</div>
+    </section>
+
+    <section class="step-card">
+      <div class="step-head"><span>02</span><div><h3>定义合并规则</h3><p>二选一。识别后仍可单独修正每个文件的表头行。</p></div></div>
+      <div class="mode-grid rule-grid" id="ruleModes">
+        <label class="choice active"><input type="radio" name="rule" value="auto" checked><i>✨</i><b>自动识别表头</b><small>在前部区域中寻找最可能的标题行</small></label>
+        <label class="choice"><input type="radio" name="rule" value="fixed"><i>🎯</i><b>指定标题行</b><small>明确顶部跳过行数和标题所在行</small></label>
+      </div>
+      <div class="rule-fields">
+        <label id="scanField"><span>自动扫描前几行</span><input id="scanRows" type="number" min="5" max="100" value="20"><small>建议 20 行</small></label>
+        <label class="fixed-only hidden"><span>顶部前几行不合并</span><input id="topSkip" type="number" min="0" max="10000" value="0"><small>不包含标题行</small></label>
+        <label class="fixed-only hidden"><span>第几行为标题</span><input id="headerRow" type="number" min="1" max="10000" value="1"><small>从 1 开始计数</small></label>
+        <label><span>末尾几行不合并</span><input id="tailSkip" type="number" min="0" max="10000" value="0"><small>按每个文件的非空数据行计</small></label>
+      </div>
+      <div class="data-options">
+        <label class="check-option"><input id="preserveDisplay" type="checkbox" checked><span><b>保留 Excel 显示内容（推荐）</b><small>保留学号前导零、百分比等显示格式；输出为文本</small></span></label>
+        <label class="check-option"><input id="excludeHidden" type="checkbox"><span><b>不合并隐藏行</b><small>勾选后，手动隐藏或筛选隐藏的数据行会被排除</small></span></label>
+      </div>
+      <div id="progressBox" class="progress-box hidden"><div><span id="progressBar"></span></div><b id="progressText">准备处理</b><button id="cancelButton" class="danger-ghost">取消</button></div>
+      <div class="action-row"><p class="privacy">🔒 全程本机处理，不上传网络。自动忽略完全空白行。</p><button id="analyzeButton" class="primary">分析并确认表头</button></div>
+    </section>
+
+    <section class="step-card hidden" id="reviewSection">
+      <div class="step-head"><span>03</span><div><h3>确认表头与列对应关系</h3><p>第一个文件默认作为标准，也可将任意文件设为标准；支持选择工作表和调整输出列顺序。</p></div></div>
+      <div id="reviewSummary" class="summary-banner"></div>
+      <div class="standard-box">
+        <div class="section-title"><div><b>合并后的输出表头</b><small>可以改名，但不能为空或重复</small></div><div class="title-buttons"><button id="aiHeaderButton" class="ai-ghost" type="button">✨ AI 表头规范</button><button id="addHeaderButton" class="ghost">＋ 添加输出列</button></div></div>
+        <div id="outputHeaders" class="header-editor"></div>
+      </div>
+      <div id="fileReviews" class="review-list"></div>
+      <div class="review-actions">
+        <button id="aiMappingButton" class="ai-btn" type="button">✨ AI 智能映射</button>
+        <button id="reanalyzeButton" class="secondary">按修改的表头行重新识别</button>
+        <label id="differenceConfirm" class="confirm-line hidden"><input id="confirmDifferences" type="checkbox"><span>我已核对上述表头差异及列映射，确认按当前设置合并</span></label>
+      </div>
+    </section>
+
+    <section class="step-card hidden" id="aiPanel">
+      <div class="ai-panel-head"><h3>🤖 AI 智能助手结果</h3><button class="ghost" type="button" id="aiPanelClose">收起</button></div>
+      <div id="aiPanelContent"></div>
+    </section>
+
+    <section class="step-card hidden" id="mergeSection">
+      <div class="step-head"><span>04</span><div><h3>生成合并文件</h3><p>导出前会再次校验所有列映射，导出后自动回读核对行数和表头。</p></div></div>
+      <div class="output-settings">
+        <label><span>新文件名称</span><input id="outputName" value="Excel合并结果.xlsx"></label>
+        <label><span>输出格式</span><select id="outputFormat"><option value="xlsx">Excel 工作簿（.xlsx，含合并说明）</option><option value="csv">CSV 文本（.csv，仅合并结果）</option></select></label>
+      </div>
+      <div class="data-options">
+        <label class="check-option"><input id="includeSource" type="checkbox" checked><span><b>增加“来源文件”列</b><small>便于追溯每行数据来自哪个文件</small></span></label>
+        <label class="check-option"><input id="perFileSheets" type="checkbox"><span><b>每个来源文件另存一个工作表</b><small>按文件分表保存映射结果，不参与去重；仅 Excel 格式有效</small></span></label>
+      </div>
+      <div class="dedup-box">
+        <label class="check-option"><input id="dedupEnabled" type="checkbox"><span><b>合并后去重</b><small>整行相同或按关键列判断重复；比较时忽略首尾空格，90 与 90.00 视为相同</small></span></label>
+        <div id="dedupDetail" class="dedup-detail hidden">
+          <div class="dedup-line"><span>判定方式</span><span class="dedup-radios"><label><input type="radio" name="dedupMode" value="all" checked>整行内容相同</label><label><input type="radio" name="dedupMode" value="keys">按关键列判断</label></span></div>
+          <div id="dedupKeyCols" class="dedup-keys hidden"></div>
+          <div class="dedup-line"><span>处理方式</span><select id="dedupAction"><option value="drop">保留首次出现，剔除后续重复</option><option value="mark">全部保留，仅标记重复行</option></select></div>
+        </div>
+      </div>
+      <div id="mergeMessage" class="message hidden"></div>
+      <div class="action-row"><p>Excel 结果包含“合并结果”和“合并说明”工作表；CSV 仅含合并结果。</p><div class="action-buttons"><button id="aiCheckButton" class="ai-btn" type="button">🛡 AI 合并前核查</button><button id="mergeButton" class="primary">开始合并并生成文件</button></div></div>
+    </section>
+
+    <section class="step-card history-card">
+      <div class="step-head"><span>05</span><div><h3>历史记录</h3><p>运行结果保存到系统数据库和加密附件库，只有手动删除历史记录才会清除。</p></div><button id="clearHistory" class="danger-ghost">清空记录</button></div>
+      <div id="historyList" class="history-list empty">暂无合并记录</div>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/xlsx.full.min.js"></script>
+  <script src="/assets/excel-merge-extract.js"></script>
+  <script src="/assets/tool-history-client.js"></script>
+  <script src="/assets/excel-merge-app.js"></script>
+</body>
+</html>

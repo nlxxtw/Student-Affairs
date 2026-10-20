@@ -1,0 +1,31 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path'),os=require('node:os');
+const {withIsolatedWorkbench}=require('./isolated-workbench-helper.cjs');
+const {chromium}=require(path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'));
+withIsolatedWorkbench(async origin=>{
+ const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/?goto=academicPublic',{waitUntil:'networkidle'});
+  const req=async(route,body,method=body===undefined?'GET':'PUT')=>{const r=await page.request.fetch(origin+'/api'+route,{method,headers:{Origin:origin},data:body});const result=await r.json();assert(r.ok(),JSON.stringify(result));return result;};
+  const classes=[{name:'2022甲1班',dept:'甲学院',major:'专业甲',grade:'2022级'},{name:'2023甲1班',dept:'甲学院',major:'专业甲',grade:'2023级'},{name:'2022乙1班',dept:'甲学院',major:'专业乙',grade:'2022级'},{name:'2023丙1班',dept:'乙学院',major:'专业丙',grade:'2023级'}];
+  const people=classes.map((c,i)=>({id:'000'+(i+1),name:'测试'+i,cls:c.name,dept:c.dept,major:c.major,grade:c.grade,status:'在校'}));
+  await req('/store/nnuzc_orgs',{value:JSON.stringify({depts:[{name:'甲学院'},{name:'乙学院'}],majors:[...new Map(classes.map(c=>[c.major,{name:c.major,dept:c.dept}])).values()],classes})});await req('/store/nnuzc_students',{value:JSON.stringify(people)});await req('/store/nnuzc_term_list',{value:JSON.stringify(['2025-2026-1学期'])});await page.reload({waitUntil:'networkidle'});await page.waitForSelector('#ap-content table');
+  const open=async key=>{await page.waitForFunction(()=>document.querySelector('.ap-page')?.getAttribute('aria-busy')==='false');if(!(await page.locator('#ap-'+key).evaluate(n=>n.classList.contains('open'))))await page.locator('#ap-'+key+' .qf-multi-trigger').click();await page.locator('#ap-'+key+'.open .qf-multi-panel').waitFor({state:'visible'});};
+  const pick=async(key,value,checked=true)=>{await open(key);await page.locator('[data-ap-filter="'+key+'"][value="'+value+'"]').setChecked(checked);};
+  const options=async key=>{await open(key);return page.locator('[data-ap-filter="'+key+'"]:visible').evaluateAll(nodes=>nodes.map(n=>n.value));};
+  await pick('grade','2022级');assert.deepEqual(await options('cls'),['2022甲1班','2022乙1班'],'2022 grade must hide every 2023 class');
+  await page.screenshot({path:path.join(os.tmpdir(),'shuzhi-academic-public-cascade.png'),fullPage:true});
+  await page.locator('#ap-cls .sf-search-input').fill('2023');assert.equal(await page.locator('[data-ap-filter="cls"][value="2023甲1班"]').isVisible(),false,'search cannot reveal a class outside the grade');await page.locator('#ap-cls .sf-search-input').fill('');
+  await pick('cls','2022甲1班');await pick('grade','2023级');assert.deepEqual(await options('cls'),classes.map(c=>c.name).sort((a,b)=>a.localeCompare(b,'zh-CN',{numeric:true})),'multiple grades combine');assert(await page.locator('[data-ap-filter="cls"][value="2022甲1班"]').isChecked());
+  await pick('grade','2022级',false);assert.deepEqual(await options('cls'),['2023丙1班','2023甲1班']);assert.equal(await page.locator('[data-ap-filter="cls"][value="2022甲1班"]').isChecked(),false,'invalid downstream checks are cleared');assert.match(await page.locator('#ap-cls .qf-multi-text').innerText(),/全部班级/);
+  await pick('cls','2023甲1班');await pick('dept','乙学院');assert.deepEqual(await options('major'),['专业丙']);assert.deepEqual(await options('grade'),['2023级']);assert.deepEqual(await options('cls'),['2023丙1班']);assert.equal(await page.locator('[data-ap-filter="cls"][value="2023甲1班"]').isChecked(),false);
+  await page.locator('[data-ap-all="cls"]').focus();await page.locator('[data-ap-all="cls"]').press('ArrowDown');assert.equal(await page.evaluate(()=>document.activeElement.value),'2023丙1班','keyboard navigation skips excluded classes');
+  await pick('major','专业丙');await pick('cls','2023丙1班');await pick('dept','乙学院',false);await pick('dept','甲学院');assert.deepEqual(await options('major'),['专业甲','专业乙']);assert.equal(await page.locator('[data-ap-filter="major"][value="专业丙"]').isChecked(),false);assert.deepEqual(await options('cls'),['2023甲1班']);
+  await pick('major','专业乙');assert.equal(await page.locator('[data-ap-filter="grade"][value="2023级"]').isChecked(),false,'major change clears an unavailable grade');assert.deepEqual(await options('grade'),['2022级']);assert.deepEqual(await options('cls'),['2022乙1班']);
+  const ids=()=>page.locator('#ap-content tbody tr').evaluateAll(nodes=>nodes.map(n=>n.children[1]?.textContent));assert.deepEqual(await ids(),['0001','0003','0002','0004'],'cascade updates the draft without changing applied results');await page.locator('[data-ap="filter"]').click();await page.waitForFunction(()=>document.querySelector('#ap-selection-summary')?.dataset.total==='1');assert.deepEqual(await ids(),['0003']);
+  await page.locator('[data-ap="reset"]').click();assert.deepEqual(await options('cls'),classes.map(c=>c.name).sort((a,b)=>a.localeCompare(b,'zh-CN',{numeric:true})));assert.equal(await page.locator('[data-ap-filter="status"][value="在校"]').isChecked(),true);assert.deepEqual(await ids(),['0001','0003','0002','0004']);
+  await pick('grade','2022级');await page.locator('[data-ap="tab"][data-arg="warnings"]').click();assert.deepEqual(await options('cls'),['2022甲1班','2022乙1班'],'tab rerenders preserve the cascade');
+  await pick('cls','2022甲1班');people[0]={...people[0],grade:'2023级',cls:'2023甲1班'};await req('/store/nnuzc_students',{value:JSON.stringify(people)});await page.evaluate(()=>academicPublicSync());assert.deepEqual(await options('cls'),['2022乙1班'],'updated student metadata refreshes the cascade');assert.match(await page.locator('#ap-cls .qf-multi-text').innerText(),/全部班级/);
+  assert.deepEqual(errors,[]);console.log('academic-public cascade browser: passed (grade/classes, dept/major/grade cascade, multi-select, stale check cleanup, search, reset, query, tabs, metadata refresh)');
+ }finally{await browser.close();}
+}).catch(e=>{console.error(e);process.exitCode=1;});

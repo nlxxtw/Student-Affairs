@@ -1,0 +1,10 @@
+"use strict";
+const fs=require('fs'); const path=require('path'); const Module=require('module');
+const file=path.join(__dirname,'qa-integration.cjs'); let source=fs.readFileSync(file,'utf8');
+source=source.replace('const temp = fs.mkdtempSync(path.join(os.tmpdir(), "xiangcai-integration-"));','const temp = fs.mkdtempSync(path.join(os.tmpdir(), "xiangcai-integration-")); console.log("TRACE isolated directory",temp);');
+source=source.replace('async function request(urlPath, options = {}) {','async function request(urlPath, options = {}) {\n const traceStarted=Date.now(); console.log("TRACE HTTP start",options.method||"GET",urlPath);');
+source=source.replace('return { response, bytes, body };','console.log("TRACE HTTP done",options.method||"GET",urlPath,response.status,Date.now()-traceStarted,"ms"); return { response, bytes, body };');
+source=source.replace('function runPowerShell(command, environment = {}) {','function runPowerShell(command, environment = {}) {\n const traceStarted=Date.now(); console.log("TRACE COM start",Object.keys(environment).join(","));');
+source=source.replace('if (result.error) throw result.error;','console.log("TRACE COM done",result.status,Date.now()-traceStarted,"ms",result.error&&result.error.message||""); if (result.error) throw result.error;');
+const traceStart=Date.now();console.log("TRACE run start",new Date(traceStart).toISOString());process.on("exit",code=>console.log("TRACE run exit",code,"elapsedMs",Date.now()-traceStart));
+const mod=new Module(file,module); mod.filename=file;mod.paths=module.paths;mod._compile(source,file);

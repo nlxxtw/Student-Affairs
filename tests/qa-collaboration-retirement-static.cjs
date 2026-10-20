@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=process.env.RETIREMENT_SOURCE_ROOT||path.resolve(__dirname,'..');
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const server=read('web-server.js');
+assert.doesNotMatch(server,/function collaborationSaveAccount|COLLABORATION_ACCOUNT_LIMIT|CREATE TABLE IF NOT EXISTS collaboration_accounts|function collaborationLoginHtml/,'account creation, authentication and capacity code must be absent');
+assert.doesNotMatch(server,/SELECT [^\n]*FROM collaboration_accounts|INSERT INTO collaboration_accounts|UPDATE collaboration_accounts/,'old credential tables must not be accessed');
+assert.doesNotMatch(server,/Location: [^\n]*collaboration-login|loginUrl: [^\n]*collaboration-login/,'no redirect may lead to the retired login');
+assert.doesNotMatch(read('index.html'),/collaborationAccountForm|collab-account-role|collaborationPanel/,'dedicated account UI and styles must be removed');
+assert.doesNotMatch(read('academic-public-module.js'),/账号数据范围授权|ap-account|accessModal/,'academic account ACL controls must be removed');
+assert.doesNotMatch(read('assets/tool-history-client.js'),/collaboration-login|__workbenchCollaboration/,'tools must use the workbench session, not deleted account login');
+assert.doesNotMatch(server,/loadLanAccess|function ensureDeviceSession|function rebindHttpServer|LAN_ACCESS/,'old LAN config must not re-enable a listener or create sessions');
+assert.match(server,/server\.listen\(PORT, HOST/,'listener is fixed to loopback');
+assert.doesNotMatch(read('app.js'),/PAGES\.lanaccess|function lanQrMatrix/,'LAN page and QR code generator are removed');
+assert.match(server,/\/api\/workbench\/state/,'generic page synchronization remains');
+assert.match(read('app.js'),/__workbenchStoreSync/,'save failure retry remains wired');
+console.log('retirement source contract: account endpoints/UI/credentials removed; tool entry and generic save protection retained');

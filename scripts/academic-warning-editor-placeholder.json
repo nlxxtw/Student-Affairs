@@ -1,0 +1,50 @@
+{
+  "item": {
+    "fileBase": "academic-warning-editor-template",
+    "student": {
+      "name": "__AW_STUDENT_NAME__",
+      "sid": "__AW_STUDENT_SID__",
+      "gender": "__AW_STUDENT_GENDER__",
+      "college": "__AW_STUDENT_COLLEGE__",
+      "major": "__AW_STUDENT_MAJOR__",
+      "className": "__AW_STUDENT_CLASSNAME__"
+    },
+    "courses": [
+      {"name":"__AW_COURSE_0_NAME__","term":"__AW_COURSE_0_TERM__","result":"__AW_COURSE_0_RESULT__"},
+      {"name":"__AW_COURSE_1_NAME__","term":"__AW_COURSE_1_TERM__","result":"__AW_COURSE_1_RESULT__"},
+      {"name":"__AW_COURSE_2_NAME__","term":"__AW_COURSE_2_TERM__","result":"__AW_COURSE_2_RESULT__"},
+      {"name":"__AW_COURSE_3_NAME__","term":"__AW_COURSE_3_TERM__","result":"__AW_COURSE_3_RESULT__"},
+      {"name":"__AW_COURSE_4_NAME__","term":"__AW_COURSE_4_TERM__","result":"__AW_COURSE_4_RESULT__"},
+      {"name":"__AW_COURSE_5_NAME__","term":"__AW_COURSE_5_TERM__","result":"__AW_COURSE_5_RESULT__"}
+    ],
+    "forms": {
+      "notice": {
+        "cetDegree":"__AW_NOTICE_CETDEGREE__","computerExam":"__AW_NOTICE_COMPUTEREXAM__","warningChoice":"",
+        "collegeOpinion":"__AW_NOTICE_COLLEGEOPINION__","leaderSignature":"__AW_NOTICE_LEADERSIGNATURE__","collegeDate":"__AW_NOTICE_COLLEGEDATE__",
+        "studentSignature":"__AW_NOTICE_STUDENTSIGNATURE__","studentDate":"__AW_NOTICE_STUDENTDATE__"
+      },
+      "parent": {
+        "counselorName":"__AW_PARENT_COUNSELORNAME__","officePhone":"__AW_PARENT_OFFICEPHONE__","mobilePhone":"__AW_PARENT_MOBILEPHONE__","email":"__AW_PARENT_EMAIL__","noticeDate":"__AW_PARENT_NOTICEDATE__",
+        "parentName":"__AW_PARENT_PARENTNAME__","parentFixedPhone":"__AW_PARENT_PARENTFIXEDPHONE__","parentMobile":"__AW_PARENT_PARENTMOBILE__","parentEmail":"__AW_PARENT_PARENTEMAIL__",
+        "parentSuggestions":"__AW_PARENT_PARENTSUGGESTIONS__","parentSignature":"__AW_PARENT_PARENTSIGNATURE__","receiptDate":"__AW_PARENT_RECEIPTDATE__"
+      },
+      "talk": {
+        "parentName":"__AW_TALK_PARENTNAME__","parentContact":"__AW_TALK_PARENTCONTACT__","studentContact":"__AW_TALK_STUDENTCONTACT__","talkObject":"__AW_TALK_TALKOBJECT__",
+        "parentTalkMethod":"__AW_TALK_PARENTTALKMETHOD__","warningLevel":"__AW_TALK_WARNINGLEVEL__","warningReason":"__AW_TALK_WARNINGREASON__",
+        "studentTalk":"__AW_TALK_STUDENTTALK__","parentTalk":"__AW_TALK_PARENTTALK__","teacherSignature":"__AW_TALK_TEACHERSIGNATURE__",
+        "studentSignature":"__AW_TALK_STUDENTSIGNATURE__","talkDate":"__AW_TALK_TALKDATE__"
+      },
+      "support": {
+        "guidanceTeacher":"__AW_SUPPORT_GUIDANCETEACHER__","academicRank":"__AW_SUPPORT_ACADEMICRANK__","plannedCompletion":"__AW_SUPPORT_PLANNEDCOMPLETION__",
+        "problemDescription":"__AW_SUPPORT_PROBLEMDESCRIPTION__","supportContent":"__AW_SUPPORT_SUPPORTCONTENT__","teacherSignature":"__AW_SUPPORT_TEACHERSIGNATURE__",
+        "studentSignature":"__AW_SUPPORT_STUDENTSIGNATURE__","completionStatus":"__AW_SUPPORT_COMPLETIONSTATUS__",
+        "collegeAuditSignature":"__AW_SUPPORT_COLLEGEAUDITSIGNATURE__","auditDate":"__AW_SUPPORT_AUDITDATE__"
+      },
+      "cancel": {
+        "poorStatus":"__AW_CANCEL_POORSTATUS__","performanceDescription":"__AW_CANCEL_PERFORMANCEDESCRIPTION__",
+        "collegeAuditSignature":"__AW_CANCEL_COLLEGEAUDITSIGNATURE__","auditDate":"__AW_CANCEL_AUDITDATE__",
+        "studentSignature":"__AW_CANCEL_STUDENTSIGNATURE__","studentDate":"__AW_CANCEL_STUDENTDATE__"
+      }
+    }
+  }
+}

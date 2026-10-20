@@ -1,0 +1,38 @@
+edition: 3.0.0
+name: shuzhi-xuegong-license
+access: shuzhi-xuegong-deploy
+
+resources:
+  license_api:
+    component: fc3
+    props:
+      region: ${env('ALIYUN_REGION')}
+      functionName: shuzhi-xuegong-license-api
+      description: 数智学工设备授权服务（不接收学生业务数据）
+      runtime: nodejs20
+      code: ./
+      handler: index.handler
+      memorySize: 128
+      timeout: 15
+      internetAccess: true
+      role: ${env('FC_EXECUTION_ROLE_ARN')}
+      environmentVariables:
+        TABLESTORE_ENDPOINT: ${env('TABLESTORE_ENDPOINT')}
+        TABLESTORE_INSTANCE: ${env('TABLESTORE_INSTANCE')}
+        TABLESTORE_LICENSE_TABLE: shuzhi_licenses
+        LICENSE_PRODUCT: shuzhi-xuegong
+        LICENSE_VERIFY_HOURS: "72"
+        LICENSE_OFFLINE_DAYS: "180"
+        LICENSE_CODE_PEPPER: ${env('LICENSE_CODE_PEPPER')}
+        LICENSE_PRIVATE_KEY_B64: ${env('LICENSE_PRIVATE_KEY_B64')}
+        UPDATE_OSS_BUCKET: ${env('UPDATE_OSS_BUCKET')}
+        UPDATE_OSS_REGION: ${env('UPDATE_OSS_REGION')}
+        UPDATE_MANIFEST_KEY: releases/current.json
+      triggers:
+        - triggerName: httpTrigger
+          triggerType: http
+          triggerConfig:
+            authType: anonymous
+            methods:
+              - GET
+              - POST

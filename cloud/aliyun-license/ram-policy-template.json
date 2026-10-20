@@ -1,0 +1,21 @@
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ots:GetRow",
+        "ots:PutRow",
+        "ots:UpdateRow"
+      ],
+      "Resource": "acs:ots:<REGION>:<ACCOUNT_ID>:instance/<INSTANCE_NAME>/table/shuzhi_licenses"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "oss:GetObject"
+      ],
+      "Resource": "acs:oss:*:*:<UPDATE_OSS_BUCKET>/releases/*"
+    }
+  ]
+}

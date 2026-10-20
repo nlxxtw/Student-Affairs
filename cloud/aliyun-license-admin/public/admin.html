@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>数智学工 · 授权管理</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <main id="loginView" class="login-shell">
+    <section class="login-card">
+      <div class="brand-mark">数</div>
+      <p class="eyebrow">数智学工</p>
+      <h1>授权管理后台</h1>
+      <p class="muted">独立管理激活码、设备绑定和授权状态</p>
+      <form id="loginForm" autocomplete="off">
+        <label>管理员账号<input id="loginUsername" name="username" value="admin" maxlength="80" required></label>
+        <label>管理员密码<input id="loginPassword" name="password" type="password" minlength="12" required></label>
+        <p id="loginError" class="error-text" role="alert"></p>
+        <button class="primary wide" type="submit">安全登录</button>
+      </form>
+      <p class="security-note">登录信息不会保存在浏览器中</p>
+    </section>
+  </main>
+
+  <main id="adminView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span>数</span><div><b>数智学工</b><small>授权管理</small></div></div>
+      <nav>
+        <button class="nav-item active" data-tab="licenses">授权管理</button>
+        <button class="nav-item" data-tab="audit">操作日志</button>
+      </nav>
+      <div class="sidebar-foot"><span id="currentUser"></span><button id="logoutButton" class="text-button">退出登录</button></div>
+    </aside>
+    <section class="content">
+      <header class="topbar"><div><p class="eyebrow">LICENSE CENTER</p><h1 id="pageTitle">授权管理</h1></div><span class="status-pill">云端服务正常</span></header>
+
+      <section id="licensesPanel">
+        <div class="stats-grid">
+          <article><span>授权总数</span><strong id="statTotal">0</strong></article>
+          <article><span>正常授权</span><strong id="statActive">0</strong></article>
+          <article><span>已停用</span><strong id="statRevoked">0</strong></article>
+          <article><span>绑定设备</span><strong id="statDevices">0</strong></article>
+        </div>
+        <section class="panel">
+          <div class="toolbar">
+            <div class="filters"><input id="searchInput" placeholder="搜索授权编号、激活码、姓名、小红书或微信"><select id="statusFilter"><option value="">全部状态</option><option value="active">正常</option><option value="revoked">已停用</option></select><button id="searchButton">查询</button></div>
+            <div class="actions"><button id="exportButton">导出列表</button><button id="createButton" class="primary">批量生成</button></div>
+          </div>
+          <div class="table-wrap license-table-wrap"><table class="license-table"><thead><tr><th>授权编号</th><th>激活码</th><th>客户信息</th><th>状态</th><th>设备</th><th>有效期</th><th>更新时间</th><th>操作</th></tr></thead><tbody id="licenseRows"></tbody></table></div>
+          <div id="emptyLicenses" class="empty hidden">暂无符合条件的授权记录</div>
+        </section>
+      </section>
+
+      <section id="auditPanel" class="hidden panel">
+        <div class="toolbar"><div><h2>操作日志</h2><p class="muted">记录登录、生成、查看授权码、停用、恢复、删除和设备解绑</p></div><button id="refreshAuditButton">刷新</button></div>
+        <div class="table-wrap audit-table-wrap"><table class="audit-table"><thead><tr><th>时间</th><th>操作</th><th>管理员</th><th>授权编号</th><th>来源IP</th><th>详情</th></tr></thead><tbody id="auditRows"></tbody></table></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="createDialog">
+    <form id="createForm" method="dialog" class="dialog-form">
+      <div class="dialog-head"><div><p class="eyebrow">BATCH CREATE</p><h2>批量生成激活码</h2></div><button type="button" class="icon-button" data-close="createDialog">×</button></div>
+      <div class="form-grid">
+        <label>生成数量<input name="count" type="number" min="1" max="200" value="10" required></label>
+        <label>每码设备上限<input name="maxDevices" type="number" min="1" max="50" value="5" required></label>
+        <label class="span-2">客户名称（姓名）<input name="customerName" maxlength="120" placeholder="请输入客户姓名" required></label>
+        <label>客户名称（小红书ID）<input name="customerXhsId" maxlength="120" placeholder="小红书昵称或ID"></label>
+        <label>客户名称（微信名或微信号）<input name="customerWechat" maxlength="120" placeholder="微信昵称或微信号"></label>
+        <label>到期日期（可选）<input name="expiresAt" type="date"></label>
+        <label class="span-2">备注<textarea name="note" maxlength="500" rows="3"></textarea></label>
+      </div>
+      <div class="warning-box">新生成的激活码会加密保存。生成后可立即下载，也可稍后在授权列表中点击“显示”或“复制”；查看操作会写入审计日志。</div>
+      <p id="createError" class="error-text"></p>
+      <div class="dialog-actions"><button type="button" data-close="createDialog">取消</button><button class="primary" type="submit">生成并下载</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="createdCodesDialog" class="codes-dialog">
+    <section class="dialog-form">
+      <div class="dialog-head"><div><p class="eyebrow">CREATED CODES</p><h2>激活码生成成功</h2><p class="muted">可立即复制或下载；关闭后仍可在授权列表中登录查看。</p></div><button type="button" class="icon-button" data-close="createdCodesDialog" aria-label="关闭">×</button></div>
+      <div class="created-actions"><button id="copyAllCodesButton" type="button">复制全部</button><button id="downloadCreatedCodesButton" type="button" class="primary">下载CSV</button></div>
+      <div id="createdCodesList" class="created-codes-list"></div>
+      <div class="dialog-actions"><button type="button" data-close="createdCodesDialog">完成</button></div>
+    </section>
+  </dialog>
+
+  <dialog id="editDialog">
+    <form id="editForm" method="dialog" class="dialog-form">
+      <input name="id" type="hidden">
+      <div class="dialog-head"><div><p class="eyebrow">EDIT LICENSE</p><h2>编辑授权</h2></div><button type="button" class="icon-button" data-close="editDialog">×</button></div>
+      <div class="form-grid">
+        <label class="span-2">客户名称（姓名）<input name="customerName" maxlength="120"></label>
+        <label>客户名称（小红书ID）<input name="customerXhsId" maxlength="120"></label>
+        <label>客户名称（微信名或微信号）<input name="customerWechat" maxlength="120"></label>
+        <label>设备上限<input name="maxDevices" type="number" min="1" max="50" required></label>
+        <label>到期日期（可选）<input name="expiresAt" type="date"></label>
+        <label class="span-2">备注<textarea name="note" maxlength="500" rows="3"></textarea></label>
+      </div>
+      <p id="editError" class="error-text"></p>
+      <div class="dialog-actions"><button type="button" data-close="editDialog">取消</button><button class="primary" type="submit">保存修改</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="deviceDialog">
+    <section class="dialog-form">
+      <div class="dialog-head"><div><p class="eyebrow">BOUND DEVICES</p><h2>已绑定设备</h2><p id="deviceLicenseId" class="muted"></p></div><button type="button" class="icon-button" data-close="deviceDialog">×</button></div>
+      <div id="deviceList" class="device-list"></div>
+      <div class="dialog-actions"><button type="button" data-close="deviceDialog">关闭</button></div>
+    </section>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/admin/admin.js" defer></script>
+</body>
+</html>

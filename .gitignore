@@ -1,0 +1,38 @@
+# 本机业务数据与密钥（勿上传）
+data/
+backups/
+updates/
+*.db
+*.db-wal
+*.db-shm
+portable-data-key.json
+license-state.json
+
+# 密钥与本地秘密
+**/*secrets*.json
+**/.env
+**/.env.*
+**/deployment-secrets.json
+**/admin-secrets.json
+
+# 运行时与依赖
+runtime/
+node_modules/
+**/node_modules/
+
+# 本地/测试临时产物
+.qa-temp/
+.codex-tmp/
+源码备份/
+release-output/
+*.log
+*.tmp
+*.part
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

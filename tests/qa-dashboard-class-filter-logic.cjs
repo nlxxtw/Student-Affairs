@@ -1,0 +1,27 @@
+'use strict';
+// Pure VM verification: no server, browser, account, database or production data.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const keys=['dept','major','grade','cls','counselor','teacher'],classes=[{name:'甲班',dept:'甲院',major:'专业甲',grade:'2022',counselor:'辅导员甲',teacher:'教师甲'},{name:'乙班',dept:'甲院',major:'专业甲',grade:'2023',counselor:'辅导员乙',teacher:'教师乙'},{name:'丙班',dept:'乙院',major:'专业乙',grade:'2022',counselor:'辅导员甲',teacher:'教师乙'}],people=classes.map((c,i)=>({id:String(i),name:'合成'+i,dept:c.dept,major:c.major,grade:c.grade,cls:c.name,status:'在校',gender:'男',political:i?'共青团员':'中共党员'}));people.push({...people[0],id:'graduate',status:'毕业'});
+let html='',modal='';const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const choices=Object.fromEntries(keys.map(key=>[key,[...new Set(classes.map(c=>key==='cls'?c.name:c[key]))].map(value=>({value,checked:false,disabled:false,closest:()=>({style:{}})}))]));
+const nodes=Object.fromEntries(keys.map(key=>[key,{querySelectorAll:selector=>selector.includes(':checked')?choices[key].filter(c=>c.checked):choices[key],querySelector:selector=>selector.includes('trigger')?{setAttribute(){}}:null}]));
+const root={querySelector:selector=>nodes[selector.match(/="([^"]+)"/)[1]]},card={set outerHTML(value){html=value;}},doc={addEventListener(){},createElement:()=>({}),head:{appendChild(){}},getElementById:id=>id==='siClassFilters'?root:id==='siClassDistribution'?card:{classList:{add(){}},innerHTML:''}};
+const context={window:{},document:doc,PAGES:{},viewFilter:{dashboard:{}},ORG_CLASSES:classes,students:people,CURRENT_TERM:'2025-2026-1',localStorage:{getItem:()=>null},structuredClone,esc,jsArg:v=>JSON.stringify(v),stuNormalizeStatus:v=>v||'在校',qfMulti:(name,options)=>'<div class="qf-multi">'+name+options.map(o=>esc(o.v)).join('|')+'</div>',qfMultiRefresh(){},qfBtns:()=>'',isoToday:()=> '2026-10-13',taskDisplayStatus:r=>r.status,openModal:(title,body)=>modal=body,depts:['甲院','乙院'],majors:['专业甲','专业乙'],grades:['2022','2023'],classes:['甲班','乙班','丙班']};
+for(const key of ['fundRecords','talkRecords','homeRecords','eventRecords','helpRecords','keyCareRecords','punishments','taskRecords','dormViolations','classroomRecords','classroomViolations','checkClassRecords'])context[key]=[];
+context.dashboardScopedStudents=()=>context.students.filter(s=>!context.viewFilter.dashboard.dept||context.viewFilter.dashboard.dept.includes(s.dept));
+context.aiRenderAiShell=()=>'';context.aiTodayContent=()=>'';
+vm.createContext(context);vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../intelligence-enhancements.js'),'utf8'),context);
+context.window.siClassReset();assert.match(html,/siClassFilters/);assert.match(html,/总人数 3/);context.PAGES.dashboard_init();choices.counselor.find(c=>c.value==='辅导员甲').checked=true;context.window.siClassQuery();assert.match(html,/总人数 2/);assert.match(html,/>甲班<|甲班/);assert.match(html,/>丙班<|丙班/);assert.doesNotMatch(html,/<td>乙班<\/td>/);
+choices.teacher.find(c=>c.value==='教师乙').checked=true;context.window.siClassQuery();assert.match(html,/总人数 1/);assert.doesNotMatch(html,/<td>甲班<\/td>/);
+context.window.siClassReset();choices.grade.find(c=>c.value==='2022').checked=true;choices.cls.find(c=>c.value==='甲班').checked=true;context.window.siClassQuery();assert.match(html,/总人数 1/);choices.grade.find(c=>c.value==='2022').checked=false;choices.grade.find(c=>c.value==='2023').checked=true;context.window.siClassQuery();assert.equal(choices.cls.find(c=>c.value==='甲班').checked,false,'upstream grade removes invalid class');context.window.siClassQuery();assert.match(html,/<td>乙班<\/td>/);
+context.viewFilter.dashboard={dept:['乙院']};context.window.siClassReset();assert.match(html,/总人数 1/);assert.doesNotMatch(html,/<td>甲班<\/td>/);assert.equal(choices.dept.find(c=>c.value==='甲院').disabled,true,'options respect dashboard scope');
+context.window.siOpenClassMemberList('','','','','all',true);assert.match(modal,/合成2/);assert.doesNotMatch(modal,/合成0|合成1|graduate/,'member list uses the same applied/global filter and in-school scope');
+context.ORG_DEPTS=[{name:'甲院',code:'10'},{name:'乙院',code:'2'},{name:'无代码院',code:''}];
+context.viewFilter.dashboard={};
+const sortClasses=[['甲院','2023级','852304通信',9],['甲院','2023级','85237数据科学',1],['甲院','2022级','Z10班',8],['甲院','2022级','A20班',7],['甲院','2022级','Z2班',1],['甲院','2022级','无编号班',6],['甲院','','1班',5],['乙院','2026级','999班',1],['无代码院','2020级','1班',1],['未维护院','2020级','1班',1]];
+context.students=sortClasses.flatMap(([dept,grade,cls,count],i)=>Array.from({length:count},(_,n)=>({id:'sort-'+i+'-'+n,name:'合成排序',dept,major:i===4?'末专业':'首专业',grade,cls,status:'在校'})));
+const before=JSON.stringify(context.students);context.window.siClassReset();
+const order=[...html.matchAll(/<tr><td>(.*?)<\/td><td>.*?<\/td><td>.*?<\/td><td>(.*?)<\/td>/g)].map(m=>[m[1],m[2]]);
+assert.deepEqual(order,[['乙院','999班'],['甲院','Z2班'],['甲院','Z10班'],['甲院','A20班'],['甲院','无编号班'],['甲院','85237数据科学'],['甲院','852304通信'],['甲院','1班'],['未维护院','1班'],['无代码院','1班']],'class distribution must sort by department code, grade, and numeric class part, independently of enrollment counts/major/name prefixes');
+assert.equal(JSON.stringify(context.students),before,'display sorting must not mutate student records');
+console.log('Dashboard class filter logic passed: filters, in-school totals, department-code/grade/numeric-class ordering and missing metadata.');
