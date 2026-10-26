@@ -5,7 +5,7 @@
     var session=JSON.parse(localStorage.getItem("nnuzc_session")||"null");
     if(!session || !session.uid || !["sa","admin","editor","viewer"].includes(session.role)){
       localStorage.removeItem("nnuzc_session");
-      location.replace("./login.html");
+      location.replace("/");
       /* 旧版错误抛出语句存在编码残留，重定向后无需继续执行。 */
       return;
       /*
@@ -14,7 +14,7 @@
     }
     window.__NNUZC_SESSION__=session;
   }catch(e){
-    if(location.pathname.indexOf("login.html")===-1) location.replace("./login.html");
+    if(location.pathname.indexOf("login.html")===-1) location.replace("/");
     throw e;
   }
 })();
@@ -426,7 +426,8 @@ function qfMulti(name, opts, cur){
   }
   // 空选仍表示不过滤，但触发器必须保留字段名称（如“全部学院”），避免复选改造后只显示“请选择”而丢失查询字段语义。
   const lbl = (options[0] && String(options[0].v) === "") ? options[0].l : ("all " + name);
-  const triggerText = lbl;
+  const selectedLabels=items.filter(function(item){return sel.includes(String(item.v));}).map(function(item){return String(item.l??item.v);});
+  const triggerText=selectedLabels.length&&selectedLabels.length<items.length?selectedLabels.join("、"):lbl;
   const panelId = 'qfmp_' + Math.random().toString(36).slice(2,9);
   const optsHtml = items.length ? items.map(function(o){
     const value=String(o&&o.v!=null?o.v:""),label=String(o&&o.l!=null?o.l:value);
@@ -435,7 +436,7 @@ function qfMulti(name, opts, cur){
   }).join("") : '<div class="qf-multi-empty">no options</div>';
   return '<div class="qf-multi" data-qf="' + escAttr(name) + '" data-label="' + escAttr(lbl) + '">'
     + '<button type="button" class="qf-multi-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="' + panelId + '">'
-      + '<span class="qf-multi-text">' + triggerText + '</span>'
+      + '<span class="qf-multi-text" title="'+escAttr(triggerText)+'">' + esc(triggerText) + '</span>'
       + '<span class="qf-multi-count" hidden>0</span>'
       + '<span class="qf-multi-caret">&#9662;</span>'
     + '</button>'
@@ -462,10 +463,11 @@ function qfMultiRefresh(multi){
     text.textContent = lbl;
     cnt.hidden = true;
   } else {
-    text.textContent = lbl + ' · ' + n;
+    text.textContent = Array.from(checks).filter(function(input){return input.checked;}).map(function(input){return input.parentElement.textContent.trim();}).join('、');
     cnt.hidden = false;
     cnt.textContent = n;
   }
+  text.title=text.textContent;
 }
 // === 顶层 readMulti：所有 qf-multi 工具栏（学生信息、处分子模块、评奖评优编辑弹窗）共用 ===
 function readMulti(name){
@@ -962,6 +964,8 @@ const ORG_MAJORS=[];
 const ORG_CLASSES=[];
 const ORG_GRADES=[]; /* v1.50：年级独立维护 */
 const ORG_ENROLL_TYPES=[]; /* 招生类别独立维护（参照年级；用于班级/学生招生类别下拉） */
+const DEFAULT_EDUCATION_LEVELS=["高中","职高","中专","专科","本科","硕士","博士"];
+const ORG_LEVELS=[]; /* 可维护培养层次字典；不是学生或班级的固定枚举。 */
 const ORG_DORMS=[]; /* 兼容影子：新版以公寓资源为唯一权威来源；此数组仅保留给旧版本回滚和旧备份迁移。 */
 const depts=[];
 
@@ -997,6 +1001,7 @@ function sortWorkbenchCollections(){
   ORG_GRADES.sort(function(a,b){return compareWorkbenchCode(a.name,b.name);});
   ORG_DORMS.sort(function(a,b){return compareWorkbenchText(a.zone||"",b.zone||"")||compareWorkbenchText(a.building||"",b.building||"");});
   ORG_ENROLL_TYPES.sort(function(a,b){return compareWorkbenchText(a.name||"",b.name||"");});
+  ORG_LEVELS.sort(function(a,b){return compareWorkbenchText(a.name||"",b.name||"");});
   if(Array.isArray(students)) students.sort(compareStudentsByOrg);
 }
 
@@ -1163,7 +1168,7 @@ const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 function clsStudents(){ return students.slice(); }
 function stuCells(s){return '<td>'+esc(s.dept)+'</td><td>'+esc(s.major)+'</td><td>'+esc(s.cls)+'</td><td>'+esc(s.id)+'</td><td>'+esc(s.name)+'</td>';}
 const curRole="sa";
-let SYS_VER="V5.5.9";
+let SYS_VER="V5.6.3";
 let WORKBENCH_BRANDING={name:"数智学工",hasCustomSidebarLogo:false,hasCustomLoginLogo:false,sidebarLogoUrl:"/assets/login-logo-icon.png",loginLogoUrl:"/assets/login-logo.png"};
 let BRANDING_SIDEBAR_LOGO_ACTION="keep",BRANDING_LOGIN_LOGO_ACTION="keep";
 let BRANDING_PENDING_SIDEBAR_LOGO_DATA="",BRANDING_PENDING_LOGIN_LOGO_DATA="";
@@ -1196,9 +1201,9 @@ window.beijingLocaleDateTime=beijingLocaleDateTime;
 function fmtNow(){return beijingDateTime(Date.now());}
 const VIEWS={
   dashboard:"工作台",cockpit:"大屏驾驶舱",ai:"AI 智能助手",student:"学生管理",classOfficer:"班级干部管理",student_mine:"我的信息",studentLeave:"请销假管理",classroom:"课堂管理",courseTimetable:"实时课表",dorm:"宿舍管理",dormRoster:"花名册",customRoster:"花名册（自定义版）",
-  meeting:"班会/活动",fund:"资助情况",studentLoan:"助学贷款",party:"党团员发展",eval:"综测数据",academic:"学业情况（个人版）",academicPublic:"学业情况（公用版） 开发中",punishment:"处分情况",
-  semester:"学期设置",recycle:"回收站",maint:"基础数据维护",brandSettings:"品牌设置",navCustomize:"自定义导航栏",license:"关于本软件",dept:"学院",major:"专业",class:"班级",
-  talks:"谈心谈话",  tasks:"工作任务",keycare:"重点关爱",psych:"心理预警",home:"家校联系",events:"突发事件",portrait:"学生画像",backup:"数据备份",update:"系统更新",checkClass:"查课记录",checkDorm:"查寝记录",help:"帮扶记录",workFolder:"工作记录文件夹",
+  meeting:"班会/活动",fund:"资助情况",studentLoan:"助学贷款",party:"党团员发展",eval:"综测数据",academic:"学业情况（个人版）",academicPublic:"学业情况（公用版）",punishment:"处分情况",
+  semester:"学期设置",recycle:"回收站",maint:"基础数据维护",brandSettings:"品牌设置",navCustomize:"自定义导航栏",license:"授权激活",dept:"学院",major:"专业",class:"班级",
+  talks:"谈心谈话",  tasks:"工作任务",keycare:"重点关爱",psych:"心理预警",home:"家校联系",events:"突发事件",portrait:"学生画像",backup:"数据备份",dataCenter:"数据中心",update:"系统更新",checkClass:"查课记录",checkDorm:"查寝记录",help:"帮扶记录",workFolder:"工作记录文件夹",
   subjectCompetition:"科创竞赛",materials:"材料",apiconfig:"API配置",certificate:"证书识别",achievement:"获奖情况",awardStatistics:"获奖统计",counselorGrowth:"辅导员成长档案",employment:"毕业生就业",dormviolate:"宿舍违纪",otherViolation:"其他违纪记录",studentOrgHome:"学生组织管理 · 总览",studentOrgManage:"学生组织管理 · 组织管理",studentOrgLedger:"学生组织管理 · 业务台账",studentOrgLibrary:"学生组织管理 · 资料",academicSummary:"综测与成绩汇总（个人定制）",academicAnalysis:"学业分析助手（个人定制）",excelMerge:"Excel 表格合并",excelCheck:"Excel 表格核对",dataMatch:"数据自动匹配"
 };
 
@@ -1639,31 +1644,49 @@ PAGES.studentOrgManage=function(){return studentOrgPage("union-u","学生组织�
 PAGES.studentOrgLedger=function(){return studentOrgPage("activity","学生组织管理 · 业务台账");};
 PAGES.studentOrgLibrary=function(){return studentOrgPage("library","学生组织管理 · 资料");};
 
-/* ===================== 演示浏览与写入限制（激活码授权已停用） ===================== */
-let WORKBENCH_LICENSE_STATUS=window.__WORKBENCH_LICENSE__||{required:false,valid:true,state:"disabled"};
+/* ===================== 授权激活、演示浏览与写入限制 ===================== */
+let WORKBENCH_LICENSE_STATUS=window.__WORKBENCH_LICENSE__||{required:true,valid:false,state:"inactive"};
 let WORKBENCH_DEMO_STATUS=window.__WORKBENCH_DEMO__||{active:false,canLoad:true,hasRealData:false};
-function licenseIsReadOnly(){return false;}
+function licenseIsReadOnly(){return WORKBENCH_LICENSE_STATUS.required===true&&WORKBENCH_LICENSE_STATUS.valid!==true;}
 function demoIsActive(){return WORKBENCH_DEMO_STATUS&&WORKBENCH_DEMO_STATUS.active===true;}
-function workbenchIsReadOnly(){return demoIsActive();}
+function workbenchIsReadOnly(){return licenseIsReadOnly()||demoIsActive();}
+function licenseFormatTime(value){if(!value)return "—";const n=Number(value),d=new Date(Number.isFinite(n)?n:value);return Number.isNaN(d.getTime())?"—":beijingLocaleDateTime(d);}
+function licenseNotice(){const message="当前未激活，可以载入演示数据并浏览全部功能；导入、新增及数据修改需要有效激活码。";if(typeof showToast==="function")showToast(message,"warn");else alert(message);}
 function demoNotice(){const message="当前为演示数据模式，不能添加、编辑、删除、导入或恢复真实数据。请先点击顶部“清除演示数据”。";if(typeof showToast==="function")showToast(message,"warn");else alert(message);}
-function workbenchReadOnlyNotice(){demoNotice();}
+function workbenchReadOnlyNotice(){if(demoIsActive())demoNotice();else licenseNotice();}
 function licenseApplyUiState(){
+  const readOnly=licenseIsReadOnly();
   window.__WORKBENCH_LICENSE__=WORKBENCH_LICENSE_STATUS;
   window.__WORKBENCH_DEMO__=WORKBENCH_DEMO_STATUS;
-  window.__WORKBENCH_READ_ONLY__=demoIsActive();
-  document.body.classList.remove("license-readonly");
+  window.__WORKBENCH_READ_ONLY__=readOnly||demoIsActive();
+  document.body.classList.toggle("license-readonly",readOnly);
   document.body.classList.toggle("demo-mode",demoIsActive());
-  const banner=document.getElementById("licenseTrialBanner");if(banner)banner.classList.remove("visible");
+  const banner=document.getElementById("licenseTrialBanner");if(banner)banner.classList.toggle("visible",readOnly);
   const demoBanner=document.getElementById("demoModeBanner");if(demoBanner)demoBanner.classList.toggle("visible",demoIsActive());
   const loadButton=document.getElementById("demoLoadBtn");if(loadButton){loadButton.classList.toggle("active",demoIsActive());loadButton.querySelector("span").textContent=demoIsActive()?"演示数据已载入":"载入演示数据";}
   const clearButton=document.getElementById("demoClearBtn");if(clearButton)clearButton.classList.toggle("active",demoIsActive());
   licenseMarkLockedActions(document);
+
+}
+function licenseBrowseFieldAllowed(field){
+  return !!(field&&String(field.type||"").toLowerCase()!=="file");
 }
 function demoBrowseFieldAllowed(field){
   if(!field)return true;
   if(field.closest("#licensePage,#navCustomizePage,.topbar,.nav-search,.qf-single,.qf-multi,[class*='filter'],[class*='query'],[class*='search'],[class*='pager'],[class*='pagination']"))return true;
   if(field.closest("#backupPage"))return String(field.type||"").toLowerCase()!=="file";
-  return !!(field&&String(field.type||"").toLowerCase()!=="file");
+  return licenseBrowseFieldAllowed(field);
+}
+function licenseControlAllowed(control){
+  if(!control)return true;
+  if(control.closest("#licensePage,#systemUpdatePage,#licenseTrialBanner,#navToggle,#navClose,#navBackdrop,.drawer-head,.modal-head"))return true;
+  if(control.matches&&control.matches('[data-view="license"],[data-view="update"],[data-top-view="license"],[data-top-view="update"]'))return true;
+  if(control.matches("input,select,textarea"))return licenseBrowseFieldAllowed(control);
+  if(control.closest("#nav,#moduleTabs,.topbar,#demoModeBanner"))return true;
+  const action=String(control.getAttribute("onclick")||"");
+  const label=String(control.textContent||control.value||control.title||control.getAttribute("aria-label")||"").replace(/\s+/g,"");
+  if(control.matches("[data-view],[data-tab-view],[data-top-view]")||/^\s*goto\s*\(/.test(action))return true;
+  return !/导入|新增|增加|添加|录入|编辑|修改|删除|移除|保存|提交|恢复|还原|清空|上传|同步|拉取|创建备份|备份到/.test(label)&&!/\b\w*(?:Import|Add|Edit|Delete|Remove|Save|Submit|Restore|Upload|Purge|Clear|Sync)\w*\s*\(/.test(action);
 }
 function demoControlAllowed(control){
   if(!control)return true;
@@ -1674,12 +1697,10 @@ function demoControlAllowed(control){
     return !/恢复|导入备份|清空本地/.test(backupText);
   }
   if(control.matches("input,select,textarea"))return demoBrowseFieldAllowed(control);
-  const action=String(control.getAttribute("onclick")||"");
-  const label=String(control.textContent||control.value||control.title||control.getAttribute("aria-label")||"").replace(/\s+/g,"");
-  if(control.matches("[data-view],[data-tab-view],[data-top-view]")||/^\s*goto\s*\(/.test(action))return true;
-  return !/导入|新增|增加|添加|录入|编辑|修改|删除|移除|保存|提交|恢复|还原|清空|上传|同步|拉取|创建备份|备份到/.test(label)&&!/\b\w*(?:Import|Add|Edit|Delete|Remove|Save|Submit|Restore|Upload|Purge|Clear|Sync)\w*\s*\(/.test(action);
+  return licenseControlAllowed(control);
 }
 function workbenchControlAllowed(control){
+  if(licenseIsReadOnly()&&!licenseControlAllowed(control))return false;
   if(demoIsActive()&&!demoControlAllowed(control))return false;
   return true;
 }
@@ -1688,7 +1709,7 @@ function licenseMarkLockedActions(root){
   root.querySelectorAll("button,a,[role='button'],input[type='button'],input[type='submit'],input[type='file']").forEach(function(control){
     const locked=workbenchIsReadOnly()&&!workbenchControlAllowed(control);
     control.classList.toggle("license-locked-action",locked);
-    if(locked){control.setAttribute("aria-disabled","true");if(!control.dataset.licenseTitle){control.dataset.licenseTitle=control.title||"";}control.title="演示数据模式：请先清除演示数据";}
+    if(locked){control.setAttribute("aria-disabled","true");if(!control.dataset.licenseTitle){control.dataset.licenseTitle=control.title||"";}control.title=demoIsActive()?"演示数据模式：请先清除演示数据": "未激活：仅可查看现有数据";}
     else{control.removeAttribute("aria-disabled");if(control.dataset.licenseTitle!==undefined){control.title=control.dataset.licenseTitle;delete control.dataset.licenseTitle;}}
   });
 }
@@ -1697,8 +1718,8 @@ document.addEventListener("click",function(event){
   const target=event.target&&event.target.closest?event.target.closest("button,a,[role='button'],input[type='button'],input[type='submit'],input[type='file'],input[type='checkbox'],input[type='radio']"):null;
   if(target&&!workbenchControlAllowed(target)){event.preventDefault();event.stopImmediatePropagation();workbenchReadOnlyNotice();}
 },true);
-document.addEventListener("beforeinput",function(event){if(workbenchIsReadOnly()&&demoIsActive()&&!demoBrowseFieldAllowed(event.target)){event.preventDefault();event.stopImmediatePropagation();workbenchReadOnlyNotice();}},true);
-document.addEventListener("change",function(event){const target=event.target;if(workbenchIsReadOnly()&&demoIsActive()&&target&&target.matches&&target.matches("input,select,textarea")&&!demoBrowseFieldAllowed(target)){event.preventDefault();event.stopImmediatePropagation();workbenchReadOnlyNotice();}},true);
+document.addEventListener("beforeinput",function(event){if(workbenchIsReadOnly()&&((licenseIsReadOnly()&&!licenseBrowseFieldAllowed(event.target))||(demoIsActive()&&!demoBrowseFieldAllowed(event.target)))){event.preventDefault();event.stopImmediatePropagation();workbenchReadOnlyNotice();}},true);
+document.addEventListener("change",function(event){const target=event.target;if(workbenchIsReadOnly()&&target&&target.matches&&target.matches("input,select,textarea")&&((licenseIsReadOnly()&&!licenseBrowseFieldAllowed(target))||(demoIsActive()&&!demoBrowseFieldAllowed(target)))){event.preventDefault();event.stopImmediatePropagation();workbenchReadOnlyNotice();}},true);
 document.addEventListener("submit",function(event){const form=event.target;if(workbenchIsReadOnly()&&!form.closest("#licensePage,#backupPage")){event.preventDefault();event.stopImmediatePropagation();workbenchReadOnlyNotice();}},true);
 if(typeof MutationObserver!=="undefined"){
   const licenseActionObserver=new MutationObserver(function(records){if(!workbenchIsReadOnly())return;records.forEach(function(record){record.addedNodes.forEach(function(node){if(node.nodeType===1){if(node.matches&&node.matches("button,a,[role='button'],input[type='button'],input[type='submit'],input[type='file']"))licenseMarkLockedActions(node.parentElement||document);else licenseMarkLockedActions(node);}});});});
@@ -1733,12 +1754,19 @@ async function demoClearData(){
 }
 window.demoLoadData=demoLoadData;window.demoClearData=demoClearData;window.demoRefreshStatus=demoRefreshStatus;
 
-function licenseStatusMarkup(){
-  const about='<div class="card license-about-card" id="licensePage"><div class="license-about-title"><span>ℹ️</span><b>关于本软件</b></div><div class="license-about-lines"><div><b>数智学工 '+esc(SYS_VER)+'</b> · 本机部署版</div><div>适用：高校辅导员 / 班主任 · 学生工作管理</div><div>授权方式：由作者人工确认后分发安装包，本机不再使用激活码联网校验</div><div>数据安全：学生、课表、附件等业务数据保存在本机，不会上传到授权服务器</div><div class="license-contact-line"><b>购买及售后：</b>微信 shuzhixuegong1　<a href="https://xhslink.cn/o/9rULwc6NN0T" target="_blank" rel="noopener noreferrer">小红书购买地址 ↗</a></div><div class="license-download-line"><b>系统下载和更新地址：</b><a href="https://pan.baidu.com/s/1mt5BcuH0NaR-gSyrP_XMcw?pwd=1118" target="_blank" rel="noopener noreferrer">百度网盘链接 ↗</a><span>提取码：1118</span></div></div></div>';
-  return '<h2 class="ptitle">ℹ️ 关于本软件 <span class="tag">购买与更新</span></h2><div class="license-card-grid" style="grid-template-columns:1fr">'+about+'</div>';
+function licenseStatusMarkup(status){
+  const active=status&&status.valid===true;
+  const title=active?"已激活 · 完整功能":"未激活 · 可浏览演示";
+  const desc=active?"当前设备授权有效，可以使用新增、编辑、删除、导入、导出和云端服务等全部功能。":"无需激活即可点击顶部“载入演示数据”，浏览全部功能、查询和统计页面。导入、新增及数据修改需要有效激活码；录入真实数据前请先清除演示数据。";
+  const form=active
+    ?'<div class="license-active-actions"><button class="btn btn-primary" type="button" data-license-action onclick="licenseVerifyNow()">联网验证授权</button><button class="btn btn-ghost" type="button" data-license-action onclick="licenseDeactivateDevice()">解除本机授权</button></div>'
+    :'<div class="license-form"><input class="in" id="licenseActivationCode" type="text" minlength="16" maxlength="80" placeholder="请输入激活码" autocomplete="off" spellcheck="false"><button class="btn btn-primary" id="licenseActivateButton" type="button" data-license-action onclick="licenseActivateDevice()">激活当前设备</button><div class="license-inline-message" id="licenseInlineMessage" role="alert"></div></div>';
+  const purchase='<div class="license-purchase"><span>购买激活码请联系：</span><b>微信：shuzhixuegong1</b><span>·</span><a href="https://xhslink.cn/o/9rULwc6NN0T" target="_blank" rel="noopener noreferrer">前往小红书购买 ↗</a><span class="license-mobile-hint">（手机打开）</span></div>';
+  const about='<div class="card license-about-card"><div class="license-about-title"><span>🔑</span><b>关于本软件</b></div><div class="license-about-lines"><div><b>数智学工 '+esc(SYS_VER)+'</b> · 设备授权版</div><div>适用：高校辅导员 / 班主任 · 学生工作管理</div><div>授权方式：购买激活码 → 输入即激活；设备绑定数量以所购授权及后台设置为准，联网验证后最长可离线使用 180 天</div><div>数据安全：学生、课表、附件等业务数据保存在本机；授权服务器只接收激活码和不可逆设备指纹</div><div class="license-contact-line"><b>购买及售后：</b>微信 shuzhixuegong1　<a href="https://xhslink.cn/o/9rULwc6NN0T" target="_blank" rel="noopener noreferrer">小红书购买地址 ↗</a></div><div class="license-download-line"><b>系统下载和更新地址：</b><a href="https://pan.baidu.com/s/1mt5BcuH0NaR-gSyrP_XMcw?pwd=1118" target="_blank" rel="noopener noreferrer">百度网盘链接 ↗</a><span>提取码：1118</span></div></div></div>';
+  return '<h2 class="ptitle">🔑 授权激活 <span class="tag">设备授权管理</span></h2><div class="license-card-grid"><div class="card license-page" id="licensePage"><section class="license-hero"><div class="license-key-mark">🔑</div><h3 class="license-state-title">'+title+'</h3><p class="license-state-desc">'+desc+'</p>'+form+purchase+'<div class="license-status-grid"><div class="license-status-item"><span>当前设备</span><b>'+esc(status.deviceName||"当前电脑")+'</b></div><div class="license-status-item"><span>授权编号</span><b>'+esc(status.licenseId||"尚未激活")+'</b></div><div class="license-status-item"><span>最近联网验证</span><b>'+esc(licenseFormatTime(status.lastVerifiedAt))+'</b></div><div class="license-status-item"><span>离线可用至</span><b>'+esc(licenseFormatTime(status.offlineUntil))+'</b></div></div></section><section class="license-about"><div class="tip"><b>授权说明：</b>同一台设备重复激活不会重复占用名额。激活码状态、设备绑定和有效期可在授权管理后台维护。</div></section></div>'+about+'</div>';
 }
-PAGES.license=function(){return licenseStatusMarkup();};
-PAGES.license_init=function(){};
+PAGES.license=function(){return licenseStatusMarkup(WORKBENCH_LICENSE_STATUS||{});};
+PAGES.license_init=function(){licenseFetchStatus(true);};
 let WORKBENCH_UPDATE_STATUS=null;
 function updateFormatBytes(value){const n=Number(value)||0;if(n<1024)return n+" B";if(n<1024*1024)return (n/1024).toFixed(1)+" KB";if(n<1024*1024*1024)return (n/1024/1024).toFixed(1)+" MB";return (n/1024/1024/1024).toFixed(2)+" GB";}
 function updateFormatTime(value){if(!value)return "—";const date=new Date(value);return Number.isNaN(date.getTime())?"—":beijingLocaleDateTime(date);}
@@ -1755,8 +1783,7 @@ function updatePageMarkup(status){
   const install=s.installProgress||{},installTime=Date.parse(install.updatedAt||""),showInstall=String(install.phase||"idle")!=="idle"&&(!["completed","error"].includes(String(install.phase))||Number.isFinite(installTime)&&Date.now()-installTime<10*60*1000);
   const downloadReady=downloaded&&["ready","completed"].includes(String((s.progress||{}).phase||""));
   const progressInfo=(downloadReady?'<div style="margin-top:12px;padding:15px 16px;border:2px solid #169a68;border-radius:10px;background:#f2fbf6"><b style="color:#08774d">升级包已经准备完成，尚未安装。</b><div style="margin-top:7px;font-size:14px;color:var(--muted)">请点击下方绿色的“立即更新并重启”，并在确认框中选择“确定”以开始安装。</div></div>':updateProgressMarkup(s.progress,"升级包下载进度"))+(showInstall?updateProgressMarkup(install,"系统升级进度"):"");
-  const manualTip='<div class="tip" style="margin-top:12px;border-color:#f0d77b;background:#fff8df;color:#805b0c"><b>当前版本请通过作者人工分发的安装包升级。</b> 在线更新已随激活码授权停用；也可在“关于本软件”中查看网盘下载地址。</div>';
-  return '<h2 class="ptitle">⬆️ 系统更新 <span class="tag">人工分发</span></h2><div class="sub">更新只替换程序文件；学生数据、附件、备份、便携密钥及本机配置始终保留在原位置。</div><div class="card" id="systemUpdatePage"><div class="license-status-grid"><div class="license-status-item"><span>当前版本</span><b>'+esc(s.currentVersion||SYS_VER)+'</b></div><div class="license-status-item"><span>系统平台</span><b>'+esc(s.platform||"Windows")+'</b></div><div class="license-status-item"><span>最近检查</span><b>'+esc(updateFormatTime(s.lastCheckedAt))+'</b></div><div class="license-status-item"><span>更新通道</span><b>'+esc(s.channel||"stable")+'</b></div></div><div style="margin-top:14px">'+state+'</div>'+manualTip+downloadInfo+progressInfo+'<div class="toolbar" style="margin-top:14px;gap:9px;flex-wrap:wrap"><button class="btn btn-primary" type="button" onclick="systemUpdateCheck(this)" '+(enabled?'':'disabled')+'>检查更新</button><button class="btn btn-ghost" type="button" onclick="systemUpdateDownload(this)" '+(enabled&&latest&&!downloaded?'':'disabled')+'>'+(downloaded?'已下载并校验':'下载并校验')+'</button><button class="btn btn-primary" type="button" onclick="systemUpdateInstall(this)" '+(downloaded?'':'disabled')+'>立即更新并重启</button><span class="tip" style="margin:0">更新仅替换程序文件；如需备份当前数据，请先手动创建本机备份。</span></div>'+(s.lastError?'<div class="tip" style="margin-top:12px;border-color:#f1c4c0;background:#fff5f4;color:#a1342c">最近检查失败：'+esc(s.lastError)+'</div>':'')+'</div>'+notes;
+  return '<h2 class="ptitle">⬆️ 系统更新 <span class="tag">安全下载 · 校验 · 可回滚</span></h2><div class="sub">更新只替换程序文件；学生数据、附件、备份、便携密钥及本机配置始终保留在原位置。</div><div class="card" id="systemUpdatePage"><div class="license-status-grid"><div class="license-status-item"><span>当前版本</span><b>'+esc(s.currentVersion||SYS_VER)+'</b></div><div class="license-status-item"><span>系统平台</span><b>'+esc(s.platform||"Windows")+'</b></div><div class="license-status-item"><span>最近检查</span><b>'+esc(updateFormatTime(s.lastCheckedAt))+'</b></div><div class="license-status-item"><span>更新通道</span><b>'+esc(s.channel||"stable")+'</b></div></div><div style="margin-top:14px">'+state+'</div>'+downloadInfo+progressInfo+'<div class="toolbar" style="margin-top:14px;gap:9px;flex-wrap:wrap"><button class="btn btn-primary" type="button" onclick="systemUpdateCheck(this)" '+(enabled?'':'disabled')+'>检查更新</button><button class="btn btn-ghost" type="button" onclick="systemUpdateDownload(this)" '+(enabled&&latest&&!downloaded?'':'disabled')+'>'+(downloaded?'已下载并校验':'下载并校验')+'</button><button class="btn btn-primary" type="button" onclick="systemUpdateInstall(this)" '+(downloaded?'':'disabled')+'>立即更新并重启</button><span class="tip" style="margin:0">更新仅替换程序文件；如需备份当前数据，请先手动创建本机备份。</span></div>'+(s.lastError?'<div class="tip" style="margin-top:12px;border-color:#f1c4c0;background:#fff5f4;color:#a1342c">最近检查失败：'+esc(s.lastError)+'</div>':'')+'</div>'+notes+'<div class="card" style="margin-top:14px"><b>更新安全规则</b><ol style="margin:8px 0 0;padding-left:20px;line-height:1.9;color:var(--muted)"><li>仅通过已授权的更新服务获取短期 OSS 下载链接。</li><li>下载完成必须通过 SHA-256 完整性校验；失败文件会被删除。</li><li>已校验升级包保存在本机更新目录，关闭网页或重启服务后无需重复下载。</li><li>仅替换程序白名单，绝不覆盖 <code>data/</code>、<code>backups/</code>、附件和密钥。</li><li>替换失败时自动恢复原程序文件并重启旧版本。</li></ol></div>';
 }
 PAGES.update=function(){return updatePageMarkup(WORKBENCH_UPDATE_STATUS||{});};
 PAGES.update_init=async function(){const status=await systemUpdateRefresh();const install=status&&status.installProgress||{},phase=String(install.phase||"idle");if(["preparing","backup","bootstrap","verifying","extracting","waiting","protecting","installing","restarting"].includes(phase))systemUpdateMonitorInstall(install.version||status.downloaded&&status.downloaded.version||status.latest&&status.latest.version||"");};
@@ -1780,8 +1807,46 @@ function systemUpdateRender(status){WORKBENCH_UPDATE_STATUS=status||WORKBENCH_UP
 async function systemUpdateRefresh(silent){try{const r=await fetch("/api/updates/status",{cache:"no-store"});const j=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(j.error||"无法读取更新状态。");systemUpdateRender(j);return j;}catch(error){if(!silent&&typeof showToast==="function")showToast(error.message||"读取更新状态失败。","error");return null;}}
 async function systemUpdateCheck(button){if(button){button.disabled=true;button.textContent="正在检查…";}try{const r=await fetch("/api/updates/check",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});const j=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(j.error||"检查更新失败。");WORKBENCH_UPDATE_STATUS=j;if(typeof showToast==="function")showToast(j.available?"发现新版本。":"当前已是最新版本。",j.available?"ok":"info");if(currentView==="update"){const host=document.getElementById("content");if(host)host.innerHTML=updatePageMarkup(j);}}catch(error){if(typeof showToast==="function")showToast(error.message||"检查更新失败。","error");await systemUpdateRefresh();}finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent="检查更新";}}}
 async function systemUpdateDownload(button){if(button){button.disabled=true;button.textContent="正在下载…";}const current=Object.assign({},WORKBENCH_UPDATE_STATUS||{});current.progress={phase:"downloading",percent:1,message:"正在连接更新服务器…"};systemUpdateRender(current);if(systemUpdatePollTimer)clearInterval(systemUpdatePollTimer);systemUpdatePollTimer=setInterval(function(){systemUpdateRefresh(true);},400);try{const r=await fetch("/api/updates/download",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});const j=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(j.error||"下载更新包失败。");if(typeof showToast==="function")showToast(j.reused?"已使用本机保存的升级包，无需重复下载。":"更新包已下载并通过校验。","ok");await systemUpdateRefresh(true);}catch(error){if(typeof showToast==="function")showToast(error.message||"下载更新包失败。","error");await systemUpdateRefresh(true);}finally{if(systemUpdatePollTimer){clearInterval(systemUpdatePollTimer);systemUpdatePollTimer=null;}if(button&&document.body.contains(button)){button.disabled=false;button.textContent="下载并校验";}}}
-function systemUpdateMonitorInstall(targetVersion){if(systemUpdatePollTimer)clearTimeout(systemUpdatePollTimer);const token=++systemUpdateMonitorToken,started=Date.now();async function poll(){if(token!==systemUpdateMonitorToken)return;let status=await systemUpdateRefresh(true);const progress=status&&status.installProgress;if(progress&&progress.phase==="error"){systemUpdatePollTimer=null;if(typeof showToast==="function")showToast(progress.error||"升级失败，已尝试恢复原版本。","error");return;}if(status&&(!targetVersion||status.currentVersion===targetVersion)&&progress&&progress.phase==="completed"){systemUpdatePollTimer=null;if(typeof showToast==="function")showToast("已成功升级至 "+(targetVersion||status.currentVersion)+"。","ok");return;}if(!status){try{const health=await fetch("/api/health",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;});if(health&&(!targetVersion||health.version===targetVersion)){const done=Object.assign({},WORKBENCH_UPDATE_STATUS||{},{currentVersion:health.version,installProgress:{phase:"completed",percent:100,message:"已成功升级至 "+health.version+"。",version:health.version,updatedAt:new Date().toISOString()}});systemUpdateRender(done);systemUpdatePollTimer=null;if(typeof showToast==="function")showToast("已成功升级至 "+health.version+"。","ok");return;}}catch(_error){}}if(Date.now()-started>5*60*1000){systemUpdatePollTimer=null;if(typeof showToast==="function")showToast("升级未在 5 分钟内完成，请查看页面中的诊断信息后重试。","error");return;}systemUpdatePollTimer=setTimeout(poll,status?700:1200);}poll();}
+function systemUpdateMonitorInstall(targetVersion){if(systemUpdatePollTimer)clearTimeout(systemUpdatePollTimer);const token=++systemUpdateMonitorToken,started=Date.now();async function poll(){if(token!==systemUpdateMonitorToken)return;let status=await systemUpdateRefresh(true);const progress=status&&status.installProgress;if(progress&&progress.phase==="error"){systemUpdatePollTimer=null;if(typeof showToast==="function")showToast(progress.error||"升级失败，已尝试恢复原版本。","error");return;}if(status&&(!targetVersion||status.currentVersion===targetVersion)&&progress&&progress.phase==="completed"){systemUpdatePollTimer=null;if(typeof showToast==="function")showToast("已成功升级至 "+(targetVersion||status.currentVersion)+"。","ok");location.replace("/");return;}if(!status){try{const health=await fetch("/api/health",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;});if(health&&(!targetVersion||health.version===targetVersion)){const done=Object.assign({},WORKBENCH_UPDATE_STATUS||{},{currentVersion:health.version,installProgress:{phase:"completed",percent:100,message:"已成功升级至 "+health.version+"。",version:health.version,updatedAt:new Date().toISOString()}});systemUpdateRender(done);systemUpdatePollTimer=null;if(typeof showToast==="function")showToast("已成功升级至 "+health.version+"。","ok");location.replace("/");return;}}catch(_error){}}if(Date.now()-started>5*60*1000){systemUpdatePollTimer=null;if(typeof showToast==="function")showToast("升级未在 5 分钟内完成，请查看页面中的诊断信息后重试。","error");return;}systemUpdatePollTimer=setTimeout(poll,status?700:1200);}poll();}
 async function systemUpdateInstall(button){const status=WORKBENCH_UPDATE_STATUS||{},latest=status.latest,downloaded=status.downloaded,targetVersion=downloaded&&downloaded.version||latest&&latest.version||"新版本";if(!confirm("即将安装 "+targetVersion+"。\n\n系统会退出并替换程序文件；学生数据、附件、备份和密钥不会被覆盖。\n\n确定立即更新吗？"))return;if(button){button.disabled=true;button.textContent="正在准备更新…";}systemUpdateRender(Object.assign({},status,{installProgress:{phase:"preparing",percent:2,message:"正在准备升级…",version:targetVersion,updatedAt:new Date().toISOString()}}));try{const r=await fetch("/api/updates/install",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});const j=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(j.error||"无法启动更新程序。");systemUpdateRender(Object.assign({},WORKBENCH_UPDATE_STATUS||status,{installProgress:j.installProgress||{phase:"preparing",percent:15,message:j.message||"更新程序已启动。",version:j.version}}));if(typeof showToast==="function")showToast("更新程序已启动；可以保持页面打开查看进度，也可以稍后重新进入系统更新页面。","info");systemUpdateMonitorInstall(j.version||targetVersion);}catch(error){systemUpdateMonitorInstall(targetVersion);if(typeof showToast==="function")showToast("正在确认更新程序是否已接管安装…","info");}}
+async function licenseFetchStatus(rerender){
+  try{const wasValid=WORKBENCH_LICENSE_STATUS&&WORKBENCH_LICENSE_STATUS.valid===true,response=await fetch("/api/license/status",{cache:"no-store"});if(!response.ok)throw new Error("无法读取授权状态");WORKBENCH_LICENSE_STATUS=await response.json();licenseApplyUiState();if(wasValid&&WORKBENCH_LICENSE_STATUS.required===true&&WORKBENCH_LICENSE_STATUS.valid!==true){location.reload();return;}if(rerender&&currentView==="license"){const host=document.getElementById("content");if(host)host.innerHTML=licenseStatusMarkup(WORKBENCH_LICENSE_STATUS);}}
+  catch(error){const message=document.getElementById("licenseInlineMessage");if(message)message.textContent=error.message;}
+}
+let activationWelcomeTimer=null;
+function activationWelcomeClose(){
+  const button=document.getElementById("activationWelcomeAcknowledge");
+  if(!button||button.dataset.ready!=="true")return;
+  if(activationWelcomeTimer){clearInterval(activationWelcomeTimer);activationWelcomeTimer=null;}
+  const close=document.querySelector("#modal .modal-x");if(close)close.style.display="";
+  closeModal();
+}
+function showActivationWelcome(){
+  if(activationWelcomeTimer){clearInterval(activationWelcomeTimer);activationWelcomeTimer=null;}
+  const body='<div style="padding:4px 2px 2px;line-height:1.8;color:var(--text)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#e8f7ef;font-size:20px">🎉</span><div><b style="font-size:17px">系统已激活</b><div style="font-size:13px;color:var(--muted)">开始录入前，请先完成以下基础数据准备。</div></div></div><div style="padding:13px 14px;border:1px solid #cfe8da;border-radius:10px;background:#f5fbf7"><b>首次使用系统请按顺序导入基本信息：</b><ol style="margin:9px 0 0;padding-left:22px"><li style="margin:7px 0">在“学生信息管理 - <b>基础数据维护</b>”中导入或新增学院、专业、班级、年级等信息；</li><li style="margin:7px 0">在“学生信息管理 - 学生管理”中导入学生基本信息；</li><li style="margin:7px 0">若升级系统或更换电脑，请在“系统管理 - 数据备份”中导入备份数据或从云端拉取数据。</li></ol></div><div id="activationWelcomeCountdown" style="margin-top:14px;text-align:center;font-size:13px;color:var(--muted)">请阅读上述内容（10 秒后可确认）</div></div>';
+  openModal("欢迎使用数智学工",body,function(){return false;});
+  const modal=document.getElementById("modal"),close=modal&&modal.querySelector(".modal-x"),foot=document.getElementById("modalFoot");
+  if(close)close.style.display="none";
+  if(foot)foot.innerHTML='<button class="btn btn-primary" id="activationWelcomeAcknowledge" type="button" disabled style="opacity:.55;cursor:not-allowed" onclick="activationWelcomeClose()">我已知晓（10）</button>';
+  let remain=10;
+  activationWelcomeTimer=setInterval(function(){
+    remain--;
+    const status=document.getElementById("activationWelcomeCountdown"),button=document.getElementById("activationWelcomeAcknowledge");
+    if(remain>0){if(status)status.textContent="请阅读上述内容（"+remain+" 秒后可确认）";if(button)button.textContent="我已知晓（"+remain+"）";return;}
+    clearInterval(activationWelcomeTimer);activationWelcomeTimer=null;
+    if(status)status.textContent="已阅读完成，可点击“我已知晓”开始使用。";
+    if(button){button.disabled=false;button.dataset.ready="true";button.style.opacity="";button.style.cursor="";button.textContent="我已知晓";button.focus();}
+  },1000);
+}
+async function licenseActivateDevice(){
+  const input=document.getElementById("licenseActivationCode"),button=document.getElementById("licenseActivateButton"),message=document.getElementById("licenseInlineMessage");
+  const code=String(input&&input.value||"").trim();if(code.replace(/[^A-Za-z0-9]/g,"").length<16){if(message)message.textContent="请输入完整的激活码。";if(input)input.focus();return;}
+  if(button){button.disabled=true;button.textContent="正在联网激活…";}if(message)message.textContent="";
+  try{const response=await fetch("/api/license/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:code})});const result=await response.json().catch(function(){return {};});if(!response.ok)throw new Error(result.error||"激活失败。");WORKBENCH_LICENSE_STATUS=result;try{sessionStorage.setItem("nnuzc_activation_welcome_pending","1");}catch(_error){}location.reload();}
+  catch(error){if(message)message.textContent=error.message||"激活失败。";if(input){input.focus();input.select();}if(button){button.disabled=false;button.textContent="激活当前设备";}}
+}
+async function licenseVerifyNow(){try{const response=await fetch("/api/license/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});const result=await response.json().catch(function(){return {};});if(!response.ok)throw new Error(result.error||"验证失败。");WORKBENCH_LICENSE_STATUS=result;licenseApplyUiState();if(result.required===true&&result.valid!==true){if(typeof showToast==="function")showToast(result.error||"当前授权已停用、删除或设备已解绑，系统已锁定。","error");setTimeout(function(){location.reload();},80);return;}if(typeof showToast==="function")showToast("授权验证成功。","ok");goto("license");}catch(error){await licenseFetchStatus(true);if(typeof showToast==="function")showToast(error.message||"授权验证失败。","error");}}
+async function licenseDeactivateDevice(){if(!confirm("解除后可以继续浏览，导入、新增及数据修改需要重新激活。确定继续？"))return;try{const response=await fetch("/api/license/deactivate",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});const result=await response.json().catch(function(){return {};});if(!response.ok)throw new Error(result.error||"解除授权失败。");location.reload();}catch(error){if(typeof showToast==="function")showToast(error.message||"解除授权失败。","error");}}
 setTimeout(licenseApplyUiState,0);
 /* ===================== AI 智能助手（框架预留：模型调用为可选，配置后自动启用） ===================== */
 const AI_CONFIG_KEY="nnuzc_ai_config";
@@ -5456,10 +5521,10 @@ function cockpitFeedRows(items){
   if(!items.length)return '<div class="sc-empty-state"><span>✓</span><b>当前学期暂无工作动态</b><small>谈心谈话、重点关爱、违纪和处分记录会汇总显示在这里</small></div>';
   return '<div class="sc-feed"><div class="sc-feed-head"><span>类型</span><span>学生</span><span>工作摘要</span><span>时间</span></div>'+items.slice(0,5).map(function(r){return '<div class="sc-feed-row" onclick="cockpitOpenDetail('+jsArg(r.type)+','+jsArg(r.name||"—")+','+jsArg(r.desc||"—")+','+jsArg(r.view||"")+')"><span class="sc-feed-tag" style="color:'+r.color+'">'+esc(r.type)+'</span><span class="sc-feed-name"><span class="sc-feed-name-real">'+esc(r.name||"—")+'</span><span class="sc-feed-name-mask">'+esc(cockpitMaskName(r.name))+'</span></span><span class="sc-feed-desc">'+esc(r.desc||"—")+'</span><span class="sc-feed-date">'+esc(r.date||"未填")+'</span></div>';}).join("")+'</div>';
 }
-/* 2026-08-23：大屏驾驶舱「学生状态分布」与学生管理的七类学籍状态（STU_STATUS_TABS）完全对齐。
+/* 大屏驾驶舱「学生状态分布」与学生管理的学籍状态（STU_STATUS_TABS）完全对齐。
    旧版只分在校/休学/毕业/其他四类，把退学、延期毕业等错误并入「其他」，导致与功能模块统计不一致。 */
 const COCKPIT_STATUS_META=[
-  {v:"在校",c:"#38dcff"},{v:"休学",c:"#ffc65c"},{v:"退学",c:"#ff5f72"},{v:"转出",c:"#4b83ff"},
+  {v:"在校",c:"#38dcff"},{v:"借读",c:"#42c7a7"},{v:"休学",c:"#ffc65c"},{v:"退学",c:"#ff5f72"},{v:"转出",c:"#4b83ff"},
   {v:"毕业",c:"#a987ff"},{v:"延期毕业",c:"#ff7ab8"},{v:"其他",c:"#8fa3b8"}
 ];
 function cockpitStatusRows(list){
@@ -5483,10 +5548,11 @@ PAGES.cockpit=function(){return enhancedPageFallback("大屏驾驶舱");};PAGES.
 
 /* ---------- 学生信息管理（对标正方教务系统） ---------- */
 const STU_GENDERS=["男","女"];
-const STU_STATUS=["在校","休学","退学","转出","毕业","延期毕业","其他"];
+const STU_STATUS=["在校","借读","休学","退学","转出","毕业","延期毕业","其他"];
 // 页面展示标签与数据内部值分离：内部仍保留「毕业」，界面展示为「已毕业」；v1.48 新增「转出」展示为「转专业（转出）」。
 const STU_STATUS_TABS=[
   {value:"在校",label:"在校生"},
+  {value:"借读",label:"借读"},
   {value:"休学",label:"休学"},
   {value:"退学",label:"退学"},
   {value:"转出",label:"转专业（转出）"},
@@ -5545,7 +5611,7 @@ function stuStatusLabel(value){
 }
 function stuStatusBadge(status){
   const n = stuNormalizeStatus(status||"");
-  return n==="在校"?"b-green":(n==="休学"?"b-orange":(n==="退学"?"b-red":(n==="转出"?"b-purple":(n==="毕业"?"b-blue":(n==="延期毕业"?"b-pink":"b-gray")))));
+  return ({"在校":"b-green","借读":"b-orange","休学":"b-orange","退学":"b-red","转出":"b-purple","毕业":"b-blue","延期毕业":"b-pink"})[n]||"b-gray";
 }
 function stuCurrentStatus(){
   const value = stuNormalizeStatus(stuFilter && stuFilter.statusTab);
@@ -7609,7 +7675,7 @@ function stuDetailHTML(s,editable){
   ];
   const edu=[
     ["学院",s.dept],["专业",s.major],["年级",s.grade],["班级",s.cls],
-    ["辅导员",s.counsel],["学历",s.level],["学制",s.length],["招生类别",s.enrollType],
+    ["辅导员",s.counsel],["培养层次",s.level],["学制",s.length],["招生类别",s.enrollType],
     ["生源地",s.source],["入学日期",s.enroll],["毕业年份",s.graduateYear||"—"],["转专业备注",s.transferNote],["学籍状态",stuStatusLabel(s.status)],["学籍异动备注",s.statusNote||"—"],["学籍异动单",s.statusAttachment?('<a href="'+attr(s.statusAttachment.url||('/attachments/'+s.statusAttachment.id))+'" target="_blank" rel="noopener" style="color:#2f6fed">'+esc(s.statusAttachment.name||'学籍异动单')+'</a>'):"—"]
   ];
   const contact=[
@@ -7687,11 +7753,11 @@ function stuFormBody(s){
   <div class="zf-form">
     <div class="row2"><div class="field"><label>学院</label><input id="fDept" value="${vk('dept')}"></div><div class="field"><label>专业</label><input id="fMajor" value="${vk('major')}" oninput="stuCascadeFromMajor()"></div></div>
     <div class="row2"><div class="field"><label>年级</label><input id="fGrade" list="fGradeOptions" value="${vk('grade')}" placeholder="可选择或输入新年级"><datalist id="fGradeOptions">${orgFilterValues('grade').map(function(value){return '<option value="'+escAttr(value)+'"></option>';}).join('')}</datalist></div><div class="field"><label>班级</label><input id="fCls" list="fClassOptions" value="${vk('cls')}" onchange="stuCascadeFromClass()" placeholder="可选择或输入新班级"><datalist id="fClassOptions">${classes.map(function(value){return '<option value="'+escAttr(value)+'"></option>';}).join('')}</datalist></div></div>
-    <div class="row2"><div class="field"><label>辅导员</label><input id="fCounsel" value="${vk('counsel')}"></div><div class="field"><label>学历</label><input id="fLevel" value="${vk('level')}"></div></div>
+    <div class="row2"><div class="field"><label>辅导员</label><input id="fCounsel" value="${vk('counsel')}"></div><div class="field"><label>培养层次</label>${educationLevelInput("fLevel",s&&s.level||"")}</div></div>
     <div class="row2"><div class="field"><label>学制</label><input id="fLength" value="${vk('length')}"></div><div class="field"><label>招生类别</label><input id="fEnrollType" list="fEnrollTypeOptions" value="${vk('enrollType')}" placeholder="可选择或输入新招生类别"><datalist id="fEnrollTypeOptions">${Array.from(new Set(STU_ENROLL_OPTS.slice(1).concat(ORG_ENROLL_TYPES.map(function(item){return item.name;})))).map(function(value){return '<option value="'+escAttr(value)+'"></option>';}).join('')}</datalist></div></div>
     <div class="row2"><div class="field"><label>生源地</label><input id="fSource" value="${vk('source')}"></div><div class="field"><label>入学日期</label><input id="fEnroll" value="${vk('enroll')}" placeholder="如 2021-09-01"></div></div>
     <div class="row2"><div class="field"><label>毕业年份</label><input id="fGraduateYear" value="${vk('graduateYear')}" placeholder="如 2026届"></div><div class="field"><label>转专业备注</label><select id="fTransfer">${sel(["是","否"],s.transferNote)}</select></div></div>
-    <div class="row2"><div class="field"><label>学籍状态 ${req}</label><select id="fStatus" required>${(statusValue===""?'<option value="" selected disabled>请选择现有学籍状态</option>':'')+STU_STATUS.map(function(x){ return '<option value="'+x+'"'+(x===statusValue?' selected':'')+'>'+stuStatusLabel(x)+'</option>'; }).join("")}</select></div><div class="field"><label>学籍异动备注</label><input id="fStatusNote" value="${vk('statusNote')||''}" placeholder="记录学籍异动原因，如：因病休学、转专业、延长学习年限、退学等"></div></div>
+    <div class="row2"><div class="field"><label>学籍状态 ${req}</label><select id="fStatus" required>${(statusValue===""?'<option value="" selected disabled>请选择现有学籍状态</option>':'')+STU_STATUS.map(function(x){ return '<option value="'+x+'"'+(x===statusValue?' selected':'')+'>'+stuStatusLabel(x)+'</option>'; }).join("")}</select></div><div class="field"><label>学籍异动备注</label><input id="fStatusNote" value="${vk('statusNote')||''}" placeholder="记录学籍异动原因，如：借读、因病休学、转专业、延长学习年限、退学等"></div></div>
     <div class="field"><label>学籍异动单（图片）</label><input type="file" id="fStatusAttachmentFile" accept="image/*" onchange="handleStatusAttachment(this)"><input type="hidden" id="fStatusAttachment" value="${s.statusAttachment?escAttr(JSON.stringify(s.statusAttachment)):''}"><div id="fStatusAttachmentName" style="font-size:12.5px;color:var(--muted);margin-top:4px">${s.statusAttachment?('已上传：'+(s.statusAttachment.name||'学籍异动单')):'未选择文件（仅支持图片格式）'}</div></div>
   </div>
   <div class="zf-section">三、联系方式</div>
@@ -7707,14 +7773,16 @@ function stuFormBody(s){
 }
 
 /* ===== v1.49：身份证号 → 出生日期自动识别；班级 / 专业 → 学籍信息 7 个字段级联 ===== */
-/* 与「基础数据维护」班级维护中新增的「学历」「招生类别」字段对齐：
-   学生编辑表单选择班级后，自动带出 专业 / 年级 / 学院 / 辅导员 / 学制 / 学历 / 招生类别；
+/* 与「基础数据维护」班级维护中新增的「培养层次」「招生类别」字段对齐：
+   学生编辑表单选择班级后，自动带出 专业 / 年级 / 学院 / 辅导员 / 学制 / 培养层次 / 招生类别；
    输入或选择专业后，自动带出学院。所有级联遵循「空才填」，避免误覆盖用户已填字段。 */
-const STU_LEVEL_OPTS = ["", "职高", "中专", "专科", "本科", "硕士", "博士"];
 const STU_ENROLL_OPTS = ["", "普通本科", "3+4分段培养", "专转本", "五年一贯制专转本"];
+function educationLevelOptions(selected){return Array.from(new Set(ORG_LEVELS.map(function(row){return String(row.name||"").trim();}).concat(selected||"").filter(Boolean)));}
+function educationLevelInput(id,selected){return '<input id="'+escAttr(id)+'" list="'+escAttr(id)+'Options" value="'+escAttr(selected||"")+'" placeholder="可选择或输入培养层次"><datalist id="'+escAttr(id)+'Options">'+educationLevelOptions(selected).map(function(name){return '<option value="'+escAttr(name)+'"></option>';}).join("")+'</datalist>';}
+function ensureEducationLevels(list){const names=new Set(ORG_LEVELS.map(function(row){return row.name;}));let changed=false;(list||[]).forEach(function(row){const name=String(row.level||"").trim();if(name&&!names.has(name)){ORG_LEVELS.push({name:name});names.add(name);changed=true;}});return changed;}
 function levelOptsHtml(selected){
   selected = selected || "";
-  return STU_LEVEL_OPTS.map(function(o){
+  return [""].concat(educationLevelOptions(selected)).map(function(o){
     return '<option value="'+escAttr(o)+'"'+(o===selected?' selected':'')+'>'+(o||'—')+'</option>';
   }).join('');
 }
@@ -7836,7 +7904,7 @@ function stuCascadeFromMajor(){
 }
 
 /* ===== 字段联动：班级为权威来源，反向同步到该班学生 =====
-   在「基础数据维护」编辑/新增/导入班级后调用，把班级的 辅导员/专业/年级/学院/学历/招生类别
+   在「基础数据维护」编辑/新增/导入班级后调用，把班级的 辅导员/专业/年级/学院/培养层次/招生类别
    一次性同步给所有归属该班级的学生（仅当班级侧有值时写入，避免把学生字段清空）。 */
 function syncClassToStudents(className){
   var c=null;
@@ -7871,7 +7939,7 @@ function syncAllClassToStudentsWithToast(){
 
 /* ===== 学生字段自动补全（导入 / 新增 / 编辑 通用） =====
    1. 出生日期为空且身份证号有效 → 从身份证号提取 YYYYMMDD；
-   2. 年级 / 辅导员 / 学历 / 招生类别 / 学制 为空 → 从「基础数据维护」的班级/专业记录自动补全；
+   2. 年级 / 辅导员 / 培养层次 / 招生类别 / 学制 为空 → 从「基础数据维护」的班级/专业记录自动补全；
    3. 学生导入时以班级为权威来源，覆盖表格中可能过时的学院、专业、年级等关联字段。 */
 function studentClassRecord(className){
   className=String(className||"").trim();
@@ -7893,13 +7961,14 @@ function fillStudentDerivedFields(s,options){
   if(!s) return s;
   var classAuthoritative=!!(options&&options.classAuthoritative);
   fillStudentIdentityFields(s);
-  // 班级 → 年级 / 辅导员 / 学历 / 招生类别 / 学院 / 专业
+  // 班级 → 年级 / 辅导员 / 培养层次 / 招生类别 / 学院 / 专业
   if(s.cls){
     var c=studentClassRecord(s.cls);
     if(c){
       if((classAuthoritative||!s.grade) && c.grade) s.grade=c.grade;
       if((classAuthoritative||!s.counsel) && c.counselor) s.counsel=c.counselor;
-      if((classAuthoritative||!s.level) && c.level) s.level=c.level;
+      // 培养层次可独立维护：已填写或导入的值优先，班级培养层次只补空值。
+      if(!s.level && c.level) s.level=c.level;
       if((classAuthoritative||!s.enrollType) && c.enrollType) s.enrollType=c.enrollType;
       if((classAuthoritative||!s.major) && c.major) s.major=c.major;
       if((classAuthoritative||!s.dept) && c.dept) s.dept=c.dept;
@@ -7959,16 +8028,17 @@ function studentImportDateFields(row){
 }
 function normalizeStudentImportRowByClass(row){
   var next=Object.assign({},row||{});
+  if(!String(next["培养层次"]||"").trim())next["培养层次"]=smartCell(next,["学历","教育层次","level"]);
   studentImportDateFields(next).forEach(function(item){if(!item.result.error)next[item.field]=item.result.value;});
   ["民族","政治面貌","学籍状态"].forEach(function(field){if(next[field]!=null)next[field]=String(next[field]).trim();});
   var derived={
     cls:String(next["班级"]||"").trim(), dept:next["学院"]||"", major:next["专业"]||"",
-    grade:next["年级"]||"", counsel:next["辅导员"]||"", level:next["学历"]||"",
+    grade:next["年级"]||"", counsel:next["辅导员"]||"", level:next["培养层次"]||"",
     length:next["学制"]||"", enrollType:next["招生类别"]||""
   };
   if(!studentClassRecord(derived.cls)) return next;
   fillStudentDerivedFields(derived,{classAuthoritative:true});
-  [["学院","dept"],["专业","major"],["年级","grade"],["辅导员","counsel"],["学历","level"],["学制","length"],["招生类别","enrollType"]].forEach(function(pair){
+  [["学院","dept"],["专业","major"],["年级","grade"],["辅导员","counsel"],["培养层次","level"],["学制","length"],["招生类别","enrollType"]].forEach(function(pair){
     if(derived[pair[1]]) next[pair[0]]=derived[pair[1]];
   });
   return next;
@@ -8044,6 +8114,7 @@ function stuEdit(id){
     if(!o.status){ alert("请选择有效的学籍状态（"+STU_STATUS.join(" / ")+"）"); return false; }
     if(o.idcard&&o.idcard!==studentIdentityNumber(s.idcard)&&!studentIdentityInfo(o.idcard)){alert("证件号码格式、出生日期或校验码不正确，请核对证件原件");return false;}
     if(o.id !== s.id && students.some(function(x){ return x.id === o.id; })){ alert("学号已被其他学生占用："+o.id); return false; }
+    if(o.id!==s.id&&typeof window.workbench?.legacy?.registerStudentIdRename!=="function"){showToast("页面版本已更新，请先保留草稿并重新进入系统后修改学号","warn");return false;}
     if(!confirmAndAddMissingStudentBasicData([o],"编辑学生")) return false;
     fillStudentDerivedFields(o,{classAuthoritative:true});
     const customResult=typeof window.customFieldsReadForm==="function"?window.customFieldsReadForm("student",s):{ok:true,values:s.customFieldValues||{}};
@@ -8065,6 +8136,7 @@ function stuEdit(id){
       syncClassOfficerStudents([oldStudentId,o.id],{persist:false});
     }
     persistStudents();
+    if(o.id!==oldStudentId)window.workbench.legacy.registerStudentIdRename(oldStudentId,o.id);
     if(oldStatusAtt && oldStatusAtt.id && (!s.statusAttachment || s.statusAttachment.id!==oldStatusAtt.id)){
       window.workbench.legacy.attachmentDelete(oldStatusAtt.id).catch(function(){});
     }
@@ -8092,7 +8164,7 @@ function stuBatchEdit(){
      格式：[分组, 字段key, 显示名, 控件类型, 选项/配置] */
   const fields = [
     ["基本信息","usedName","曾用名","text"],["基本信息","gender","性别","select",STU_GENDERS],["基本信息","ethnic","民族","select",ETH],["基本信息","birth","出生日期","text"],["基本信息","idcard","身份证号","text"],["基本信息","examNo","考生号","text"],["基本信息","political","政治面貌","select",political],["基本信息","disab","残疾情况","text"],
-    ["学籍信息","dept","学院","text"],["学籍信息","major","专业","text"],["学籍信息","grade","年级","select",grades],["学籍信息","cls","班级","select",classes],["学籍信息","counsel","辅导员","text"],["学籍信息","level","学历","select",STU_LEVEL_OPTS],["学籍信息","length","学制","text"],["学籍信息","enrollType","招生类别","select",STU_ENROLL_OPTS],["学籍信息","source","生源地","text"],["学籍信息","enroll","入学日期","text"],["学籍信息","graduateYear","毕业年份","text"],["学籍信息","transferNote","转专业备注","select",["是","否"]],["学籍信息","status","学籍状态","select",STU_STATUS],["学籍信息","statusNote","学籍异动备注","text"],
+    ["学籍信息","dept","学院","text"],["学籍信息","major","专业","text"],["学籍信息","grade","年级","select",grades],["学籍信息","cls","班级","select",classes],["学籍信息","counsel","辅导员","text"],["学籍信息","level","培养层次","education"],["学籍信息","length","学制","text"],["学籍信息","enrollType","招生类别","select",STU_ENROLL_OPTS],["学籍信息","source","生源地","text"],["学籍信息","enroll","入学日期","text"],["学籍信息","graduateYear","毕业年份","text"],["学籍信息","transferNote","转专业备注","select",["是","否"]],["学籍信息","status","学籍状态","select",STU_STATUS],["学籍信息","statusNote","学籍异动备注","text"],
     ["联系方式","phone","手机号","text"],["联系方式","qq","QQ号","text"],["联系方式","wechat","微信号","text"],["联系方式","address","家庭住址","text"],["联系方式","fatherName","父亲姓名","text"],["联系方式","fatherPhone","父亲电话","text"],["联系方式","motherName","母亲姓名","text"],["联系方式","motherPhone","母亲电话","text"],["联系方式","emgName","紧急联系人","text"],["联系方式","emgRel","联系人关系","text"],["联系方式","emgPhone","紧急联系人电话","text"],
     ["宿舍信息","accom","住宿情况","select",["校内","租房","走读"]],["宿舍信息","building","楼栋","dorm-building"],["宿舍信息","room","房间号","text"],["宿舍信息","bed","床位","text"]
   ];
@@ -8121,6 +8193,8 @@ function stuBatchEdit(){
       let inputHtml="";
       if(f[3] === "dorm-building"){
         inputHtml = batchDormBuildingHtml();
+      } else if(f[3] === "education"){
+        inputHtml=educationLevelInput("bf_level","");
       } else if(f[3] === "select"){
         inputHtml = '<select id="bf_'+f[1]+'" style="flex:1"><option value="">请选择</option>'+opts+'</select>';
       } else {
@@ -8164,7 +8238,7 @@ function stuBatchEdit(){
     const fullSnapshots=picks.map(function(s){return {student:s,data:JSON.parse(JSON.stringify(s)),oldStatus:s.status};});
     const dormFieldNames=["accom","building","room","bed"],dormUpdates={};dormFieldNames.forEach(function(key){if(updates[key]!==undefined)dormUpdates[key]=updates[key];});
     const hasDormUpdates=Object.keys(dormUpdates).length>0;
-    if(hasDormUpdates&&picks.some(function(s){const status=stuNormalizeStatus(updates.status!==undefined?updates.status:s.status);return status!=="在校"&&status!=="毕业";})){showToast("休学、退学、转出等非在校学生不能批量写入住宿信息","warn");return false;}
+    if(hasDormUpdates&&picks.some(function(s){const status=stuNormalizeStatus(updates.status!==undefined?updates.status:s.status);return status!=="在校"&&status!=="毕业";})){showToast("借读、休学、退学、转出等非在校学生不能批量写入住宿信息","warn");return false;}
     const dormRecordsSnapshot=JSON.parse(JSON.stringify(dormDistRecords||[])),orgDormSnapshot=JSON.parse(JSON.stringify(ORG_DORMS||[])),dormSpatialSnapshot=window.__DORM_SPATIAL__&&typeof window.__DORM_SPATIAL__.getState==="function"?window.__DORM_SPATIAL__.getState():null;
     const rollbackBatch=function(){fullSnapshots.forEach(function(snapshot){Object.keys(snapshot.student).forEach(function(key){delete snapshot.student[key];});Object.assign(snapshot.student,snapshot.data);});dormDistRecords=dormRecordsSnapshot;ORG_DORMS.splice(0,ORG_DORMS.length,...orgDormSnapshot);if(dormSpatialSnapshot&&window.__DORM_SPATIAL__&&typeof window.__DORM_SPATIAL__.restoreState==="function")window.__DORM_SPATIAL__.restoreState(dormSpatialSnapshot);try{persistStudents();persistDormDist();saveOrgs();}catch(_ignore){}};
     if(updates.status!==undefined&&!dormConfirmGraduationTransitions(picks.map(function(s){return {student:Object.assign({},s,updates),oldStatus:s.status};}),"student-batch-edit"))return false;
@@ -8184,6 +8258,7 @@ function stuBatchEdit(){
       rollbackBatch();return false;
     }
     persistStudents();
+    if(updates.level&&ensureEducationLevels(picks))saveOrgs();
     beforeState.forEach(function(b){
       const changed = Object.keys(updates).map(function(k){
         return k+"["+(b[k]||"—")+" → "+updates[k]+"]";
@@ -8250,7 +8325,7 @@ const STU_IMPORT_FIELDS=[
   /* 二、学籍信息 13 项 */
   ["dept","学院",false],["major","专业",false],
   ["grade","年级",false],["cls","班级",true],["counsel","辅导员",false],
-  ["level","学历",false],["length","学制",false],["enrollType","招生类别",false],
+  ["level","培养层次",false],["length","学制",false],["enrollType","招生类别",false],
   ["source","生源地",false],["enroll","入学日期",false],["transferNote","转专业备注",false],
   ["status","学籍状态",true],["statusNote","学籍异动备注",false],["graduateYear","毕业年份",false],
   /* 三、联系方式 11 项 */
@@ -8261,6 +8336,7 @@ const STU_IMPORT_FIELDS=[
   ["emgName","紧急联系人",false],["emgRel","紧急联系人关系",false],["emgPhone","紧急联系人电话",false]
 ];
 const STU_IMPORT_ALIASES={
+  level:["学历","学历名称","教育层次","培养层次名称"],
   id:["学生编号","学生学号","学籍号","编号"],name:["学生姓名","名字"],usedName:["原姓名"],gender:["性别代码"],birth:["出生年月","出生年月日"],idcard:["身份证","身份证号码","证件号码"],examNo:["考生编号","考生号码","高考考生号"],
   dept:["院系","所属学院","所属院系","二级学院"],major:["专业名称","所学专业"],grade:["所在年级","入学年级"],cls:["班级名称","行政班","行政班级"],counsel:["辅导员姓名"],
   enroll:["入学时间","入校日期"],graduateYear:["毕业届别","毕业年级"],status:["在校状态","学生状态"],phone:["联系电话","手机号码","联系电话号码"],wechat:["微信","微信账号"],cadre:["学生干部任职","班干部任职","班级干部任职情况"]
@@ -8317,7 +8393,7 @@ function importFieldLabel(value){return String(value||"").trim().replace(/^\d+[�
 function importFixedOptions(context,overrides){
   context=String(context||"");
   if(/自定义字段|字段导入模板|花名册（自定义版）/.test(context))return Object.assign({},overrides||{});
-  const yesNo=["是","否"],rules={"性别":STU_GENDERS,"民族":ETH,"政治面貌":political,"学籍状态":STU_STATUS,"学历":STU_LEVEL_OPTS.filter(Boolean),"转专业备注":yesNo,"住宿情况":["校内","租房","走读"],"任职状态":["在任","离任"],"考核等级":CLASS_OFFICER_ASSESSMENT_LEVELS,"是否贫困生":yesNo,"困难评定等级":["未评定等级","特别困难","比较困难","一般困难"],"国家助学金":yesNo,"学院助学金":yesNo,"国家励志助学金":yesNo,"学院励志助学金":yesNo,"临时补助":yesNo,"卫生情况":["优","良","中","差"],"是否走访":yesNo,"关怀等级":["正常","关注","重点"],"帮扶类型":["学业帮扶","生活帮扶","心理帮扶","行为习惯帮扶","综合帮扶"],"帮扶状态":["进行中","已结束"]};
+  const yesNo=["是","否"],rules={"性别":STU_GENDERS,"民族":ETH,"政治面貌":political,"学籍状态":STU_STATUS,"转专业备注":yesNo,"住宿情况":["校内","租房","走读"],"任职状态":["在任","离任"],"考核等级":CLASS_OFFICER_ASSESSMENT_LEVELS,"是否贫困生":yesNo,"困难评定等级":["未评定等级","特别困难","比较困难","一般困难"],"国家助学金":yesNo,"学院助学金":yesNo,"国家励志助学金":yesNo,"学院励志助学金":yesNo,"临时补助":yesNo,"卫生情况":["优","良","中","差"],"是否走访":yesNo,"关怀等级":["正常","关注","重点"],"帮扶类型":["学业帮扶","生活帮扶","心理帮扶","行为习惯帮扶","综合帮扶"],"帮扶状态":["进行中","已结束"]};
   if(/党团|党员/.test(context)){rules["当前阶段"]=PARTY_STAGES;rules["当前发展阶段"]=PARTY_STAGES;rules["团员身份"]=PARTY_LEAGUE_STATUSES;}
   if(/课表/.test(context))rules["星期"]=[1,2,3,4,5,6,7].map(courseScheduleDayText);
   if(/课堂/.test(context))rules["类型"]=["旷课","事假","病假","公假","迟到","早退"];
@@ -8328,7 +8404,7 @@ function importFixedOptions(context,overrides){
   return Object.assign(rules,overrides||{});
 }
 const IMPORT_SMART_VALUE_ALIASES={
-  "学历":{"大专":"专科","大学专科":"专科","大学本科":"本科"},
+  "学籍状态":{"借读生":"借读"},
   "政治面貌":{
     "中国共产党党员":"中共党员","共产党员":"中共党员","正式党员":"中共党员","中国共产党正式党员":"中共党员",
     "中国共产党预备党员":"中共预备党员","预备党员":"中共预备党员",
@@ -8336,7 +8412,7 @@ const IMPORT_SMART_VALUE_ALIASES={
   },
   "当前阶段":{"中国共产党党员":"中共党员","正式党员":"中共党员","中国共产党预备党员":"中共预备党员","预备党员":"中共预备党员","中国共产主义青年团团员":"共青团员","青年团员":"共青团员","团员":"共青团员","普通群众":"群众"},
   "当前发展阶段":{"中国共产党党员":"中共党员","正式党员":"中共党员","中国共产党预备党员":"中共预备党员","预备党员":"中共预备党员","中国共产主义青年团团员":"共青团员","青年团员":"共青团员","团员":"共青团员","普通群众":"群众"},
-  "团员身份":{"中国共产主义青年团团员":"团员","共青团员":"团员","群众":"非团员","非共青团员":"非团员"},
+  "团员身份":{"中国共产主义青年团团员":"团员","共青团员":"团员","群众":"非团员","非共青团员":"非团员","保留团员的中共党员":"保留团籍的中共党员","保留团员的中共预备党员":"保留团籍的中共预备党员"},
   "性别":{"男性":"男","男生":"男","女性":"女","女生":"女"},
   "住宿情况":{"住校":"校内","校内住宿":"校内","在校住宿":"校内","校外租房":"租房","校外住宿":"租房","通勤":"走读"},
   "任职状态":{"在职":"在任","现任":"在任","卸任":"离任","已离任":"离任"},
@@ -8466,12 +8542,12 @@ function importTemplateValidations(context,rows,overrides){
   const rules=importFixedOptions(context,overrides),skipRows=[];
   rows.forEach(function(row,index){if(index>0&&(/^(?:※|文本(?:（|$)|如\s*\d{4}-)/.test(String(row[0]||""))))skipRows.push(index+1);});
   return (rows[0]||[]).map(function(header,index){
-    const label=importFieldLabel(header),values=Array.from(new Set((rules[label]||[]).map(String).filter(Boolean)));
+    const label=importFieldLabel(header),allowCustom=label==="培养层次"&&!/自定义字段|字段导入模板|花名册（自定义版）/.test(context),values=Array.from(new Set((allowCustom?educationLevelOptions():(rules[label]||[])).map(String).filter(Boolean)));
     if(!values.length)return null;
     const column=colLetter(index+1),ranges=[];let first=2;
     skipRows.forEach(function(row){if(row>first)ranges.push(column+first+":"+column+(row-1));first=row+1;});
     ranges.push(column+first+":"+column+1048576);
-    return {label:label,values:values,sqref:ranges.join(" ")};
+    return {label:label,values:values,sqref:ranges.join(" "),allowCustom:allowCustom};
   }).filter(Boolean);
 }
 function importTemplateInstructionRow(row){
@@ -8481,6 +8557,7 @@ function importTemplateInstructionRow(row){
 function importTemplateExampleValue(header,context,overrides){
   const label=importFieldLabel(header),options=importFixedOptions(context,overrides)[label];
   if(options&&options.length)return String(options[0]);
+  if(label==="培养层次")return educationLevelOptions()[0]||"本科";
   const exact={"学号":"20240001","姓名":"示例学生","记录ID":"EXAMPLE001","学期":"2026-2027-1学期","学年":"2026-2027学年","学院":"示例学院","所属学院":"示例学院","专业":"示例专业","年级":"2024级","班级":"示例班级","课程":"高等数学","课程名称":"高等数学","课程代码":"COURSE001","星期":"星期一","周次":"1-16","节次":"第1-2节","网址":"https://example.edu/","官网":"https://example.edu/","官方网址":"https://example.edu/"};
   if(exact[label]!=null)return exact[label];
   if(/日期|时间/.test(label))return "2026-10-14";
@@ -8510,7 +8587,7 @@ function buildSheet1XML(rows,validations,options){options=options||{};const cols
     else{xml+=`<c r="${ref}"${style} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;}
   });xml+=`</row>`;});
   xml+='</sheetData>';
-  if(validations&&validations.length)xml+='<dataValidations count="'+validations.length+'">'+validations.map(function(rule,index){return '<dataValidation type="list" errorStyle="stop" allowBlank="1" showDropDown="0" showInputMessage="1" showErrorMessage="1" errorTitle="固定选项输入错误" error="'+xmlEsc('「'+rule.label+'」只能选择下拉列表中的值，请重新选择。')+'" promptTitle="请选择固定选项" prompt="'+xmlEsc('请从下拉列表选择'+rule.label+'；选项外的值不能保存。')+'" sqref="'+rule.sqref+'"><formula1>_szxg_import_'+(index+1)+'</formula1></dataValidation>';}).join('')+'</dataValidations>';
+  if(validations&&validations.length)xml+='<dataValidations count="'+validations.length+'">'+validations.map(function(rule,index){const open=!!rule.allowCustom;return '<dataValidation type="list" errorStyle="stop" allowBlank="1" showDropDown="0" showInputMessage="1" showErrorMessage="'+(open?'0':'1')+'" errorTitle="固定选项输入错误" error="'+xmlEsc('「'+rule.label+'」只能选择下拉列表中的值，请重新选择。')+'" promptTitle="'+(open?'可选择或自由填写':'请选择固定选项')+'" prompt="'+xmlEsc(open?'培养层次选项来自基础数据维护，也可直接填写其他培养层次。':'请从下拉列表选择'+rule.label+'；选项外的值不能保存。')+'" sqref="'+rule.sqref+'"><formula1>_szxg_import_'+(index+1)+'</formula1></dataValidation>';}).join('')+'</dataValidations>';
   xml+='</worksheet>';return xml;
 }
 function buildXlsx(sheetName,rows,options){
@@ -8887,7 +8964,7 @@ function stuImport(){
       const rows=(S.okRows||[]).map(normalizeStudentImportRowByClass);
       if(!rows.length){ S.imported=true; render(); return; }
       const pendingStudents=rows.map(function(r){return {
-        id:r["学号"],dept:r["学院"],major:r["专业"],grade:r["年级"],cls:r["班级"]||"",counsel:r["辅导员"]||"",level:r["学历"]||"",length:r["学制"]||"",enrollType:r["招生类别"]||"",deptCode:"",majorCode:""
+        id:r["学号"],dept:r["学院"],major:r["专业"],grade:r["年级"],cls:r["班级"]||"",counsel:r["辅导员"]||"",level:r["培养层次"]||"",length:r["学制"]||"",enrollType:r["招生类别"]||"",deptCode:"",majorCode:""
       };});
       if(!confirmAndAddMissingStudentBasicData(pendingStudents,"学生导入")) return;
       const progress=window.WorkbenchProgress&&WorkbenchProgress.begin({title:'学生信息导入',message:'正在写入 '+rows.length+' 条学生数据…'});
@@ -8931,7 +9008,7 @@ const STU_EXPORT_FIELDS=[
   ["photo","学籍照片",true,function(s){return s.photo&&(s.photo.name||s.photo.id)||"";}],["idPhoto","证件照",true,function(s){return s.idPhoto&&(s.idPhoto.name||s.idPhoto.id)||"";}],
   ["disab","残疾情况",true],["disabCert","残疾人证 PDF",true,function(s){return s.disabCert?"已上传":"";}],["cadre","当前班级干部任职",true],["cadreHistory","历史班级干部任职",true],
   ["dept","学院",true],["major","专业",true],["grade","年级",true],["cls","班级",true],
-  ["counsel","辅导员",true],["level","学历",true],["length","学制",true],["enrollType","招生类别",true],
+  ["counsel","辅导员",true],["level","培养层次",true],["length","学制",true],["enrollType","招生类别",true],
   ["source","生源地",true],["enroll","入学日期",true],["graduateYear","毕业年份",true],["transferNote","转专业备注",true],
   ["status","学籍状态",true,function(s){return stuStatusLabel(s.status||"");}],["statusNote","学籍异动备注",true],
   ["statusAttachment","学籍异动单（图片）",true,function(s){return s.statusAttachment&&(s.statusAttachment.name||s.statusAttachment.id)||"";}],
@@ -10653,8 +10730,8 @@ function exportParty(){
   const ss=stuFilterByState(clsStudents(),state);
   const rowsSrc=partyFilteredRoster(ss,state);
   const trainingHeaders=[];PARTY_TRAINING_CONFIG.forEach(function(item){trainingHeaders.push(item.label+"状态",item.label+"日期",item.label+"培训单位",item.label+"培训结果");});
-  const rows=rowsSrc.map(function(s){const p=partyEnsure(s),history=partyHistory(s).map(function(node){return [node.stage,node.date].filter(Boolean).join("（")+(node.stage&&node.date?"）":"");}).join(" → "),training=[];PARTY_TRAINING_CONFIG.forEach(function(item){const record=p.training[item.key];training.push(record.status||"未参加",record.date||"",record.organizer||"",record.result||"");});return [s.dept,s.major,s.cls,s.id,s.name,s.political||"",p.leagueStatus||"",partyCurrentStage(s),p.date||"",p.branch||"",p.contact||"",p.introducer||"",p.materials||"",p.note||""].concat(training,[history]);});
-  downloadXlsxFile("党团员名册",[["学院","专业","班级","学号","姓名","政治面貌","团员身份","当前发展阶段","确定日期","所属党支部","培养联系人","入党介绍人","材料状态","本次节点备注"].concat(trainingHeaders,["发展历程"]),...rows],"党团员名册.xlsx");
+  const rows=rowsSrc.map(function(s){const p=partyEnsure(s),history=partyHistory(s).map(function(node){return [node.stage,node.date].filter(Boolean).join("（")+(node.stage&&node.date?"）":"");}).join(" → "),training=[];PARTY_TRAINING_CONFIG.forEach(function(item){const record=p.training[item.key];training.push(record.status||"未参加",record.date||"",record.organizer||"",record.result||"");});return [s.dept,s.major,s.cls,s.id,s.name,s.political||"",p.leagueStatus||"",partyCurrentStage(s),p.date||"",p.branch||"",p.contact||"",p.introducer||"",p.materials||"",p.note||""].concat(training,[history],partyImportApi().MILESTONE_FIELDS.map(function(field){return p.milestones&&p.milestones[field.key]||"";}));});
+  downloadXlsxFile("党团员名册",[["学院","专业","班级","学号","姓名","政治面貌","团员身份","当前发展阶段","确定日期","所属党支部","培养联系人","入党介绍人","材料状态","本次节点备注"].concat(trainingHeaders,["发展历程"],partyImportApi().MILESTONE_FIELDS.map(function(field){return field.label;})),...rows],"党团员名册.xlsx");
 }
 window.exportParty=exportParty;
 
@@ -10672,21 +10749,41 @@ function partyImportTemplate(){
   const api=partyImportApi(),headers=api.IMPORT_FIELDS.map(function(field){return field.label+(field.required?" *":"");});
   const sample=["20240001","张三","共青团员","已推优","入党积极分子","2026-09-15","信息工程学院学生第一党支部","李老师","王老师","材料齐全","培养考察正常","已结业","2026-05-20","学院党校","优秀","培训中","2026-10-01","学校党校","在训","未参加","","",""];
   const widths=[22,12,15,22,18,15,30,18,18,20,28,16,16,22,20,16,16,22,20,16,16,22,20];
+  api.MILESTONE_FIELDS.forEach(function(){sample.push("");widths.push(24);});
   downloadXlsxFile("党团员发展导入模板",[headers,sample],"党团员发展台账_导入模板.xlsx",{context:"党团员发展台账",fixedOptions:partyImportFixedOptions(),columnWidths:widths,freezeColumns:2});
 }
 window.partyImportTemplate=partyImportTemplate;
-function partyImportOpen(){
+function partyImportOpen(smart){
   const api=partyImportApi();
   openMappedImportWizard({
     name:"党团员发展台账",
+    autoRecognize:smart===true,
+    autoRequiredFields:["sid","name"].concat(api.MILESTONE_FIELDS.map(function(field){return field.key;})),
+    previewHtml:smart===true?function(state){
+      const rows=state.validRows||[];
+      if(!rows.length||state.result&&state.result.done)return "";
+      return '<div id="partyImportPreview" class="import-preview" style="margin-top:14px"><div class="ph"><b>即将更新的党团信息</b><span>'+rows.length+' 人 · 日期及发展历程同时更新</span></div><div style="max-height:340px;overflow:auto"><table><thead><tr><th>学号</th><th>姓名</th><th>政治面貌</th><th>团员身份</th><th>当前发展阶段</th></tr></thead><tbody>'+rows.map(function(row){return '<tr>'+[row.sid,row.name,row.political,row.leagueStatus,row.stage].map(function(value){return '<td>'+esc(value||"—")+'</td>';}).join("")+'</tr>';}).join("")+'</tbody></table></div></div>';
+    }:undefined,
     fields:api.IMPORT_FIELDS.map(function(field){return {key:field.key,label:field.label,required:field.required,aliases:(field.aliases||[]).slice(),options:field.options?field.options.slice():undefined};}),
     template:"partyImportTemplate()",
     fixedOptions:partyImportFixedOptions(),
-    infoHtml:"模板第 2 行为填写示例，请替换或删除示例后录入正式数据。按学号关联现有学生，不会新增学生。空白字段保留原值；同一文件每名学生只能出现一次。导入前会再次校验姓名、固定选项、发展节点日期和党课培训日期。",
-    validate:function(rows){try{const checked=api.prepareImport(rows,students);return {ok:checked.validRows,errors:checked.errors};}catch(error){return {ok:[],errors:[{row:"—",msg:error&&error.message||"导入数据校验失败"}]};}},
+    infoHtml:"可直接选择党建跟踪表，系统识别标题下方的表头，按入团、申请、积极分子、发展对象、预备党员、正式党员时间推断政治面貌、团员身份与最高发展阶段，并保存各节点。年月日期保留精度，未来日期不提前升级；日期矛盾、与明确身份冲突或可能回退现有阶段时须先核对。只填原有身份字段的模板仍按原方式导入。按学号关联现有学生，不新增学生；空白可选字段保留原值。",
+    validate:function(rows,state){
+      try{
+        const mapped=new Set(state.mapping.filter(function(field){return field.excel;}).map(function(field){return field.key;}));
+        const input=rows.map(function(row){const next=Object.assign({},row);api.MILESTONE_FIELDS.forEach(function(field){if(!mapped.has(field.key))delete next[field.key];});return next;});
+        const checked=api.prepareImport(input,students),warnings=checked.warnings.map(function(warning){
+          const source=rows[Number(warning.row)-2];
+          return source&&source.__importRowNumber?Object.assign({},warning,{row:source.__importRowNumber}):warning;
+        });
+        return {ok:checked.validRows,errors:checked.errors,warnings:warnings};
+      }catch(error){return {ok:[],errors:[{row:"—",msg:error&&error.message||"导入数据校验失败"}]};}
+    },
     apply:async function(rows){
       if(!window.workbench||!window.workbench.legacy||typeof window.workbench.legacy.partyImport!=="function")throw new Error("当前服务版本不支持党团员批量导入，请重启主程序后重试");
       const result=await window.workbench.legacy.partyImport(rows);
+      // Background edits may queue while the import request is in flight; hydrate only after they settle.
+      if(typeof window.workbench.legacy.flushStore==="function")await window.workbench.legacy.flushStore();
       if(window.__workbenchStoreSync&&typeof window.__workbenchStoreSync.hydrate==="function")window.__workbenchStoreSync.hydrate();
       if(currentView==="party")renderPage("party");
       return {ok:Number(result.imported)||rows.length,skip:Number(result.skipped)||0};
@@ -10695,6 +10792,7 @@ function partyImportOpen(){
   });
 }
 window.partyImportOpen=partyImportOpen;
+window.partyTrackingImportOpen=function(){partyImportOpen(true);};
 
 function exportPunish(type){
   const list=punishRowsData(type);
@@ -10732,20 +10830,10 @@ function stuImageSrc(photo){
 }
 function stuPhotoSrc(s){return stuImageSrc(s&&s.photo);}
 function stuIdPhotoSrc(s){return stuImageSrc(s&&s.idPhoto);}
-/* 读取图片原图（不缩放、不压缩，保证原像素与画质），返回 data:image/...;base64,... */
-function readImageFull(f){
-  return new Promise((resolve)=>{
-    const r=new FileReader();
-    r.onload=()=>resolve(r.result||'');
-    r.onerror=()=>resolve('');
-    r.readAsDataURL(f);
-  });
-}
 window.readImageThumb=readImageThumb;
 
 function fundImport(targetTerm){
   try{targetTerm=lockedImportTerm(targetTerm||(viewTerm&&viewTerm.fund)||CURRENT_TERM);}catch(error){showToast(error.message,"warn");return;}
-  window.__fundImportTargetTerm=targetTerm;
   const headers=FUND_DATA_HEADERS.slice();
   openMappedImportWizard({name:"资助情况",fields:headers,requiredFields:["学号"],template:"fundImportTemplate()",
     validate:function(rows){
@@ -10763,81 +10851,6 @@ function fundImportTemplate(){
   const data=[headers,sample];
   downloadXlsxFile("资助情况导入模板", data, "资助情况导入模板.xlsx");
   if(typeof showToast==="function") showToast("已下载导入模板","ok");
-}
-async function fundImportParse(fileObj){ return await parseWorkbookToRows(fileObj,FUND_DATA_HEADERS); }
-/* ===== 资助导入：预处理（按学号自动匹配学籍 + 一致性校验） =====
-   规则：表格内有学号即可；若同时填写了 姓名/学院/专业/班级 等学籍信息，则与学生管理核对，
-   不一致收集到 mismatches（继续导入时以系统学籍为准）；若未填学籍信息则自动匹配系统学籍。 */
-function fundImportProcess(rows){
-  if(!rows||!rows.length){ $('#fundImportPreview').innerHTML='<div class="import-summary" style="margin-top:12px">文件中没有可导入的数据行。</div>'; return; }
-  var mismatches=[]; // {sid,name,field,excel,system}
-  var ok=[], errors=[];
-  var seen=new Set();
-  rows.forEach(function(r,i){
-    const sid=smartCell(r,["学号"]);
-    if(!sid){ errors.push({row:i+2, msg:"学号为空"}); return; }
-    const stu=students.find(function(x){return String(x.id)===String(sid);});
-    if(!stu){ errors.push({row:i+2, msg:"学号不存在："+sid}); return; }
-    var targetTerm=(typeof window.__fundImportTargetTerm==='string' && window.__fundImportTargetTerm.trim())?window.__fundImportTargetTerm:CURRENT_TERM;
-    var term=lockedImportTerm(targetTerm);
-    var recordKey=sid+"|"+term;
-    if(seen.has(recordKey)){ errors.push({row:i+2, msg:"同一学期学号重复："+sid+"（"+term+"）"}); return; }
-    seen.add(recordKey);
-    const row={"学号":sid};
-    // 学籍字段：自动匹配 + 一致性校验
-    var stuInfoMap={"姓名":stu.name||"","民族":stu.ethnic||stu.nation||"","学院":stu.dept||"","专业":stu.major||"","年级":stu.grade||classGrade(stu.cls)||"","班级":stu.cls||""};
-    Object.keys(stuInfoMap).forEach(function(f){
-      var excelRaw=smartCell(r,[f]);
-      var sysVal=String(stuInfoMap[f]||"").trim();
-      if(!excelRaw){
-        row[f]=sysVal; // Excel 无此字段 → 自动匹配系统学籍
-      } else if(String(excelRaw).trim()!==sysVal){
-        mismatches.push({sid:sid, name:stu.name||"", field:f, excel:String(excelRaw).trim(), system:sysVal});
-        row[f]=sysVal; // 以系统学籍为准暂存
-      } else {
-        row[f]=sysVal;
-      }
-    });
-    // 学期锁定：无论 Excel 是否包含“学期”列，均写入用户在当前功能中选择的目标学期。
-    row["学期"]=term;
-    // 资助字段
-    row["是否贫困生"]=smartCell(r,["是否贫困生"]);
-    row["困难评定等级"]=normalizeFundLevel(smartCell(r,["困难评定等级","贫困等级"]));
-    row["国家助学金"]=smartCell(r,["国家助学金"]);
-    row["学院助学金"]=smartCell(r,["学院助学金"]);
-    row["国家励志助学金"]=smartCell(r,["国家励志助学金"]);
-    row["学院励志助学金"]=smartCell(r,["学院励志助学金"]);
-    row["临时补助"]=smartCell(r,["临时补助"]);
-    row["其他"]=smartCell(r,["其他资助","其他"]);
-    ok.push(row);
-  });
-  // 预览
-  const prevCols=["学号","姓名","民族","学院","专业","年级","班级","学期","是否贫困生","困难评定等级","国家助学金","学院助学金","国家励志助学金","学院励志助学金","临时补助","其他"];
-  const prev=ok.map(function(r){ return '<tr><td>'+prevCols.map(function(c){ return esc(r[c]); }).join('</td><td>')+'</td></tr>'; }).join('');
-  var html='<div class="import-preview"><div class="ph"><b>预览（'+ok.length+' 行可导入 / '+errors.length+' 行错误）</b></div>'
-    +'<div style="max-height:240px;overflow:auto"><table class="import-field-table"><thead><tr>'+prevCols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr></thead><tbody>'+prev+'</tbody></table></div></div>';
-  if(mismatches.length){
-    var mRows=mismatches.map(function(m){
-      return '<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border)">'+esc(m.sid)+'</td>'
-        +'<td style="padding:4px 10px;border-bottom:1px solid var(--border)">'+esc(m.name)+'</td>'
-        +'<td style="padding:4px 10px;border-bottom:1px solid var(--border)">'+esc(m.field)+'</td>'
-        +'<td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--danger)">'+esc(m.excel)+'</td>'
-        +'<td style="padding:4px 10px;border-bottom:1px solid var(--border);color:var(--primary)">'+esc(m.system)+'</td></tr>';
-    }).join('');
-    html+='<div class="import-summary" style="margin-top:10px"><div style="font-size:13px;color:var(--danger);margin-bottom:6px">⚠ 发现 <b>'+mismatches.length+'</b> 处学籍信息与学生管理不一致（将以<b>系统学籍</b>为准）：</div>'
-      +'<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"><table style="width:100%;font-size:12.5px;border-collapse:collapse">'
-      +'<thead><tr style="background:var(--bg-alt)"><th style="padding:6px 10px;text-align:left">学号</th><th style="padding:6px 10px;text-align:left">姓名</th><th style="padding:6px 10px;text-align:left">字段</th><th style="padding:6px 10px;text-align:left">导入值</th><th style="padding:6px 10px;text-align:left">系统值</th></tr></thead><tbody>'+mRows+'</tbody></table></div></div>';
-  }
-  if(errors.length){
-    var eRows=errors.map(function(e){ return '<li style="font-size:12.5px;color:var(--muted)">第 '+e.row+' 行：'+esc(e.msg)+'</li>'; }).join('');
-    html+='<div class="import-summary" style="margin-top:10px"><div style="font-size:13px;color:var(--muted);margin-bottom:4px">以下行将被跳过：</div><ul style="margin:0;padding-left:18px">'+eRows+'</ul></div>';
-  }
-  html+='<div class="import-summary" style="margin-top:10px"><div class="kpi ok"><div class="n">'+ok.length+'</div><div class="l">可导入</div></div><div class="kpi fail"><div class="n">'+errors.length+'</div><div class="l">错误</div></div></div>';
-  $('#fundImportPreview').innerHTML=html;
-  const foot=document.getElementById('modalFoot');
-  foot.innerHTML='<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" id="fundImportOk">确认导入 '+ok.length+' 条'+(mismatches.length?'（以系统学籍为准）':'')+'</button>';
-  const okBtn=document.getElementById('fundImportOk');
-  if(okBtn) okBtn.onclick=function(){ fundImportApplyData(ok); };
 }
 /* ===== 资助情况：显示源（fundRecords）与写入目标联动 =====
    同步写入学生档案与按学期的独立记录表，保证列表与档案一致。 */
@@ -10977,37 +10990,6 @@ function migrateFundLevel(){
   if(changed){ try{ persistStudents(); }catch(e){} try{ persistFund(); }catch(e){} }
 }
 migrateFundLevel();
-async function fundImportApplyData(rows){
-  if(!rows||!rows.length){ alert('没有可导入的数据'); return; }
-  let cnt=0;
-  runFundRecordBatch(function(){
-  rows.forEach(function(r){
-    const sid=r["学号"];
-    const s=students.find(x=>x.id===sid);
-    if(!s) return;
-    const term=r["学期"]||CURRENT_TERM;
-    const isPoor=(r["是否贫困生"]==='是');
-    const vals={
-      isPoor:isPoor,
-      poorLevel:normalizeFundLevel(r["困难评定等级"]),
-      national:(r["国家助学金"]==='是'),
-      college:(r["学院助学金"]==='是'),
-      nationalMotivational:(r["国家励志助学金"]==='是'),
-      collegeMotivational:(r["学院励志助学金"]==='是'),
-      temporaryAid:(r["临时补助"]==='是'),
-      other:(r["其他"]||'—')
-    };
-    applyFundRecord(sid,s.name,s.dept,s.grade,s.cls,term,vals);
-    cnt++;
-  });
-  });
-  closeModal();
-  if(typeof renderPage==="function") renderPage('fund');
-  if(typeof showToast==="function") showToast('成功导入 '+cnt+' 条资助记录','ok'); else alert('成功导入 '+cnt+' 条资助记录');
-  var __ft = (rows[0] && rows[0]['学期']) || CURRENT_TERM;
-  var __fto = fundTermByTerm(__ft);
-  if(__fto){ setTimeout(function(){ openEditFundTerm(__fto.id); }, 80); }
-}
 window.fundImport=fundImport;
 
 PAGES.dorm=()=>{
@@ -12204,7 +12186,7 @@ window.openEditFund=function(sid, term){
 
 /* v1.60：党团员发展台账。每名学生的党组织节点按 history 保存，可追溯、可更正；不再限制仅在校生，可按学籍状态筛选查看。 */
 const PARTY_STAGES=["群众","共青团员","递交入党申请书","入党积极分子","发展对象","中共预备党员","中共党员"];
-const PARTY_LEAGUE_STATUSES=["团员","非团员","已推优","保留团员的中共党员","退团"];
+const PARTY_LEAGUE_STATUSES=["团员","非团员","已推优","保留团籍的中共预备党员","保留团籍的中共党员","退团"];
 const PARTY_TRAINING_STATUSES=["未参加","培训中","已结业","未通过"];
 const PARTY_TRAINING_CONFIG=[{key:"primary",label:"初级党课"},{key:"intermediate",label:"中级党课"},{key:"advanced",label:"高级党课"}];
 const PARTY_CARD_CATEGORIES=[{key:"群众",label:"群众"},{key:"共青团员",label:"共青团员"},{key:"推优",label:"团推优（入党积极分子）"},{key:"中共预备党员",label:"预备党员"},{key:"中共党员",label:"中共党员"}];
@@ -12245,6 +12227,7 @@ function partyEnsure(s){
   const p=s.party;
   if(p.stage==="入团"){ p.stage="群众"; p.leagueStatus="团员"; }
   if(!p.leagueStatus) p.leagueStatus=s.political==="共青团员"?"团员":"非团员";
+  if(p.leagueStatus==="保留团员的中共党员")p.leagueStatus="保留团籍的中共党员";
   if(!Array.isArray(p.history)) p.history=[];
   partyTrainingEnsure(p);
   return p;
@@ -12254,18 +12237,23 @@ function partyHistory(s){
   return p.history.slice().sort(function(a,b){return String(a.date||"").localeCompare(String(b.date||""));});
 }
 function partyStageClass(stage){ return stage==="中共党员"?"b-red":(stage==="中共预备党员"?"b-orange":(stage==="发展对象"?"b-purple":(stage==="入党积极分子"?"b-blue":"b-gray"))); }
-function partyLeagueStatusClass(status){ return status==="已推优"?"b-blue":(status==="团员"||status==="保留团员的中共党员"?"b-green":"b-gray"); }
+function partyLeagueStatusClass(status){ return status==="已推优"?"b-blue":(status==="团员"||status==="保留团员的中共党员"||status==="保留团籍的中共党员"||status==="保留团籍的中共预备党员"?"b-green":"b-gray"); }
 function partySetFormValue(id,value){const field=document.getElementById(id);if(field)field.value=value==null?"":String(value);}
 function partyLoadFormStudent(sid){
   const student=students.find(function(item){return String(item.id)===String(sid);});
   if(!student)return;
   const p=partyEnsure(student);
   partySetFormValue("partyPolitical",student.political||"");partySetFormValue("partyLeague",p.leagueStatus||"非团员");partySetFormValue("partyStage",p.stage||"");partySetFormValue("partyDate",p.date||"");partySetFormValue("partyBranch",p.branch||"");partySetFormValue("partyContact",p.contact||"");partySetFormValue("partyIntroducer",p.introducer||"");partySetFormValue("partyMaterials",p.materials||"");partySetFormValue("partyNote",p.note||"");
+  const milestoneSummary=document.getElementById("partyMilestoneSummary");if(milestoneSummary)milestoneSummary.innerHTML=partyMilestoneSummaryHtml(p);
   PARTY_TRAINING_CONFIG.forEach(function(item){const record=p.training[item.key];partySetFormValue("partyTraining_"+item.key+"_status",record.status);partySetFormValue("partyTraining_"+item.key+"_date",record.date);partySetFormValue("partyTraining_"+item.key+"_organizer",record.organizer);partySetFormValue("partyTraining_"+item.key+"_result",record.result);});
 }
 window.partyLoadFormStudent=partyLoadFormStudent;
 function partyTrainingFormHtml(p){
   return '<div class="zf-section" style="margin-top:14px">党课培训记录</div><div class="tip" style="margin-bottom:10px">分别记录初级、中级、高级党课的培训状态、日期、培训单位和培训结果。</div>'+PARTY_TRAINING_CONFIG.map(function(item){const record=p.training[item.key],prefix="partyTraining_"+item.key+"_",statusOptions=PARTY_TRAINING_STATUSES.map(function(status){return '<option value="'+attr(status)+'"'+(record.status===status?' selected':'')+'>'+esc(status)+'</option>';}).join("");return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:9px"><div style="font-weight:700;margin-bottom:8px">'+esc(item.label)+'</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><div class="field" style="margin:0"><label>培训状态</label><select id="'+prefix+'status">'+statusOptions+'</select></div><div class="field" style="margin:0"><label>培训/结业日期</label><input id="'+prefix+'date" type="date" value="'+attr(record.date)+'"></div><div class="field" style="margin:0"><label>培训单位</label><input id="'+prefix+'organizer" maxlength="200" value="'+attr(record.organizer)+'"></div><div class="field" style="margin:0"><label>培训结果</label><input id="'+prefix+'result" maxlength="500" value="'+attr(record.result)+'" placeholder="如：合格、优秀、证书编号"></div></div></div>';}).join("");
+}
+function partyMilestoneSummaryHtml(p){
+  const dates=p.milestones||{},fields=partyImportApi().MILESTONE_FIELDS;
+  return '<section class="party-detail-section"><h3>发展时间记录</h3><div class="party-milestone-grid">'+fields.map(function(field){const historical=(p.history||[]).filter(function(item){return item.stage===field.stage&&item.date;}).sort(function(a,b){return String(a.date).localeCompare(String(b.date));}),date=dates[field.key]||(historical.length?historical[historical.length-1].date:"");return '<div class="party-milestone'+(date?'':' is-empty')+'"><div>'+esc(field.label)+'</div><div class="party-milestone-value">'+(date?partyDateHtml(date):'未登记')+'</div></div>';}).join("")+'</div></section>';
 }
 function partyOpenForm(id){
   const candidates=clsStudents();
@@ -12285,7 +12273,7 @@ function partyOpenForm(id){
     +'<div class="row2"><div class="field"><label>所属党支部</label><input id="partyBranch" value="'+attr(p.branch||"")+'" placeholder="如：信息工程学院学生第一党支部"></div><div class="field"><label>培养联系人</label><input id="partyContact" value="'+attr(p.contact||"")+'"></div></div>'
     +'<div class="row2"><div class="field"><label>入党介绍人</label><input id="partyIntroducer" value="'+attr(p.introducer||"")+'"></div><div class="field"><label>材料状态</label><input id="partyMaterials" value="'+attr(p.materials||"")+'" placeholder="如：申请书、政审材料已归档"></div></div>'
     +'<div class="field"><label>本次节点备注</label><textarea id="partyNote" rows="3" maxlength="2000" placeholder="记录培养考察、会议决议、转正意见等">'+esc(p.note||"")+'</textarea></div>'
-    +partyTrainingFormHtml(p);
+    +'<div id="partyMilestoneSummary">'+partyMilestoneSummaryHtml(p)+'</div>'+partyTrainingFormHtml(p);
   openModal(id?"编辑党团发展信息":"登记党团发展节点",body,function(){
     const sid=id||document.getElementById("partySid").value;
     const target=students.find(function(x){return x.id===sid;});
@@ -12306,15 +12294,17 @@ function partyOpenForm(id){
   document.getElementById("modal").classList.add("wide");
 }
 function partyView(id){
-  const s=students.find(function(x){return x.id===id;}); if(!s) return;
-  const p=partyEnsure(s), history=partyHistory(s);
-  const rows=history.length?history.map(function(h,i){return '<tr><td>'+esc(h.stage)+'</td><td>'+esc(h.date||"—")+'</td><td>'+esc(h.branch||"—")+'</td><td>'+esc(h.contact||"—")+'</td><td>'+esc(h.introducer||"—")+'</td><td style="white-space:normal">'+esc(h.note||"—")+'</td><td><a class="lk" onclick="partyEditNode('+jsArg(s.id)+','+i+')">编辑</a></td></tr>';}).join(""):'<tr><td colspan="7" class="empty">暂未登记发展节点</td></tr>';
-  const trainingRows=PARTY_TRAINING_CONFIG.map(function(item){const record=p.training[item.key];return '<tr><td><b>'+esc(item.label)+'</b></td><td>'+badge(esc(record.status),record.status==="已结业"?"b-green":(record.status==="培训中"?"b-blue":(record.status==="未通过"?"b-red":"b-gray")))+'</td><td>'+esc(record.date||"—")+'</td><td>'+esc(record.organizer||"—")+'</td><td style="white-space:normal">'+esc(record.result||"—")+'</td></tr>';}).join("");
-  const body='<div class="zf-detail-head"><div class="avatar">'+esc((s.name||"?").charAt(0))+'</div><div><div style="font-size:17px;font-weight:700">'+esc(s.name)+'</div><div style="color:var(--muted);margin-top:4px">'+esc(s.id+" · "+s.cls)+'</div></div></div>'
-    +portraitArchiveGrid([["政治面貌",s.political],["团员身份",p.leagueStatus],["当前阶段",p.stage],["确定日期",p.date],["所属支部",p.branch],["培养联系人",p.contact],["入党介绍人",p.introducer],["材料状态",p.materials]])
-    +'<div class="zf-section">党课培训记录</div><div class="list-scroll">'+table(["培训级别","状态","培训/结业日期","培训单位","培训结果"],trainingRows)+'</div>'
-    +'<div class="zf-section">发展历程</div><div class="list-scroll">'+table(["发展阶段","确定日期","所属支部","培养联系人","介绍人","备注","操作"],rows)+'</div>';
-  openModal("党团发展档案 · "+s.name,body,null); $("#modalFoot").innerHTML='<button class="btn btn-ghost" data-sid="'+attr(s.id)+'" onclick="partyOpenForm(this.dataset.sid)">编辑</button><button class="btn btn-ghost" style="border-color:#e8830c;color:#e8830c" data-sid="'+attr(s.id)+'" onclick="partyInit(this.dataset.sid)">初始化</button><button class="btn btn-primary" onclick="closeModal()">关闭</button>'; $("#modal").classList.add("wide");
+  const s=students.find(function(x){return x.id===id;});if(!s)return;
+  const p=partyEnsure(s),history=partyHistory(s);
+  const field=function(label,value){return '<div><dt>'+esc(label)+'</dt><dd>'+esc(value||"未填写")+'</dd></div>';};
+  const timeline=history.length?'<ol class="party-timeline">'+history.map(function(h,i){return '<li class="party-timeline-item"><header><h4>'+esc(h.stage||"未填写阶段")+'</h4><button type="button" class="btn btn-ghost btn-sm lk" onclick="partyEditNode('+jsArg(s.id)+','+i+')">编辑</button></header><div class="party-timeline-date">'+partyDateHtml(h.date||"")+'</div><div class="party-timeline-facts"><span>所属支部：'+esc(h.branch||"未填写")+'</span><span>培养联系人：'+esc(h.contact||"未填写")+'</span><span>入党介绍人：'+esc(h.introducer||"未填写")+'</span>'+(h.materials?'<span>材料状态：'+esc(h.materials)+'</span>':'')+'</div>'+(h.note?'<p class="party-timeline-note">'+esc(h.note)+'</p>':'')+'</li>';}).join("")+'</ol>':'<div class="party-timeline-empty">暂未登记发展节点，可通过“编辑”登记或导入党建跟踪表。</div>';
+  const training=PARTY_TRAINING_CONFIG.map(function(item){const record=p.training[item.key];return '<article class="party-training-card"><header><h4>'+esc(item.label)+'</h4>'+badge(esc(record.status),record.status==="已结业"?"b-green":record.status==="培训中"?"b-blue":record.status==="未通过"?"b-red":"b-gray")+'</header><dl><dt>培训 / 结业日期</dt><dd>'+esc(record.date||"未登记")+'</dd><dt>培训单位</dt><dd>'+esc(record.organizer||"未填写")+'</dd><dt>培训结果</dt><dd>'+esc(record.result||"未填写")+'</dd></dl></article>';}).join("");
+  const body='<div class="party-detail"><header class="party-detail-head"><div class="party-detail-avatar" aria-hidden="true">'+esc((s.name||"?").charAt(0))+'</div><div><h3>'+esc(s.name)+'</h3><p>'+esc([s.id,s.cls,s.status||"在校"].filter(Boolean).join(" · "))+'</p><p>'+esc([s.dept,s.major].filter(Boolean).join(" / "))+'</p></div></header>'
+    +'<dl class="party-detail-grid party-detail-primary">'+field("政治面貌",s.political)+field("团员身份",p.leagueStatus)+'<div><dt>当前发展阶段</dt><dd>'+badge(esc(partyCurrentStage(s)),partyStageClass(partyCurrentStage(s)))+'<div class="party-stage-date">'+partyDateHtml(partyStageDate(s))+'</div></dd></div></dl>'
+    +'<dl class="party-detail-grid">'+field("所属党支部",p.branch)+field("培养联系人",p.contact)+field("入党介绍人",p.introducer)+field("材料状态",p.materials)+'</dl>'
+    +partyMilestoneSummaryHtml(p)+'<section class="party-detail-section"><h3>党课培训记录</h3><div class="party-training-cards">'+training+'</div></section>'
+    +'<section class="party-detail-section"><h3>发展历程 · '+history.length+' 个节点</h3><p>按记录日期排列，年月或年份不补写具体日期。</p>'+timeline+'</section></div>';
+  openModal("党团发展档案 · "+s.name,body,null);$("#modalFoot").innerHTML='<button class="btn btn-ghost" data-sid="'+attr(s.id)+'" onclick="partyOpenForm(this.dataset.sid)">编辑</button><button class="btn btn-ghost" style="border-color:#e8830c;color:#e8830c" data-sid="'+attr(s.id)+'" onclick="partyInit(this.dataset.sid)">初始化</button><button class="btn btn-primary" onclick="closeModal()">关闭</button>';$("#modal").classList.add("wide");
 }
 function partyInit(id){
   var s=students.find(function(x){return x.id===id;}); if(!s){ alert('学生不存在'); return; }
@@ -12343,13 +12333,15 @@ function partyEditNode(id, idx){
   var s=students.find(function(x){return x.id===id;}); if(!s) return;
   var hist=partyHistory(s); var node=hist[idx]; if(!node) return;
   var body='<div class="tip">修改该发展节点的详情，保存后同步到学生全档案。</div>'
-    +'<div class="row2"><div class="field"><label>发展阶段</label><input id="pnStage" class="in" value="'+attr(node.stage||"")+'"></div><div class="field"><label>确定日期</label><input id="pnDate" type="date" value="'+attr(node.date||"")+'"></div></div>'
+    +'<div class="row2"><div class="field"><label>发展阶段</label><input id="pnStage" class="in" value="'+attr(node.stage||"")+'"></div><div class="field"><label>确定日期</label><input id="pnDate" class="in" placeholder="YYYY-MM-DD 或 YYYY-MM" value="'+attr(node.date||"")+'"></div></div>'
     +'<div class="row2"><div class="field"><label>所属党支部</label><input id="pnBranch" class="in" value="'+attr(node.branch||"")+'"></div><div class="field"><label>培养联系人</label><input id="pnContact" class="in" value="'+attr(node.contact||"")+'"></div></div>'
     +'<div class="row2"><div class="field"><label>入党介绍人</label><input id="pnIntro" class="in" value="'+attr(node.introducer||"")+'"></div><div class="field"><label>材料状态</label><input id="pnMat" class="in" value="'+attr(node.materials||"")+'"></div></div>'
     +'<div class="field"><label>备注</label><textarea id="pnNote" rows="3" class="in">'+attr(node.note||"")+'</textarea></div>';
   openModal("编辑发展节点",body,function(){
-    node.stage=document.getElementById("pnStage").value.trim()||node.stage;
-    node.date=document.getElementById("pnDate").value.trim();
+    const previousStage=node.stage,previousDate=node.date,nextStage=document.getElementById("pnStage").value.trim()||node.stage,nextDate=partyImportApi().normalizeMilestoneDate(document.getElementById("pnDate").value.trim());
+    if(!PARTY_STAGES.includes(nextStage)||nextDate.error){alert(nextDate.error||"请选择系统已有的发展阶段。");return false;}
+    node.stage=nextStage;
+    node.date=nextDate.value;
     node.branch=document.getElementById("pnBranch").value.trim();
     node.contact=document.getElementById("pnContact").value.trim();
     node.introducer=document.getElementById("pnIntro").value.trim();
@@ -12357,34 +12349,45 @@ function partyEditNode(id, idx){
     node.note=document.getElementById("pnNote").value.trim();
     node.updated=(typeof fmtNow==='function')?fmtNow():new Date().toISOString();
     var p=partyEnsure(s);
-    if(p.stage===node.stage){ p.date=node.date; p.branch=node.branch; p.contact=node.contact; p.introducer=node.introducer; p.materials=node.materials; p.note=node.note; }
+    const milestone=partyImportApi().MILESTONE_FIELDS.find(function(field){return field.stage===node.stage;}),oldMilestone=partyImportApi().MILESTONE_FIELDS.find(function(field){return field.stage===previousStage;});
+    if(milestone){p.milestones=p.milestones||{};if(oldMilestone&&oldMilestone.key!==milestone.key&&p.milestones[oldMilestone.key]===previousDate)delete p.milestones[oldMilestone.key];p.milestones[milestone.key]=node.date;}
+    if(p.stage===previousStage){ p.stage=node.stage;p.date=node.date.length===10?node.date:""; p.branch=node.branch; p.contact=node.contact; p.introducer=node.introducer; p.materials=node.materials; p.note=node.note; }
     persistStudents(); closeModal(); partyView(id); showToast("已保存发展节点修改","success");
   });
   document.getElementById("modal").classList.add("wide");
 }
-function partyTrainingSummaryHtml(p){return '<div class="party-history">'+PARTY_TRAINING_CONFIG.map(function(item){const record=p.training[item.key];return '<span>'+esc(item.label)+' · '+esc(record.status||"未参加")+(record.date?' · '+esc(record.date):'')+'</span>';}).join("")+'</div>';}
+function partyStageDate(s){
+  const p=partyEnsure(s),stage=partyCurrentStage(s),field=partyImportApi().MILESTONE_FIELDS.find(function(item){return item.stage===stage;});
+  const history=partyHistory(s).filter(function(item){return item.stage===stage&&item.date;});
+  return p.date||(field&&p.milestones&&p.milestones[field.key])||(history.length?history[history.length-1].date:"")||"";
+}
+function partyDateHtml(date){
+  const precision=/^\d{4}-\d{2}$/.test(date)?"（仅到月份）":/^\d{4}$/.test(date)?"（仅到年份）":"";
+  return '<span class="party-date">'+esc(date||"未登记日期")+'</span>'+(precision?'<small class="party-date-precision">'+esc(precision)+'</small>':'');
+}
+function partyTrainingSummaryHtml(p){return '<div class="party-training-summary">'+PARTY_TRAINING_CONFIG.map(function(item){const record=p.training[item.key],status=record.status||"未参加";return '<div><span>'+esc(item.label.replace("党课",""))+'</span>'+badge(esc(status),status==="已结业"?"b-green":status==="培训中"?"b-blue":status==="未通过"?"b-red":"b-gray")+'</div>';}).join("")+'</div>';}
 PAGES.party=function(){
-  if(!viewFilter.party) viewFilter.party={};
-  const state=viewFilter.party;
-  if(state.status===undefined) state.status=["在校"];
-  const ss=stuFilterByState(clsStudents(),state);
-  let rowsSrc=partyFilteredRoster(ss,state);
-  if(state.kw){const k=state.kw.trim(); rowsSrc=rowsSrc.filter(function(s){return (s.id||"").includes(k)||(s.name||"").includes(k);});}
-  const info=pagerSlice("party",rowsSrc,JSON.stringify(state));
+  if(!viewFilter.party)viewFilter.party={};
+  const state=viewFilter.party;if(state.status===undefined)state.status=["在校"];
+  const ss=stuFilterByState(clsStudents(),state);let rowsSrc=partyFilteredRoster(ss,state);
+  if(state.kw){const k=state.kw.trim();rowsSrc=rowsSrc.filter(function(s){return(s.id||"").includes(k)||(s.name||"").includes(k);});}
+  const info=pagerSlice("party",rowsSrc,JSON.stringify(state)),ready=queryReady("party");
   const rows=info.slice.length?info.slice.map(function(s){
-    const p=partyEnsure(s), hist=partyHistory(s);
-    const chips=hist.length?'<div class="party-history">'+hist.map(function(h){return '<span>'+esc(h.stage)+" · "+esc(h.date||"未填")+'</span>';}).join("")+'</div>':'<span style="color:var(--muted)">暂未登记节点</span>';
-    return '<tr>'+stuCells(s)+'<td>'+esc(s.political||"—")+'</td><td>'+badge(esc(p.leagueStatus||"非团员"),partyLeagueStatusClass(p.leagueStatus))+'</td><td><span class="party-current">'+esc(partyCurrentStage(s))+'</span></td><td>'+esc(p.date||"—")+'</td><td>'+esc(p.branch||"—")+'</td><td style="white-space:normal;min-width:210px">'+partyTrainingSummaryHtml(p)+'</td><td style="white-space:normal;min-width:250px">'+chips+'</td><td><a class="lk" onclick="partyView('+jsArg(s.id)+')">查看</a> <a class="lk" onclick="partyOpenForm('+jsArg(s.id)+')">编辑</a> <a class="lk" onclick="partyInit('+jsArg(s.id)+')">初始化</a></td></tr>';
-  }).join(""):'<tr><td colspan="13" class="empty">暂无符合条件的学生</td></tr>';
-  const cards=PARTY_CARD_CATEGORIES.map(function(card){
-    const count=ss.filter(function(s){return partyCardCategory(s)===card.key;}).length,active=state.category===card.key;
-    return '<button type="button" class="party-kpi'+(active?' active':'')+'" aria-pressed="'+active+'" onclick="partySelectCard('+jsArg(card.key)+')"><b>'+count+'</b><span>'+esc(card.label)+'</span></button>';
-  }).join("");
-  return '<div class="party-hero"><h2>🚩 党团员发展台账</h2><p>按“团员身份—入党申请—积极分子—发展对象—预备党员—正式党员”完整留痕；可按学籍状态筛选查看，默认展示在校生。</p><div class="party-steps"><span>团员身份</span><span>递交申请书</span><span>积极分子</span><span>发展对象</span><span>预备党员</span><span>正式党员</span></div></div>'
-    +'<div class="party-kpis">'+cards+'</div>'
-    +'<div class="card"><div class="tip">名单按学生主档案中的“学籍状态”筛选；默认展示在校生，可切换查看其他学籍状态的学生；发展阶段、支部、联系人和每次节点均会同步到学生画像全档案。点击卡片查询对应名单，再次点击取消该分类；团推优统计已推优及入党积极分子，进入后续阶段后不再重复计入。</div><div class="toolbar qf-bar" data-page="party"><input type="hidden" data-qf="category" value="'+attr(state.category||"")+'">'
-    +'<div class="filter-item"><label>关键字</label>'+qfInput("kw","搜索学号/姓名",state.kw,160)+'</div><div class="filter-item"><label>学院</label>'+qfMulti("dept",[{v:"",l:"全部学院"}].concat(depts.map(function(d){return {v:d,l:d};})),state.dept)+'</div><div class="filter-item"><label>专业</label>'+qfMulti("major",[{v:"",l:"全部专业"}].concat(majors.map(function(m){return {v:m,l:m};})),state.major)+'</div><div class="filter-item"><label>年级</label>'+qfMulti("grade",[{v:"",l:"全部年级"}].concat(grades.map(function(g){return {v:g,l:g};})),state.grade)+'</div><div class="filter-item"><label>班级</label>'+qfMulti("cls",[{v:"",l:"全部班级"}].concat(classes.map(function(c){return {v:c,l:c};})),state.cls)+'</div><div class="filter-item"><label>学籍状态</label>'+qfMulti("status",[{v:"",l:"全部学籍状态"}].concat(STU_STATUS_TABS.map(function(x){return {v:x.value,l:x.label};})),state.status)+'</div><div class="filter-item"><label>发展阶段</label>'+qfMulti("stage",[{v:"",l:"全部阶段"}].concat(PARTY_STAGES.map(function(x){return {v:x,l:x};})),state.stage)+'</div>'+qfBtns("party")+'<span style="flex:1"></span><button class="btn btn-primary btn-sm" onclick="partyOpenForm()">＋ 登记发展节点</button><button class="btn btn-ghost btn-sm" onclick="partyImportOpen()">⬆ 导入名册</button><button class="btn btn-ghost btn-sm" onclick="partyImportTemplate()">⇩ 下载导入模板</button><button class="btn btn-ghost btn-sm" onclick="exportParty()">⬇ 导出名册</button></div>'
-    +'<div class="module-table-wrap">'+table(["学院","专业","班级","学号","姓名","政治面貌","团员身份","当前阶段","确定日期","所属支部","党课培训","发展历程","操作"],rows)+'</div>'+renderGenericPager("party",info,"partyJump")+'</div>';
+    const p=partyEnsure(s),hist=partyHistory(s),stage=partyCurrentStage(s);
+    return '<tr data-party-sid="'+attr(s.id)+'"><td data-label="学生"><button type="button" class="party-student-name" onclick="partyView('+jsArg(s.id)+')">'+esc(s.name||"未填写姓名")+'</button><small class="party-meta">'+esc(s.id)+'</small></td>'
+      +'<td data-label="班级 / 院系"><strong class="party-class-name">'+esc(s.cls||"未填写班级")+'</strong><small class="party-meta">'+esc(s.dept||"未填写学院")+'</small><small class="party-meta">'+esc(s.major||"未填写专业")+(s.grade?' · '+esc(String(s.grade).replace(/级$/,""))+'级':'')+'</small></td>'
+      +'<td data-label="政治面貌">'+esc(s.political||"未填写")+'</td><td data-label="团员身份">'+badge(esc(p.leagueStatus||"非团员"),partyLeagueStatusClass(p.leagueStatus))+'</td>'
+      +'<td data-label="当前阶段 / 日期">'+badge(esc(stage),partyStageClass(stage))+'<div class="party-stage-date">'+partyDateHtml(partyStageDate(s))+'</div></td>'
+      +'<td data-label="党课培训">'+partyTrainingSummaryHtml(p)+'</td><td data-label="发展记录"><span class="party-record-count">'+hist.length+' 条节点</span><small class="party-meta">'+esc(p.branch||"未填写支部")+'</small></td>'
+      +'<td data-label="操作"><div class="party-row-actions"><button type="button" class="btn btn-ghost btn-sm" onclick="partyView('+jsArg(s.id)+')">查看</button><button type="button" class="btn btn-ghost btn-sm" onclick="partyOpenForm('+jsArg(s.id)+')">编辑</button></div></td></tr>';
+  }).join(""):'<tr><td colspan="8" class="empty">暂无符合条件的学生，请调整筛选条件。</td></tr>';
+  const cards=PARTY_CARD_CATEGORIES.map(function(card,index){const count=ss.filter(function(s){return partyCardCategory(s)===card.key;}).length,active=state.category===card.key;return '<button type="button" class="party-kpi'+(active?' active':'')+'" data-tone="'+index+'" aria-pressed="'+active+'" onclick="partySelectCard('+jsArg(card.key)+')"><span>'+esc(card.label)+'</span><b>'+count+'</b><small>'+(active?'已筛选 · 再次点击取消':'点击查看名单')+'</small></button>';}).join("");
+  return '<div class="party-page"><header class="party-page-head"><div><h2>党团员发展台账</h2><p>查看学生身份、发展阶段和培养记录。</p></div><div class="party-page-actions"><button class="btn btn-primary" onclick="partyTrackingImportOpen()">导入党建跟踪表</button><button class="btn btn-ghost" onclick="partyOpenForm()">＋ 登记发展节点</button></div></header>'
+    +'<section class="party-overview" aria-label="常用分类概览"><div class="party-section-head"><h3>分类概览</h3><details class="party-count-help"><summary>统计口径</summary><div>按学院、专业、年级、班级、学籍状态及关键字统计。卡片是常用分类，不代表全部发展阶段的合计；递交申请书、发展对象可在“发展阶段”中筛选。团推优包含已推优及入党积极分子，进入后续阶段后不重复计入。</div></details></div><div class="party-kpis">'+cards+'</div></section>'
+    +'<section class="card ledger-filter-card party-filter-card" aria-label="筛选学生"><div class="party-section-head"><h3>筛选学生</h3><small>默认在校生，可切换其他学籍状态</small></div><div class="toolbar qf-bar ledger-filters ledger-filters-7" data-page="party"><input type="hidden" data-qf="category" value="'+attr(state.category||"")+'">'
+    +'<div class="filter-item"><label>关键字</label>'+qfInput("kw","搜索学号/姓名",state.kw,160)+'</div><div class="filter-item"><label>学院</label>'+qfMulti("dept",[{v:"",l:"全部学院"}].concat(depts.map(function(d){return {v:d,l:d};})),state.dept)+'</div><div class="filter-item"><label>专业</label>'+qfMulti("major",[{v:"",l:"全部专业"}].concat(majors.map(function(m){return {v:m,l:m};})),state.major)+'</div><div class="filter-item"><label>年级</label>'+qfMulti("grade",[{v:"",l:"全部年级"}].concat(grades.map(function(g){return {v:g,l:g};})),state.grade)+'</div><div class="filter-item"><label>班级</label>'+qfMulti("cls",[{v:"",l:"全部班级"}].concat(classes.map(function(c){return {v:c,l:c};})),state.cls)+'</div><div class="filter-item"><label>学籍状态</label>'+qfMulti("status",[{v:"",l:"全部学籍状态"}].concat(STU_STATUS_TABS.map(function(x){return {v:x.value,l:x.label};})),state.status)+'</div><div class="filter-item"><label>发展阶段</label>'+qfMulti("stage",[{v:"",l:"全部阶段"}].concat(PARTY_STAGES.map(function(x){return {v:x,l:x};})),state.stage)+'</div><div class="ledger-filter-actions">'+qfBtns("party")+'</div></div></section>'
+    +'<section class="card party-ledger"><div class="party-ledger-head"><div><h3>发展台账 <span>'+(ready?info.total+' 人':'待查询')+'</span></h3><p>'+(ready?'当前名单'+(state.category?' · '+esc((PARTY_CARD_CATEGORIES.find(function(card){return card.key===state.category;})||{}).label||state.category):'')+' · 点击姓名或“查看”打开完整档案':'设置条件后查询，或点击上方分类查看名单')+'</p></div><div class="party-secondary-actions"><button class="btn btn-ghost btn-sm" onclick="partyImportOpen()">⬆ 导入名册</button><button class="btn btn-ghost btn-sm" onclick="partyImportTemplate()">⇩ 下载导入模板</button><button class="btn btn-ghost btn-sm" onclick="exportParty()">⬇ 导出名册</button></div></div>'
+    +'<div class="module-table-wrap party-table-wrap">'+table(["学生","班级 / 院系","政治面貌","团员身份","当前阶段 / 日期","党课培训","发展记录","操作"],rows)+'</div>'+renderGenericPager("party",info,"partyJump")+'</section></div>';
 };
 window.openParty=function(){partyOpenForm();};
 
@@ -12715,6 +12718,7 @@ PAGES.punishment=()=>{
 /* ============ 全局数据备份（导出/导入 JSON，防止 localStorage 清缓存丢失） ============ */
 const BACKUP_KEYS=["nnuzc_student_leaves","nnuzc_students","nnuzc_orgs","nnuzc_dorm_dist","nnuzc_dorm_spatial_v1","nnuzc_fund_records","nnuzc_fund_terms","nnuzc_student_loan_records","nnuzc_academic_terms","nnuzc_academic_warnings","nnuzc_grade_terms","nnuzc_term_list","nnuzc_current_term","nnuzc_term_settings","nnuzc_nav_visibility_v1","nnuzc_stu_overrides","nnuzc_dorm","nnuzc_talks","nnuzc_home","nnuzc_events","nnuzc_checkclass","nnuzc_chaoxing_imports","nnuzc_checkdorm","nnuzc_help","nnuzc_course_schedules","nnuzc_workfolder","nnuzc_tasks","nnuzc_task_notes","nnuzc_keycare","nnuzc_class_officer_records","nnuzc_punishments","nnuzc_meetings","nnuzc_data_epoch","nnuzc_student_integrity_review_version","nnuzc_fixed_value_review_version"];
 
+BACKUP_KEYS.push("nnuzc_student_identity_links_v1");
 window.exportAllData=async function exportAllData(){
   try{
     if(!window.workbench||!window.workbench.legacy||!window.workbench.legacy.storeExport) throw new Error("本机数据服务尚未就绪，请从数智学工启动入口重新打开系统。");
@@ -12787,21 +12791,25 @@ function loadOrgs(){
     if(o && Array.isArray(o.grades)){ ORG_GRADES.length=0; o.grades.forEach(function(g){ ORG_GRADES.push(g); }); }
     if(o && Array.isArray(o.dorms)){ ORG_DORMS.length=0; o.dorms.forEach(function(d){ ORG_DORMS.push(d); }); }
     if(o && Array.isArray(o.enrollTypes)){ ORG_ENROLL_TYPES.length=0; o.enrollTypes.forEach(function(e){ ORG_ENROLL_TYPES.push(e); }); }
+    ORG_LEVELS.length=0;
+    if(o && Array.isArray(o.levels)){const names=new Set();o.levels.forEach(function(row){const name=String(row&&row.name||"").trim();if(name&&!names.has(name)){ORG_LEVELS.push({name:name});names.add(name);}});}
+    else {DEFAULT_EDUCATION_LEVELS.forEach(function(name){ORG_LEVELS.push({name:name});});ensureEducationLevels(ORG_CLASSES.concat(students));}
   }catch(e){ reportDataError("基础数据加载",e); }
 }
 function saveOrgs(){
-  try{ sortWorkbenchCollections(); localStorage.setItem(ORG_KEY, JSON.stringify({depts:ORG_DEPTS, majors:ORG_MAJORS, classes:ORG_CLASSES, grades:ORG_GRADES, dorms:ORG_DORMS, enrollTypes:ORG_ENROLL_TYPES})); }catch(e){ reportDataError("基础数据保存",e); throw e; }
+  try{ ensureEducationLevels(ORG_CLASSES.concat(students)); sortWorkbenchCollections(); localStorage.setItem(ORG_KEY, JSON.stringify({depts:ORG_DEPTS, majors:ORG_MAJORS, classes:ORG_CLASSES, grades:ORG_GRADES, dorms:ORG_DORMS, enrollTypes:ORG_ENROLL_TYPES, levels:ORG_LEVELS})); }catch(e){ reportDataError("基础数据保存",e); throw e; }
 }
 
 /* 收集学生数据中尚未维护的基础数据；班级记录同时保留完整层级与可派生字段。 */
 function collectMissingOrgsFromStudents(list){
-  const dmap={}, mmap={}, gmap={}, emap={}, cmap={};
+  const dmap={}, mmap={}, gmap={}, emap={}, lmap=Object.create(null), cmap={};
   (list||[]).forEach(function(s){
     const d=String(s.dept||"").trim(),m=String(s.major||"").trim(),g=String(s.grade||"").trim(),c=String(s.cls||"").trim(),enrollType=String(s.enrollType||"").trim();
     if(d && !ORG_DEPTS.some(function(x){ return x.name===d; })) dmap[d]=(s.deptCode||"");
     if(d && m && !ORG_MAJORS.some(function(x){ return x.name===m; })) mmap[m]={code:(s.majorCode||""),name:m,dept:d,years:String(s.length||"").replace(/年$/,"")};
     if(g && !ORG_GRADES.some(function(x){return x.name===g;})) gmap[g]={name:g};
     if(enrollType && !ORG_ENROLL_TYPES.some(function(x){return x.name===enrollType;})) emap[enrollType]={name:enrollType};
+    const level=String(s.level||"").trim();if(level&&!ORG_LEVELS.some(function(x){return x.name===level;}))lmap[level]={name:level};
     if(c && !ORG_CLASSES.some(function(x){ return x.name===c; })) cmap[c]={name:c,grade:g,major:m,dept:d,counselor:s.counsel||s.counselor||"",teacher:s.teacher||"",level:s.level||"",enrollType:enrollType};
   });
   return {
@@ -12809,6 +12817,7 @@ function collectMissingOrgsFromStudents(list){
     majors: Object.keys(mmap).map(function(k){ return mmap[k]; }),
     grades: Object.keys(gmap).map(function(k){return gmap[k];}),
     enrollTypes: Object.keys(emap).map(function(k){return emap[k];}),
+    levels: Object.keys(lmap).map(function(k){return lmap[k];}),
     classes: Object.keys(cmap).map(function(k){ return cmap[k]; })
   };
 }
@@ -12834,6 +12843,7 @@ function confirmAndAddMissingStudentBasicData(list,sourceLabel){
   if(missing.majors.length)parts.push("• 专业（"+missing.majors.length+"）："+missing.majors.map(function(item){return item.name;}).join("、"));
   if(missing.grades.length)parts.push("• 年级（"+missing.grades.length+"）："+missing.grades.map(function(item){return item.name;}).join("、"));
   if(missing.enrollTypes.length)parts.push("• 招生类别（"+missing.enrollTypes.length+"）："+missing.enrollTypes.map(function(item){return item.name;}).join("、"));
+  if(missing.levels.length)parts.push("• 培养层次（"+missing.levels.length+"）："+missing.levels.map(function(item){return item.name;}).join("、"));
   if(missing.classes.length)parts.push("• 班级（"+missing.classes.length+"）："+missing.classes.map(function(item){return item.name;}).join("、"));
   if(!parts.length)return true;
   if(!confirm("检测到以下信息尚未在“基础数据维护”中建立：\n\n"+parts.join("\n")+"\n\n是否将不存在的学院、专业、班级、年级等信息自动添加到“基础数据维护”中？"))return false;
@@ -12848,6 +12858,7 @@ function addOrgsToBasic(missing){
   (missing.majors||[]).forEach(function(m){ if(!ORG_MAJORS.some(function(x){ return x.name===m.name; })) ORG_MAJORS.push(m); });
   (missing.grades||[]).forEach(function(g){if(!ORG_GRADES.some(function(x){return x.name===g.name;}))ORG_GRADES.push({name:g.name});});
   (missing.enrollTypes||[]).forEach(function(e){if(!ORG_ENROLL_TYPES.some(function(x){return x.name===e.name;}))ORG_ENROLL_TYPES.push({name:e.name});});
+  (missing.levels||[]).forEach(function(row){if(!ORG_LEVELS.some(function(x){return x.name===row.name;}))ORG_LEVELS.push({name:row.name});});
   (missing.classes||[]).forEach(function(c){ if(!ORG_CLASSES.some(function(x){ return x.name===c.name; })) ORG_CLASSES.push(c); });
   saveOrgs();
   recomputeFilterOptions();
@@ -12892,7 +12903,7 @@ function writeImportedRows(rows,mode){
     const newStudent={
       id:id, name:r["姓名"], dept:r["学院"], major:r["专业"], cls:r["班级"]||"",
       gender:r["性别"]||"", political:r["政治面貌"]||"", phone:r["手机号"]||"",
-      grade:r["年级"]||"", counsel:r["辅导员"]||"", level:r["学历"]||"", status:status, enroll:r["入学日期"]||r["入学时间"]||"", statusNote:r["学籍异动备注"]||"—",
+      grade:r["年级"]||"", counsel:r["辅导员"]||"", level:r["培养层次"]||"", status:status, enroll:r["入学日期"]||r["入学时间"]||"", statusNote:r["学籍异动备注"]||"—",
       accom:r["住宿情况"]||"", building:r["楼栋"]||"", room:r["房间号"]||"", bed:r["床位号"]||"", imported:true
     };
     // 补全 STU_IMPORT_FIELDS 定义的其他字段（民族、身份证号、学生干部任职、家庭住址等）
@@ -12970,8 +12981,9 @@ function maintExportStamp(){const p=beijingTimeParts(Date.now());return p.year+p
 const MAINT_EXPORTS=Object.freeze({
   dept:{sheet:"学院",file:"学院信息",headers:["学院代码","学院名称"],rows:function(){return ORG_DEPTS.slice().sort(function(a,b){return compareWorkbenchCode(a.code,b.code);}).map(function(d){return [d.code||"",d.name||""];});}},
   major:{sheet:"专业",file:"专业信息",headers:["专业代码","专业名称","所属学院","学制（年）"],rows:function(){return ORG_MAJORS.slice().sort(function(a,b){return compareWorkbenchCode(a.code,b.code);}).map(function(m){return [m.code||"",m.name||"",m.dept||"",m.years||""];});}},
-  class:{sheet:"班级",file:"班级信息",headers:["班级名称","年级","专业","所属学院","辅导员","班主任","学历","招生类别"],rows:function(){return ORG_CLASSES.slice().sort(function(a,b){return compareWorkbenchText(a.name,b.name);}).map(function(c){return [c.name||"",c.grade||"",c.major||"",c.dept||"",c.counselor||"",c.teacher||"",c.level||"",c.enrollType||""];});}},
+  class:{sheet:"班级",file:"班级信息",headers:["班级名称","年级","专业","所属学院","辅导员","班主任","培养层次","招生类别"],rows:function(){return ORG_CLASSES.slice().sort(function(a,b){return compareWorkbenchText(a.name,b.name);}).map(function(c){return [c.name||"",c.grade||"",c.major||"",c.dept||"",c.counselor||"",c.teacher||"",c.level||"",c.enrollType||""];});}},
   grade:{sheet:"年级",file:"年级信息",headers:["年级名称","关联学生数","关联班级数"],rows:function(){return ORG_GRADES.slice().sort(function(a,b){return compareWorkbenchCode(a.name,b.name);}).map(function(g){return [g.name||"",students.filter(function(s){return s.grade===g.name;}).length,ORG_CLASSES.filter(function(c){return c.grade===g.name;}).length];});}},
+  level:{sheet:"培养层次",file:"培养层次信息",headers:["培养层次","关联班级数","关联学生数"],rows:function(){return ORG_LEVELS.map(function(row){return [row.name,ORG_CLASSES.filter(function(c){return c.level===row.name;}).length,students.filter(function(s){return s.level===row.name;}).length];});}},
   enrollType:{sheet:"招生类别",file:"招生类别信息",headers:["招生类别","关联班级数","关联学生数"],rows:function(){return ORG_ENROLL_TYPES.slice().sort(compareWorkbenchText).map(function(e){return [e.name||"",ORG_CLASSES.filter(function(c){return c.enrollType===e.name;}).length,students.filter(function(s){return s.enrollType===e.name;}).length];});}},
   dorminfo:{sheet:"宿舍信息",file:"宿舍楼信息",headers:["区位","宿舍楼"],rows:function(){return ORG_DORMS.slice().sort(function(a,b){return compareWorkbenchText(a.zone,b.zone)||compareWorkbenchText(a.building,b.building);}).map(function(d){return [d.zone||"",d.building||""];});}}
 });
@@ -13211,7 +13223,7 @@ function openClassAdd(){
   const gradeOpts=orgFilterValues('grade').map(function(g){return "<option value='"+escAttr(g)+"'>"+escAttr(g)+"</option>";}).join('');
   const majorOpts=ORG_MAJORS.map(function(m){return "<option value='"+escAttr(m.name)+"'>"+escAttr(m.name)+"</option>";}).join('');
   const deptOpts=ORG_DEPTS.map(function(d){return "<option value='"+escAttr(d.name)+"'>"+escAttr(d.name)+"</option>";}).join('');
-  /* v1.49：班级新增弹窗新增「学历」「招生类别」两字段，便于学生编辑表单选择班级后自动带出 */
+  /* v1.49：班级新增弹窗新增「培养层次」「招生类别」两字段，便于学生编辑表单选择班级后自动带出 */
   openModal("新增班级",
     "<div class='field'><label>班级名称<span class='req'>*</span></label><input id='ocName' placeholder='如 852304通信'></div>"+
     "<div class='row2'><div class='field'><label>年级</label><select id='ocGrade' class='role'>"+gradeOpts+"</select></div>"+
@@ -13219,7 +13231,7 @@ function openClassAdd(){
     "<div class='row2'><div class='field'><label>所属学院</label><select id='ocDept' class='role'>"+deptOpts+"</select></div>"+
     "<div class='field'><label>辅导员</label><input id='ocCounselor' placeholder='如 王老师'></div></div>"+
     "<div class='field'><label>班主任</label><input id='ocTeacher' placeholder='如 李老师'></div>"+
-    "<div class='row2'><div class='field'><label>学历</label><select id='ocLevel' class='role'>"+levelOptsHtml("")+"</select></div>"+
+    "<div class='row2'><div class='field'><label>培养层次</label><select id='ocLevel' class='role'>"+levelOptsHtml("")+"</select></div>"+
     "<div class='field'><label>招生类别</label><select id='ocEnrollType' class='role'>"+enrollTypeOptsHtml("")+"</select></div></div>",
     function(){
       const name=$("#ocName").value.trim();
@@ -13249,7 +13261,7 @@ function openClassEdit(name){
   const gradeOpts=orgFilterValues('grade').map(function(g){return "<option value='"+escAttr(g)+"'"+(g===c.grade?" selected":"")+">"+escAttr(g)+"</option>";}).join('');
   const majorOpts=ORG_MAJORS.map(function(m){return "<option value='"+escAttr(m.name)+"'"+(m.name===c.major?" selected":"")+">"+escAttr(m.name)+"</option>";}).join('');
   const deptOpts=ORG_DEPTS.map(function(d){return "<option value='"+escAttr(d.name)+"'"+(d.name===c.dept?" selected":"")+">"+escAttr(d.name)+"</option>";}).join('');
-  /* v1.49：班级编辑弹窗新增「学历」「招生类别」两字段，select 选项与新增一致 */
+  /* v1.49：班级编辑弹窗新增「培养层次」「招生类别」两字段，select 选项与新增一致 */
   openModal("编辑班级",
     "<div class='field'><label>班级名称<span class='req'>*</span></label><input id='ocName' value='"+escAttr(c.name)+"'></div>"+
     "<div class='row2'><div class='field'><label>年级</label><select id='ocGrade' class='role'>"+gradeOpts+"</select></div>"+
@@ -13257,7 +13269,7 @@ function openClassEdit(name){
     "<div class='row2'><div class='field'><label>所属学院</label><select id='ocDept' class='role'>"+deptOpts+"</select></div>"+
     "<div class='field'><label>辅导员</label><input id='ocCounselor' value='"+escAttr(c.counselor)+"'></div></div>"+
     "<div class='field'><label>班主任</label><input id='ocTeacher' value='"+escAttr(c.teacher)+"'></div>"+
-    "<div class='row2'><div class='field'><label>学历</label><select id='ocLevel' class='role'>"+levelOptsHtml(c.level||'')+"</select></div>"+
+    "<div class='row2'><div class='field'><label>培养层次</label><select id='ocLevel' class='role'>"+levelOptsHtml(c.level||'')+"</select></div>"+
     "<div class='field'><label>招生类别</label><select id='ocEnrollType' class='role'>"+enrollTypeOptsHtml(c.enrollType||'')+"</select></div></div>",
     function(){
       const oldName=c.name;
@@ -13314,13 +13326,14 @@ const MAINT_IMPORT_FIELDS = {
     {key:'dept', label:'所属学院', req:false, aliases:['所属学院','学院','dept']},
     {key:'counselor', label:'辅导员', req:false, aliases:['辅导员','counselor','班导']},
     {key:'teacher', label:'班主任', req:false, aliases:['班主任','teacher']},
-    /* v1.49 新增：班级可携带「学历」「招生类别」，学生编辑表单选择班级后即可自动带出 */
-    {key:'level', label:'学历', req:false, aliases:['学历','level','教育层次']},
+    /* v1.49 新增：班级可携带「培养层次」「招生类别」，学生编辑表单选择班级后即可自动带出 */
+    {key:'level', label:'培养层次', req:false, aliases:['培养层次','学历','level','教育层次']},
     {key:'enrollType', label:'招生类别', req:false, aliases:['招生类别','enrollType','录取类别']}
   ],
   grade: [
     {key:'name', label:'年级名称', req:true, aliases:['年级名称','年级','名称','name','年级名']}
   ],
+  level: [{key:'name',label:'培养层次',req:true,aliases:['培养层次','培养层次名称','学历','学历名称','教育层次','level','名称','name']}],
   enrollType: [
     {key:'name', label:'招生类别', req:true, aliases:['招生类别','enrollType','录取类别','名称','name']}
   ],
@@ -13329,7 +13342,7 @@ const MAINT_IMPORT_FIELDS = {
     {key:'building', label:'宿舍楼', req:true, aliases:['宿舍楼','楼栋','building','宿舍','楼宇']}
   ]
 };
-const MAINT_IMPORT_NAME = {dept:'学院', major:'专业', class:'班级', grade:'年级', enrollType:'招生类别', dorminfo:'宿舍楼'};
+const MAINT_IMPORT_NAME = {dept:'学院', major:'专业', class:'班级', grade:'年级', enrollType:'招生类别', level:'培养层次', dorminfo:'宿舍楼'};
 
 /* 各类型导入模板的示例数据行（与 MAINT_IMPORT_FIELDS 列顺序一致），CSV / Excel 模板共用 */
 const MAINT_IMPORT_SAMPLES = {
@@ -13338,6 +13351,7 @@ const MAINT_IMPORT_SAMPLES = {
   class: ['852304通信','2024级','通信工程','信息工程学院','王老师','李老师','本科','普通本科'],
   grade: ['2024级'],
   enrollType: ['普通本科'],
+  level: ['本科'],
   dorminfo: ['东区','东1栋']
 };
 
@@ -13416,6 +13430,7 @@ function maintImportParse(text, fields){
 
 function maintImportValidate(kind, records){
   const ok=[], errors=[];
+  const levelNames=new Set(ORG_LEVELS.map(function(row){return row.name;}));
   const deptNames=ORG_DEPTS.map(function(d){return d.name;});
   const majorNames=ORG_MAJORS.map(function(m){return m.name;});
   const classNames=ORG_CLASSES.map(function(c){return c.name;});
@@ -13445,10 +13460,13 @@ function maintImportValidate(kind, records){
       const majorRow=ORG_MAJORS.find(function(m){return m.name===r.major;});
       if(majorRow && r.dept && majorRow.dept!==r.dept) errs.push('所属学院与专业「'+r.major+'」的归属不一致');
       if(ORG_DEPTS.some(function(d){return d.name===r.name;})) errs.push('「'+r.name+'」已是学院名称，不可作为班级');
-      if(r.level&&STU_LEVEL_OPTS.filter(Boolean).indexOf(r.level)<0)errs.push('学历「'+r.level+'」不在系统现有选项中');
     } else if(kind==='grade'){
       if(!r.name) errs.push('年级名称为空');
       else if(ORG_GRADES.some(function(g){return g.name===r.name;})) errs.push('年级「'+r.name+'」已存在');
+    } else if(kind==='level'){
+      if(!r.name)errs.push('培养层次名称为空');
+      else if(levelNames.has(r.name))errs.push('培养层次「'+r.name+'」已存在');
+      else levelNames.add(r.name);
     } else if(kind==='enrollType'){
       if(!r.name) errs.push('招生类别为空');
       else if(ORG_ENROLL_TYPES.some(function(x){return x.name===r.name;})) errs.push('招生类别「'+r.name+'」已存在');
@@ -13608,6 +13626,8 @@ function maintImportApplyRows(kind, ok, initialSkip){
     });
     } else if(kind==='grade'){
       ok.forEach(function(r){ ORG_GRADES.push({name:r.name}); });
+    } else if(kind==='level'){
+      ok.forEach(function(row){ORG_LEVELS.push({name:row.name});});
     } else if(kind==='enrollType'){
       ok.forEach(function(r){ ORG_ENROLL_TYPES.push({name:r.name}); });
     } else if(kind==='dorminfo'){
@@ -13639,10 +13659,10 @@ PAGES.major=function(){
     "openMajorAdd()","maintImport('major')","maintMajorDel()","maintExport('major')");
 };
 PAGES.class=function(){
-  /* v1.49：班级表新增「学历」「招生类别」两列，从 ORG_CLASSES 读取 c.level / c.enrollType */
+  /* v1.49：班级表新增「培养层次」「招生类别」两列，从 ORG_CLASSES 读取 c.level / c.enrollType */
   const rows=maintGroupedRows(ORG_CLASSES,function(c){return (c.dept||"未归类学院")+'\u0000'+(c.grade||"未标注年级");},function(key){return key.split('\u0000').join(' · ');},10,function(c){ return '<tr><td><input type="checkbox" data-key="'+escAttr(c.name)+'"></td><td>'+esc(c.name)+'</td><td>'+esc(c.grade)+'</td><td>'+esc(c.major)+'</td><td>'+esc(c.dept)+'</td><td>'+esc(c.counselor)+'</td><td>'+esc(c.teacher)+'</td><td>'+esc(c.level||'')+'</td><td>'+esc(c.enrollType||'')+'</td><td><button class="btn btn-ghost btn-sm" onclick="openClassEdit('+jsArg(c.name)+')">编辑</button></td></tr>'; });
-  return maintTable("🎓 班级","按学院与年级归类查看；维护班级信息，支持新增、删除、导入。v1.49 新增「学历」「招生类别」字段，学生编辑时选择班级可自动带出。修改班级后，「同步到学生」可将该班 辅导员/专业/年级/学院/学历/招生类别 一次性刷到本班学生。",
-    ["<input type=checkbox>","班级名称","年级","专业","所属学院","辅导员","班主任","学历","招生类别","操作"],
+  return maintTable("🎓 班级","按学院与年级归类查看；维护班级信息，支持新增、删除、导入。v1.49 新增「培养层次」「招生类别」字段，学生编辑时选择班级可自动带出。修改班级后，「同步到学生」可将该班 辅导员/专业/年级/学院/培养层次/招生类别 一次性刷到本班学生。",
+    ["<input type=checkbox>","班级名称","年级","专业","所属学院","辅导员","班主任","培养层次","招生类别","操作"],
     rows,
     "openClassAdd()","maintImport('class')","maintClassDel()","maintExport('class')","syncAllClassToStudentsWithToast");
 };
@@ -13750,6 +13770,38 @@ PAGES.enrollType=function(){
     ["<input type=checkbox>","招生类别","关联班级数","关联学生数","操作"],
     rows,
     "openEnrollTypeAdd()","maintImport('enrollType')","maintEnrollTypeDel()","maintExport('enrollType')");
+};
+
+/* 培养层次字典：允许任意名称；已被使用的项需先调整引用，避免静默更改学籍信息。 */
+function openLevelAdd(){
+  openModal("新增培养层次","<div class='field'><label>培养层次名称<span class='req'>*</span></label><input id='olName' placeholder='如 高中 / 本科 / 职业本科'></div>",function(){
+    const name=$("#olName").value.trim();
+    if(!name){showToast("请填写培养层次名称","error");return false;}
+    if(ORG_LEVELS.some(function(row){return row.name===name;})){showToast("该培养层次已存在","error");return false;}
+    ORG_LEVELS.push({name:name});saveOrgs();maintReRender();showToast("培养层次已新增，可继续新增","ok");$("#olName").value="";$("#olName").focus();return false;
+  });
+}
+function openLevelEdit(name){
+  const row=ORG_LEVELS.find(function(item){return item.name===name;});if(!row)return;
+  openModal("编辑培养层次","<div class='field'><label>培养层次名称<span class='req'>*</span></label><input id='olName' value='"+escAttr(row.name)+"'></div>",function(){
+    const next=$("#olName").value.trim();
+    if(!next){showToast("请填写培养层次名称","error");return false;}
+    if(next!==row.name&&ORG_LEVELS.some(function(item){return item.name===next;})){showToast("该培养层次已存在","error");return false;}
+    if(next!==row.name&&(ORG_CLASSES.some(function(c){return c.level===row.name;})||students.some(function(s){return s.level===row.name;}))){showToast("该培养层次已有关联班级或学生，请先调整引用后再改名","error");return false;}
+    row.name=next;saveOrgs();maintReRender();showToast("培养层次已更新","ok");return true;
+  });
+}
+async function maintLevelDel(){
+  const wrap=document.querySelector('.pane.active .maint-pane-wrap')||document.getElementById('maintTableWrap');
+  const keys=Array.from((wrap||document).querySelectorAll('input[type=checkbox]:checked')).map(function(input){return input.dataset.key;}).filter(Boolean);
+  if(!keys.length){showToast("请勾选要删除的培养层次","error");return;}
+  const used=keys.filter(function(name){return ORG_CLASSES.some(function(c){return c.level===name;})||students.some(function(s){return s.level===name;});});
+  if(used.length){showToast("以下培养层次存在关联班级或学生，无法删除："+used.join("、"),"error");return;}
+  if(await recycleMoveRecords("baseLevel","base_level",keys)){maintReRender();showToast("已将 "+keys.length+" 个培养层次移入回收站","ok");}
+}
+PAGES.level=function(){
+  const rows=ORG_LEVELS.map(function(row){return '<tr><td><input type="checkbox" data-key="'+escAttr(row.name)+'"></td><td>'+esc(row.name)+'</td><td>'+ORG_CLASSES.filter(function(c){return c.level===row.name;}).length+'</td><td>'+students.filter(function(s){return s.level===row.name;}).length+'</td><td><button class="btn btn-ghost btn-sm" onclick="openLevelEdit('+jsArg(row.name)+')">编辑</button></td></tr>';});
+  return maintTable("🎓 培养层次维护","自由维护培养层次名称，作为学生、班级及导入模板的建议选项；学生录入和导入也可填写新培养层次。已有关联班级或学生的培养层次须先调整引用，再改名或删除。",["<input type=checkbox>","培养层次","关联班级数","关联学生数","操作"],rows,"openLevelAdd()","maintImport('level')","maintLevelDel()","maintExport('level')");
 };
 
 /* ===================== 旧宿舍基础信息兼容层（界面已隐藏） ===================== */
@@ -14161,6 +14213,7 @@ function smartAddTerm(list, term, prefix){
 function smartStudentFromRow(r){
   const o={};
   STU_IMPORT_FIELDS.forEach(function(f){o[f[0]]=smartCell(r,[f[1],f[0]]);});
+  o.level=o.level||smartCell(r,STU_IMPORT_ALIASES.level);
   if(o.idcard)o.idcard=studentIdentityNumber(o.idcard);
   o.enroll=o.enroll||smartCell(r,["入学日期","日期","enroll"]);
   studentImportDateFields(r).forEach(function(item){if(!item.result.error)o[item.field==="出生日期"?"birth":"enroll"]=item.result.value;});
@@ -14175,11 +14228,11 @@ function smartImportApplyPlan(plan){
   const smartStatusBefore=new Map(students.map(function(student){return [String(student.id),student.status];}));
   const smartGraduationPreview=(byType.student||[]).map(function(row){const next=smartStudentFromRow(row),old=students.find(function(student){return String(student.id)===String(next.id);});return next.id&&stuNormalizeStatus(next.status)==="毕业"&&(!old||stuNormalizeStatus(old.status)!=="毕业")?{student:Object.assign({},old||{id:next.id,name:next.name||next.id},{status:"毕业"}),oldStatus:old?old.status:""}:null;}).filter(Boolean);
   if(!dormConfirmGraduationTransitions(smartGraduationPreview,"smart-import")){report.skip=(byType.student||[]).length;report.errors.push("用户取消了毕业自动退宿，学生导入未执行");return report;}
-  const smartSnapshots={students:JSON.parse(JSON.stringify(students)),dorm:JSON.parse(JSON.stringify(dormDistRecords||[])),spatial:window.__DORM_SPATIAL__&&typeof window.__DORM_SPATIAL__.getState==="function"?window.__DORM_SPATIAL__.getState():null,depts:JSON.parse(JSON.stringify(ORG_DEPTS||[])),majors:JSON.parse(JSON.stringify(ORG_MAJORS||[])),classes:JSON.parse(JSON.stringify(ORG_CLASSES||[])),grades:JSON.parse(JSON.stringify(ORG_GRADES||[])),dorms:JSON.parse(JSON.stringify(ORG_DORMS||[]))};
-  const rollbackSmartImport=function(message){students.splice(0,students.length,...smartSnapshots.students);dormDistRecords=smartSnapshots.dorm;ORG_DEPTS.splice(0,ORG_DEPTS.length,...smartSnapshots.depts);ORG_MAJORS.splice(0,ORG_MAJORS.length,...smartSnapshots.majors);ORG_CLASSES.splice(0,ORG_CLASSES.length,...smartSnapshots.classes);ORG_GRADES.splice(0,ORG_GRADES.length,...smartSnapshots.grades);ORG_DORMS.splice(0,ORG_DORMS.length,...smartSnapshots.dorms);if(smartSnapshots.spatial&&window.__DORM_SPATIAL__&&typeof window.__DORM_SPATIAL__.restoreState==="function")window.__DORM_SPATIAL__.restoreState(smartSnapshots.spatial);try{persistStudents();persistDormDist();saveOrgs();recomputeFilterOptions();}catch(_ignore){}report.ok=0;report.errors.push(message);return report;};
+  const smartSnapshots={students:JSON.parse(JSON.stringify(students)),dorm:JSON.parse(JSON.stringify(dormDistRecords||[])),spatial:window.__DORM_SPATIAL__&&typeof window.__DORM_SPATIAL__.getState==="function"?window.__DORM_SPATIAL__.getState():null,depts:JSON.parse(JSON.stringify(ORG_DEPTS||[])),majors:JSON.parse(JSON.stringify(ORG_MAJORS||[])),classes:JSON.parse(JSON.stringify(ORG_CLASSES||[])),grades:JSON.parse(JSON.stringify(ORG_GRADES||[])),dorms:JSON.parse(JSON.stringify(ORG_DORMS||[])),levels:JSON.parse(JSON.stringify(ORG_LEVELS))};
+  const rollbackSmartImport=function(message){students.splice(0,students.length,...smartSnapshots.students);dormDistRecords=smartSnapshots.dorm;ORG_DEPTS.splice(0,ORG_DEPTS.length,...smartSnapshots.depts);ORG_MAJORS.splice(0,ORG_MAJORS.length,...smartSnapshots.majors);ORG_CLASSES.splice(0,ORG_CLASSES.length,...smartSnapshots.classes);ORG_GRADES.splice(0,ORG_GRADES.length,...smartSnapshots.grades);ORG_DORMS.splice(0,ORG_DORMS.length,...smartSnapshots.dorms);ORG_LEVELS.splice(0,ORG_LEVELS.length,...smartSnapshots.levels);if(smartSnapshots.spatial&&window.__DORM_SPATIAL__&&typeof window.__DORM_SPATIAL__.restoreState==="function")window.__DORM_SPATIAL__.restoreState(smartSnapshots.spatial);try{persistStudents();persistDormDist();saveOrgs();recomputeFilterOptions();}catch(_ignore){}report.ok=0;report.errors.push(message);return report;};
   (byType.dept||[]).forEach(function(r){const code=smartCell(r,["学院代码","代码"]),name=smartCell(r,["学院名称","学院"]);if(name&&!ORG_DEPTS.some(function(x){return (code&&x.code===code)||x.name===name;})){ORG_DEPTS.push({code:code,name:name});report.ok++;}else report.skip++;});
   (byType.major||[]).forEach(function(r){const code=smartCell(r,["专业代码","代码"]),name=smartCell(r,["专业名称","专业"]),dept=smartCell(r,["所属学院","学院"]);if(name&&dept&&!ORG_MAJORS.some(function(x){return (code&&x.code===code)||x.name===name;})){ORG_MAJORS.push({code:code,name:name,dept:dept,years:smartCell(r,["学制","学制年"])||"4"});report.ok++;}else report.skip++;});
-  (byType.class||[]).forEach(function(r){const name=smartCell(r,["班级名称","班级"]),grade=smartCell(r,["年级"]),major=smartCell(r,["专业","专业名称"]),dept=smartCell(r,["所属学院","学院"]);if(name&&grade&&major&&dept&&!ORG_CLASSES.some(function(x){return x.name===name;})){ORG_CLASSES.push({name:name,grade:grade,major:major,dept:dept,counselor:smartCell(r,["辅导员"]),teacher:smartCell(r,["班主任"]),level:smartCell(r,["学历"]),enrollType:smartCell(r,["招生类别"])});report.ok++;}else report.skip++;});
+  (byType.class||[]).forEach(function(r){const name=smartCell(r,["班级名称","班级"]),grade=smartCell(r,["年级"]),major=smartCell(r,["专业","专业名称"]),dept=smartCell(r,["所属学院","学院"]);if(name&&grade&&major&&dept&&!ORG_CLASSES.some(function(x){return x.name===name;})){ORG_CLASSES.push({name:name,grade:grade,major:major,dept:dept,counselor:smartCell(r,["辅导员"]),teacher:smartCell(r,["班主任"]),level:smartCell(r,["培养层次","学历","教育层次","level"]),enrollType:smartCell(r,["招生类别"])});report.ok++;}else report.skip++;});
   (byType.grade||[]).forEach(function(r){const name=smartCell(r,["年级名称","年级"]);if(name&&!ORG_GRADES.some(function(x){return x.name===name;})){ORG_GRADES.push({name:name});report.ok++;}else report.skip++;});
   saveOrgs();recomputeFilterOptions();
   (byType.student||[]).forEach(function(r){const o=smartStudentFromRow(r),enumIssues=stuImportEnumIssues({"民族":o.ethnic,"政治面貌":o.political,"学籍状态":o.status});if(enumIssues.length){report.skip++;report.errors.push("学生“"+(o.id||o.name||"未识别")+"”存在非系统选项："+enumIssues.map(function(issue){return issue.field+" "+issue.msg;}).join("；"));return;}if(!o.id||!o.name||!o.cls){report.skip++;report.errors.push("学生信息缺少学号、姓名或班级");return;}if(!studentClassRecord(o.cls)){report.skip++;report.errors.push("学生“"+o.id+"”的班级未在基础数据维护中维护："+o.cls);return;}fillStudentDerivedFields(o,{classAuthoritative:true});const old=students.find(function(s){return s.id===o.id;});if(old){Object.assign(old,o);fillStudentDerivedFields(old,{classAuthoritative:true});}else students.push(Object.assign({dorm:[],classroom:[],punishments:[],fund:{},party:{stage:"群众"},psych:{level:"正常",issues:[]}},o));report.ok++;});
@@ -14329,7 +14382,7 @@ window.setSemesterAsCurrent=setSemesterAsCurrent;
 window.removeSemesterSetting=removeSemesterSetting;
 /* v1.46 基础数据维护：Tab 切换页（学院 / 专业 / 班级），对齐「宿舍管理」的 Tab 模式 */
 PAGES.maint=function(){
-  const allowedTabs=["d1","d2","d3","d4","d5"];
+  const allowedTabs=["d1","d2","d3","d4","d7","d5"];
   const t=allowedTabs.indexOf(window.maintTab)>=0?window.maintTab:"d1";
   if(window.maintTab!==t) window.maintTab=t;
   const makeHtml=function(src){
@@ -14339,20 +14392,22 @@ PAGES.maint=function(){
   const wrap=function(html){ return '<div class="maint-pane-wrap">'+html+'</div>'; };
   return `
   <div class="maint-title-row">
-    <h2 class="ptitle">🗂️ 基础数据维护 <span class="tag">学院 · 专业 · 年级 · 招生类别 · 班级</span></h2>
-    <div class="maint-data-warning" role="note"><strong>请按“学院 → 专业 → 年级 → 招生类别 → 班级”顺序新增或导入数据。首次维护多一步，后续学生导入和其他功能就能直接带出学籍信息；还能避免年级、班级按顺序填充造成同班学生班级错填，让数据关联更可靠。</strong></div>
+    <h2 class="ptitle">🗂️ 基础数据维护 <span class="tag">学院 · 专业 · 年级 · 招生类别 · 培养层次 · 班级</span></h2>
+    <div class="maint-data-warning" role="note"><strong>请按“学院 → 专业 → 年级 → 招生类别 → 培养层次 → 班级”顺序新增或导入数据。首次维护多一步，后续学生导入和其他功能就能直接带出学籍信息；还能避免年级、班级按顺序填充造成同班学生班级错填，让数据关联更可靠。</strong></div>
   </div>
   <div class="tabs" style="margin-bottom:14px">
     <div class="tab ${t==='d1'?'active':''}" data-t="d1">学院</div>
     <div class="tab ${t==='d2'?'active':''}" data-t="d2">专业</div>
     <div class="tab ${t==='d3'?'active':''}" data-t="d3">年级</div>
     <div class="tab ${t==='d4'?'active':''}" data-t="d4">招生类别</div>
+    <div class="tab ${t==='d7'?'active':''}" data-t="d7">培养层次</div>
     <div class="tab ${t==='d5'?'active':''}" data-t="d5">班级</div>
   </div>
   <div class="pane ${t==='d1'?'active':''}" id="d1">${wrap(makeHtml(PAGES.dept()))}</div>
   <div class="pane ${t==='d2'?'active':''}" id="d2">${wrap(makeHtml(PAGES.major()))}</div>
   <div class="pane ${t==='d3'?'active':''}" id="d3">${wrap(makeHtml(PAGES.grade()))}</div>
   <div class="pane ${t==='d4'?'active':''}" id="d4">${wrap(makeHtml(PAGES.enrollType()))}</div>
+  <div class="pane ${t==='d7'?'active':''}" id="d7">${wrap(makeHtml(PAGES.level()))}</div>
   <div class="pane ${t==='d5'?'active':''}" id="d5">${wrap(makeHtml(PAGES.class()))}</div>`;
 };
 /* v1.46 兼容：maint 页内 Tab 切换时，window.maintTab 需记录当前 Tab */
@@ -16373,7 +16428,7 @@ function portraitArchiveHTML(s){
     +'<div class="zf-detail-head" style="margin:0 0 12px">'+photos+'<div style="flex:1"><div style="font-size:19px;font-weight:700">'+esc(s.name)+' <span style="font-size:13px;color:var(--muted);font-weight:400">'+esc(sid)+'</span></div><div style="color:var(--muted);margin-top:4px">'+esc([s.dept,s.major,s.grade,s.cls].filter(Boolean).join(" · "))+'</div></div><div>'+badge(esc(stuStatusLabel(s.status)),stuStatusBadge(s.status))+'</div></div>'
     +'<div class="tip">本档案实时汇总学生管理、宿舍、资助、助学贷款、学业、谈话、家校、心理、党团和处分模块中已录入的数据；新增或修改数据后，重新打开或点击“刷新档案”即可显示。</div>'
     +portraitArchiveSection("一、基本信息",portraitArchiveGrid([["学号",sid],["姓名",s.name],["曾用名",s.usedName],["性别",s.gender],["民族",s.ethnic],["出生日期",s.birth],["身份证号",s.idcard],["考生号",s.examNo],["政治面貌",s.political],["残疾情况",disabTxt],["当前班级干部任职",cadreCurrentTxt],["历史班级干部任职",cadreHistoryTxt]]))
-    +portraitArchiveSection("二、学籍信息",portraitArchiveGrid([["学院",s.dept],["专业",s.major],["年级",s.grade],["班级",s.cls],["辅导员",s.counsel],["学历",s.level],["学制",s.length],["招生类别",s.enrollType],["生源地",s.source],["入学日期",s.enroll],["毕业年份",s.graduateYear],["转专业备注",s.transferNote],["学籍状态",stuStatusLabel(s.status)],["学籍异动备注",s.statusNote],["学籍异动单",statusAttachment]]))
+    +portraitArchiveSection("二、学籍信息",portraitArchiveGrid([["学院",s.dept],["专业",s.major],["年级",s.grade],["班级",s.cls],["辅导员",s.counsel],["培养层次",s.level],["学制",s.length],["招生类别",s.enrollType],["生源地",s.source],["入学日期",s.enroll],["毕业年份",s.graduateYear],["转专业备注",s.transferNote],["学籍状态",stuStatusLabel(s.status)],["学籍异动备注",s.statusNote],["学籍异动单",statusAttachment]]))
     +portraitArchiveSection("三、联系方式",portraitArchiveGrid([["手机号",s.phone],["QQ号",s.qq],["微信号",s.wechat],["家庭住址",s.address],["父亲姓名",s.fatherName],["父亲电话",s.fatherPhone],["母亲姓名",s.motherName],["母亲电话",s.motherPhone],["紧急联系人",s.emgName],["关系",s.emgRel],["紧急联系人电话",s.emgPhone]]))
     +portraitArchiveSection("四、宿舍信息",portraitArchiveGrid([["住宿情况",s.accom],["楼栋",s.building||s.dormBuild],["房间号",s.room||s.dormRoom],["床位号",s.bed]]))
     +portraitArchiveSection("五、心理与党团",portraitArchiveGrid([["心理关怀等级",(s.psych||{}).level||"正常"],["关注问题",(s.psych||{}).issues],["干预措施",(s.psych||{}).note],["最近更新",(s.psych||{}).updated],["政治面貌",s.political],["团员身份",portraitParty.leagueStatus],["党团发展阶段",portraitParty.stage],["确定日期",portraitParty.date],["所属支部",portraitParty.branch],["培养联系人",portraitParty.contact],["党团材料",portraitParty.materials]]))
@@ -16690,6 +16745,7 @@ document.addEventListener("click",e=>{
       else if(tid==="d4") window.maintTab="d4";
       else if(tid==="d5") window.maintTab="d5";
       else if(tid==="d6") window.maintTab="d6";
+      else if(tid==="d7") window.maintTab="d7";
     }
   }
 });
@@ -16887,7 +16943,7 @@ function recycleApplySnapshots(values){
     nnuzc_dorm_spatial_v1:function(){if(typeof window.dormSpatialReloadState==="function")window.dormSpatialReloadState();}
     ,nnuzc_workfolder:function(rows){workFolderNodes=rows;}
     ,nnuzc_orgs:function(value){
-      [[ORG_DEPTS,value.depts],[ORG_MAJORS,value.majors],[ORG_CLASSES,value.classes],[ORG_GRADES,value.grades],[ORG_DORMS,value.dorms],[ORG_ENROLL_TYPES,value.enrollTypes]].forEach(function(pair){pair[0].splice(0,pair[0].length,...(Array.isArray(pair[1])?pair[1]:[]));});recomputeFilterOptions();
+      [[ORG_DEPTS,value.depts],[ORG_MAJORS,value.majors],[ORG_CLASSES,value.classes],[ORG_GRADES,value.grades],[ORG_DORMS,value.dorms],[ORG_ENROLL_TYPES,value.enrollTypes],[ORG_LEVELS,Array.isArray(value.levels)?value.levels:ORG_LEVELS.slice()]].forEach(function(pair){pair[0].splice(0,pair[0].length,...(Array.isArray(pair[1])?pair[1]:[]));});recomputeFilterOptions();
     }
     ,nnuzc_student_org_v1:function(){const frame=document.querySelector('iframe[src*="学生组织管理"]');if(frame&&frame.contentWindow)frame.contentWindow.location.reload();}
     ,nnuzc_custom_roster_v1:function(){if(currentView==="customRoster"&&typeof renderPage==="function")setTimeout(function(){renderPage("customRoster");},0);}
@@ -17506,10 +17562,10 @@ function employmentIntentionStatsHtml(){
   const answeredRows=list.filter(function(r){return r._hasRecord;}),total=list.length,answered=answeredRows.length,market=answeredRows.filter(function(r){return r.intention==="市场就业";}).length,study=answeredRows.filter(function(r){return String(r.intention||"").indexOf("拟升学")===0;}).length,exam=answeredRows.filter(function(r){return ["拟参加公务员考试","拟参加事业编制考试","拟参加央国企考试"].indexOf(r.intention)>=0;}).length,issues=answeredRows.filter(function(r){return employmentIntentionIsIssue(r.issues);}).length;
   const cards=[["毕业生名单",total,"人"],["已填写意向",answered,"人"],["未填写意向",total-answered,"人"],["市场就业",market,"人"],["升学意向",study,"人"],["问题待跟进",issues,"人"]];
   const counts={};answeredRows.forEach(function(r){const k=r.intention||"未选择意向";counts[k]=(counts[k]||0)+1;});const max=Math.max(1,...Object.keys(counts).map(function(k){return counts[k];}));
-  const bars=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).map(function(k){const n=counts[k],pct=answered?Math.round(n/answered*1000)/10:0;return '<div style="display:grid;grid-template-columns:170px 1fr 86px;align-items:center;gap:10px;margin:8px 0"><span>'+esc(k)+'</span><div style="height:10px;background:#edf2ef;border-radius:8px;overflow:hidden"><div style="height:100%;width:'+Math.round(n/max*100)+'%;background:linear-gradient(90deg,#0f8f68,#43b78f)"></div></div><b>'+n+' · '+pct+'%</b></div>';}).join('')||'<div class="empty">毕业生名单已同步，填写或导入意向后显示分布</div>';
+  const bars=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).map(function(k){const n=counts[k],pct=answered?Math.round(n/answered*1000)/10:0;return '<div class="employment-intention-bar"><span>'+esc(k)+'</span><div style="height:10px;background:#edf2ef;border-radius:8px;overflow:hidden"><div style="height:100%;width:'+Math.round(n/max*100)+'%;background:linear-gradient(90deg,#0f8f68,#43b78f)"></div></div><b>'+n+' · '+pct+'%</b></div>';}).join('')||'<div class="empty">毕业生名单已同步，填写或导入意向后显示分布</div>';
   const classStats={};list.forEach(function(r){const k=r.cls||"未填写班级",o=classStats[k]||(classStats[k]={total:0,answered:0,market:0,study:0,exam:0});o.total++;if(r._hasRecord)o.answered++;if(r.intention==="市场就业")o.market++;if(String(r.intention||"").indexOf("拟升学")===0)o.study++;if(["拟参加公务员考试","拟参加事业编制考试","拟参加央国企考试"].indexOf(r.intention)>=0)o.exam++;});
   const classRows=Object.keys(classStats).sort().map(function(k){const o=classStats[k];return '<tr><td>'+esc(k)+'</td><td>'+o.total+'</td><td>'+o.answered+'</td><td>'+(o.total-o.answered)+'</td><td>'+o.market+'</td><td>'+o.study+'</td><td>'+o.exam+'</td></tr>';}).join('')||'<tr><td colspan="7" class="empty">暂无毕业生名单</td></tr>';
-  return '<div style="display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:14px">'+cards.map(function(c){return '<div class="card" style="padding:14px;margin:0"><div style="color:var(--muted);font-size:13px">'+c[0]+'</div><div style="font-size:24px;font-weight:750;margin-top:5px">'+c[1]+' <small style="font-size:12.5px">'+c[2]+'</small></div></div>';}).join('')+'</div><div style="display:grid;grid-template-columns:minmax(420px,1.1fr) minmax(520px,1fr);gap:14px;margin-bottom:14px"><div class="card" style="margin:0"><b>就业意向分布（已填写）</b><div style="margin-top:10px">'+bars+'</div></div><div class="card" style="margin:0"><b>班级填写与意向统计</b><div class="list-scroll" style="max-height:360px;margin-top:10px">'+table(["班级","名单人数","已填写","未填写","市场就业","升学","考公/考编/央国企"],classRows)+'</div></div></div>';
+  return '<div class="employment-intention-stats">'+cards.map(function(c){return '<div class="card" style="padding:14px;margin:0"><div style="color:var(--muted);font-size:13px">'+c[0]+'</div><div style="font-size:24px;font-weight:750;margin-top:5px">'+c[1]+' <small style="font-size:12.5px">'+c[2]+'</small></div></div>';}).join('')+'</div><div class="employment-intention-breakdown"><div class="card" style="margin:0"><b>就业意向分布（已填写）</b><div style="margin-top:10px">'+bars+'</div></div><div class="card" style="margin:0"><b>班级填写与意向统计</b><div class="list-scroll" style="max-height:360px;margin-top:10px">'+table(["班级","名单人数","已填写","未填写","市场就业","升学","考公/考编/央国企"],classRows)+'</div></div></div>';
 }
 function employmentIntentionExport(){
   const roster=employmentIntentionRoster();if(!roster.length){alert("学生管理中暂无已填写毕业年份的学生可导出。");return;}
@@ -17679,7 +17735,7 @@ function employmentDestinationPane(){
   const trackingDepts=[...new Set(all.map(function(item){return item.student.dept;}).filter(Boolean))].sort();
   const trackingClasses=[...new Set(all.filter(function(item){return !employmentTrackingFilter.dept||item.student.dept===employmentTrackingFilter.dept;}).map(function(item){return item.student.cls;}).filter(Boolean))].sort();
   const yearBar='<div class="toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><label style="font-size:13px;color:var(--muted);white-space:nowrap">毕业年份：</label><select class="in" style="min-width:120px" onchange="employmentTrackingSetGraduateYear(this.value)"><option value="">全部届次</option>'+years.map(function(x){return '<option value="'+attr(x)+'"'+(employmentTrackingYearMatches(c.year,x)?' selected':'')+'>'+esc(x)+'</option>';}).join('')+'</select><span style="flex:1"></span><span style="font-size:12.5px;color:var(--muted)">名单自动来自学生管理中已填写的“毕业年份”；修改学生毕业年份后本页会同步更新。</span></div>';
-  const overview='<div id="employmentSyncOverview" style="display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin:0 0 14px"><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">毕业生名单</div><b style="font-size:23px">'+all.length+'</b></div><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">已完成联系</div><b style="font-size:23px">'+contacted+'</b></div><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">尚未首次联系</div><b style="font-size:23px">'+(all.length-contacted)+'</b></div><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">待安排/已到期跟进</div><b style="font-size:23px">'+needFollow+'</b></div></div>';
+  const overview='<div id="employmentSyncOverview" class="employment-tracking-stats"><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">毕业生名单</div><b style="font-size:23px">'+all.length+'</b></div><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">已完成联系</div><b style="font-size:23px">'+contacted+'</b></div><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">尚未首次联系</div><b style="font-size:23px">'+(all.length-contacted)+'</b></div><div class="card" style="margin:0;padding:12px"><div style="font-size:12.5px;color:var(--muted)">待安排/已到期跟进</div><b style="font-size:23px">'+needFollow+'</b></div></div>';
   const rows=list.length?list.map(function(item){const l=item.latest,r=item.record||{},sid=String(item.student.id),count=(r.contacts||[]).length,status=employmentTrackingStatus(item),next=l&&l.nextDate||"—",checked=employmentTrackingSelection.has(sid)?" checked":"";return '<tr><td><input class="employment-tracking-select" type="checkbox" value="'+attr(sid)+'"'+checked+' onchange="employmentTrackingToggleSelection(this.value,this.checked)"></td><td>'+esc(item.student.cls||"—")+'</td><td>'+esc(item.student.id)+'</td><td>'+esc(item.student.name)+'</td><td>'+esc(item.student.graduateYear||"—")+'</td><td>'+esc(item.intention||"未填写")+'</td><td><span class="badge '+(status==="待联系"?"b-gray":status==="已签约就业"||status==="升学录取"?"b-green":"b-orange")+'">'+esc(status)+'</span></td><td>'+count+' 次</td><td>'+esc(l?l.date||"—":"未联系")+'</td><td>'+esc(employmentTrackingMethodText(l))+'</td><td>'+esc(next)+'</td><td style="white-space:nowrap"><a class="lk" onclick="employmentTrackingOpenContact('+jsArg(item.student.id)+')">'+(count?"继续跟进":"首次联系")+'</a>　<a class="lk" onclick="employmentTrackingView('+jsArg(item.student.id)+')">档案</a></td></tr>';}).join(""):'<tr><td colspan="12" class="empty">当前筛选条件下暂无已填写毕业年份的学生</td></tr>';
   const selectedCount=list.filter(function(item){return employmentTrackingSelection.has(String(item.student.id));}).length;
   const toolbar='<div class="toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><input class="in" placeholder="搜索学号、姓名、班级、毕业年份、意向或单位" style="width:250px" value="'+attr(employmentTrackingFilter.kw)+'" oninput="employmentTrackingSetFilter(\'kw\',this.value)"><select id="employmentTrackingDept" class="in" aria-label="学院筛选" onchange="employmentTrackingSetFilter(\'dept\',this.value)"><option value="">全部学院</option>'+trackingDepts.map(function(x){return '<option value="'+attr(x)+'"'+(employmentTrackingFilter.dept===x?" selected":"")+'>'+esc(x)+'</option>';}).join("")+'</select><select id="employmentTrackingClass" class="in" aria-label="班级筛选" onchange="employmentTrackingSetFilter(\'cls\',this.value)"><option value="">全部班级</option>'+trackingClasses.map(function(x){return '<option value="'+attr(x)+'"'+(employmentTrackingFilter.cls===x?" selected":"")+'>'+esc(x)+'</option>';}).join("")+'</select><select class="in" onchange="employmentTrackingSetFilter(\'status\',this.value)"><option value="">全部跟进状态</option>'+EMPLOYMENT_TRACKING_STATUS.map(function(x){return '<option value="'+attr(x)+'"'+(employmentTrackingFilter.status===x?" selected":"")+'>'+esc(x)+'</option>';}).join("")+'</select><span id="employmentTrackingSelectedCount" style="font-size:12.5px;color:var(--muted)">已选 '+selectedCount+' 人</span><span style="flex:1"></span><button id="employmentTrackingInitializeBtn" class="btn btn-sm btn-ghost" '+(selectedCount?"":"disabled")+' onclick="employmentTrackingInitialize()">⚙ 数据初始化（清空选中）</button><button class="btn btn-sm btn-ghost" onclick="employmentTrackingExport()">⬇ 导出跟踪台账</button></div>';
@@ -17751,7 +17807,7 @@ function employmentResourceContentHtml(){
   const list=employmentResourceFiltered(),valid=employmentResourceRecords.filter(function(r){return r.status==="有效";}).length,pending=employmentResourceRecords.filter(function(r){return r.status==="待核验";}).length,regions=new Set(employmentResourceRecords.map(function(r){return r.region;}).filter(Boolean)).size;
   const stats=[["资源总数",employmentResourceRecords.length],["当前显示",list.length],["覆盖地域",regions],["已核验有效",valid],["待核验",pending]];
   const cards=list.length?list.map(function(r){const cls=r.status==="有效"?"b-green":r.status==="失效"?"b-red":"b-gray",safeUrl=employmentResourceValidUrl(r.url)?r.url:"#";return '<article class="card" style="margin:0;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:210px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:21px">🔗</span><span class="badge '+cls+'">'+esc(r.status||'待核验')+'</span></div><div style="font-size:17px;font-weight:750">'+esc(r.title||'未命名资源')+'</div><div style="color:var(--muted);font-size:13px">'+esc(r.organizer||'未记录主办单位')+' · '+esc(r.industry||'综合')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12.5px"><span class="tag">'+esc(r.region||'全国')+'</span><span class="tag">核验 '+esc(r.verifiedAt||'未记录')+'</span></div><div style="margin-top:auto;display:flex;gap:7px;flex-wrap:wrap"><a class="btn btn-primary btn-sm" href="'+attr(safeUrl)+'" target="_blank" rel="noopener noreferrer">打开官网</a><button class="btn btn-ghost btn-sm" onclick="employmentResourceOpenForm('+jsArg(r.id)+')">编辑</button>'+(r.status!=="有效"?'<button class="btn btn-ghost btn-sm" onclick="employmentResourceMarkVerified('+jsArg(r.id)+')">标记已核验</button>':'')+'<button class="btn btn-ghost btn-sm" style="color:#c43d36" onclick="employmentResourceDelete('+jsArg(r.id)+')">删除</button></div></article>';}).join(''):'<div class="empty" style="grid-column:1/-1">暂无匹配的就业资源</div>';
-  return '<div style="display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:14px">'+stats.map(function(x){return '<div class="card" style="margin:0;padding:14px"><div style="color:var(--muted);font-size:12.5px">'+x[0]+'</div><div style="font-size:23px;font-weight:750;margin-top:5px">'+x[1]+'</div></div>';}).join('')+'</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">'+cards+'</div>';
+  return '<div class="employment-resource-stats">'+stats.map(function(x){return '<div class="card" style="margin:0;padding:14px"><div style="color:var(--muted);font-size:12.5px">'+x[0]+'</div><div style="font-size:23px;font-weight:750;margin-top:5px">'+x[1]+'</div></div>';}).join('')+'</div><div class="employment-resource-grid">'+cards+'</div>';
 }
 function employmentResourceExport(){if(!employmentResourceRecords.length){alert("暂无就业资源可导出。");return;}const data=[EMPLOYMENT_RESOURCE_FIELDS.map(function(f){return f.header;})].concat(employmentResourceRecords.map(function(r){return EMPLOYMENT_RESOURCE_FIELDS.map(function(f){return r[f.key]||"";});}));downloadXlsxFile("就业资源",data,"就业资源_"+xcmStamp()+".xlsx");showToast("已导出 "+employmentResourceRecords.length+" 条就业资源","success");}
 function employmentResourceDownloadTemplate(){downloadXlsxFile("就业资源导入模板",[EMPLOYMENT_RESOURCE_FIELDS.map(function(f){return f.header;}),["国家大学生就业服务平台","全国","综合就业服务","教育部","https://www.ncss.cn/","","待核验",""]],"就业资源导入模板.xlsx");}
@@ -18093,7 +18149,7 @@ function achievementOrgStatsHtml(list){
 PAGES.achievement=function(){return enhancedPageFallback("获奖情况");};window.achievementSetStatDimension=function(dimension){if(!ACHIEVEMENT_STAT_DIMENSIONS[dimension])return;achievementStatDimension=dimension;renderPage("achievement");};
 function achievementStudentsByName(name){const value=String(name||"").trim();return value?(students||[]).filter(function(s){return String(s.name||"").trim()===value;}):[];}
 function achievementResolveStudent(sid,name){const studentId=String(sid||"").trim();if(studentId)return achievementStudent(studentId);const matches=achievementStudentsByName(name);return matches.length===1?matches[0]:null;}
-function achievementStudentInfoHtml(sid,name){const studentId=String(sid||"").trim(),studentName=String(name||"").trim(),matches=achievementStudentsByName(studentName),s=achievementResolveStudent(studentId,studentName);if(!studentId&&!studentName)return '<div class="tip" style="margin:0">输入学号或姓名后，自动匹配学院、专业、年级、班级等完整学籍信息；同名学生请在弹出的候选信息中人工选择。</div>';if(!s){const reason=!studentId&&matches.length>1?'姓名 <b>'+esc(studentName)+'</b> 存在 '+matches.length+' 名同名学生，请在弹出的候选信息中人工选择。':'未在“学生管理”中匹配到该学生，请核对姓名和学号。';return '<div class="tip" style="margin:0;border-color:#f0c58a;color:#9a6517">'+reason+'</div>';}const fields=[["姓名",s.name],["性别",s.gender],["学院",s.dept],["专业",s.major],["年级",s.grade||classGrade(s.cls)],["班级",s.cls],["学籍状态",stuStatusLabel(s.status)||s.status],["学历",s.level],["招生类别",s.enrollType],["入学日期",s.enroll],["辅导员",s.counsel]];return '<div style="margin:0;padding:11px 12px;border:1px solid #c9e2d7;border-radius:9px;background:#f8fdf9"><b style="color:#126b49">已匹配学生学籍</b><span style="margin-left:8px;color:var(--muted)">学号：'+esc(s.id||studentId)+'</span><div style="display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:8px 12px;margin-top:9px">'+fields.map(function(x){return '<div><small style="display:block;color:var(--muted)">'+x[0]+'</small><span>'+esc(x[1]||"未维护")+'</span></div>';}).join("")+'</div></div>';}
+function achievementStudentInfoHtml(sid,name){const studentId=String(sid||"").trim(),studentName=String(name||"").trim(),matches=achievementStudentsByName(studentName),s=achievementResolveStudent(studentId,studentName);if(!studentId&&!studentName)return '<div class="tip" style="margin:0">输入学号或姓名后，自动匹配学院、专业、年级、班级等完整学籍信息；同名学生请在弹出的候选信息中人工选择。</div>';if(!s){const reason=!studentId&&matches.length>1?'姓名 <b>'+esc(studentName)+'</b> 存在 '+matches.length+' 名同名学生，请在弹出的候选信息中人工选择。':'未在“学生管理”中匹配到该学生，请核对姓名和学号。';return '<div class="tip" style="margin:0;border-color:#f0c58a;color:#9a6517">'+reason+'</div>';}const fields=[["姓名",s.name],["性别",s.gender],["学院",s.dept],["专业",s.major],["年级",s.grade||classGrade(s.cls)],["班级",s.cls],["学籍状态",stuStatusLabel(s.status)||s.status],["培养层次",s.level],["招生类别",s.enrollType],["入学日期",s.enroll],["辅导员",s.counsel]];return '<div style="margin:0;padding:11px 12px;border:1px solid #c9e2d7;border-radius:9px;background:#f8fdf9"><b style="color:#126b49">已匹配学生学籍</b><span style="margin-left:8px;color:var(--muted)">学号：'+esc(s.id||studentId)+'</span><div style="display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:8px 12px;margin-top:9px">'+fields.map(function(x){return '<div><small style="display:block;color:var(--muted)">'+x[0]+'</small><span>'+esc(x[1]||"未维护")+'</span></div>';}).join("")+'</div></div>';}
 window.achievementMatchStudent=function(source,value){const sidEl=document.getElementById("achievement_sid"),nameEl=document.getElementById("achievement_name"),info=document.getElementById("achievementStudentInfo");function apply(s,typed){if(sidEl)sidEl.value=s?(s.id||""):"";if(nameEl)nameEl.value=s?(s.name||""):(typed||"");if(info)info.innerHTML=achievementStudentInfoHtml(sidEl?sidEl.value:"",nameEl?nameEl.value:"");}if(source==="sid"){const s=achievementStudent(value);apply(s,"");return;}resolveStudentNameInput(value,apply,"获奖情况");};
 window.achievementStudentInfo=function(sid){achievementMatchStudent("sid",sid);};
 function achievementUpsertFromCertificate(cert){if(!cert||cert.status!=="confirmed")return null;const d=cert.data||{};if(["学生获奖人","团队成员"].indexOf(d.role)<0)return null;const student=achievementStudent(cert.sid)||{};const payload={sid:cert.sid,name:student.name||cert.name||"",dept:student.dept||"",major:student.major||"",grade:student.grade||classGrade(student.cls)||"",cls:student.cls||"",category:d.category,level:d.level,awardName:d.awardName,prize:d.prize,organization:d.organization,issuingOrganization:d.issuingOrganization,date:d.date,role:d.role,teachers:d.teachers,members:d.members,source:"certificate",certificateId:cert.id,attachment:cert.attachment};let row=achievementRecords.find(function(r){return r.certificateId===cert.id;});if(row)Object.assign(row,achievementNormalize(Object.assign({},row,payload),"certificate"),{id:row.id,updatedAt:fmtNow()});else{row=achievementNormalize(payload,"certificate");achievementRecords.unshift(row);}achievementPersist();cert.achievementRecordId=row.id;return row;}
@@ -18122,7 +18178,7 @@ initNavDrawer(); initNavGroups(); renderNav(); renderTop(); refreshWorkbenchBran
       const u = new URL(location.href);
       const g = u.searchParams.get('goto');
       if(g) goto(g); else goto(currentView,{expandNavGroup:false});
-      try{sessionStorage.removeItem("nnuzc_activation_welcome_pending");}catch(_error){}
+      try{if(WORKBENCH_LICENSE_STATUS&&WORKBENCH_LICENSE_STATUS.valid===true&&sessionStorage.getItem("nnuzc_activation_welcome_pending")==="1"){sessionStorage.removeItem("nnuzc_activation_welcome_pending");setTimeout(showActivationWelcome,0);}}catch(_error){}
       setTimeout(studentIntegrityCheckAfterUpdate,700);
       setTimeout(fixedValueReviewCheckAfterUpdate,1200);
     }catch(e){ goto("dashboard",{expandNavGroup:false}); }
@@ -18191,14 +18247,13 @@ function studentIntegrityOpenUpdateChoice(scan){
 }
 /* 固定选项历史值巡检：仅检查真正由系统锁定的字段，不把招生类别等可维护字典当成异常。 */
 const FIXED_VALUE_REVIEW_KEY="nnuzc_fixed_value_review_version";
-const FIXED_VALUE_REVIEW_SIGNATURE=SYS_VER+"|detail-v2";
+const FIXED_VALUE_REVIEW_SIGNATURE=SYS_VER+"|detail-v3-open-education";
 let fixedValueReviewRunning=false;
 function fixedValueReviewDefinitions(){
   const common=importFixedOptions(""),talk=importFixedOptions("谈心谈话"),home=importFixedOptions("家校联系"),employment=importFixedOptions("就业意向"),status=["待核验","有效","失效"];
   const field=function(path,label,choices){return {path:path.split("."),label:label,choices:choices||common[label]||[]};};
   return [
-    {key:"nnuzc_students",label:"学生信息",fields:[field("gender","性别"),field("ethnic","民族"),field("political","政治面貌"),field("status","学籍状态"),field("level","学历"),field("transferNote","转专业备注"),field("accom","住宿情况"),field("psych.level","关怀等级"),field("fund.poorLevel","困难评定等级"),field("party.stage","当前阶段",PARTY_STAGES),field("party.leagueStatus","团员身份",PARTY_LEAGUE_STATUSES),...PARTY_TRAINING_CONFIG.map(function(item){return field("party.training."+item.key+".status",item.label+"状态",PARTY_TRAINING_STATUSES);})]},
-    {key:"nnuzc_orgs",label:"班级基础数据",rows:"classes",fields:[field("level","学历")]},
+    {key:"nnuzc_students",label:"学生信息",fields:[field("gender","性别"),field("ethnic","民族"),field("political","政治面貌"),field("status","学籍状态"),field("transferNote","转专业备注"),field("accom","住宿情况"),field("psych.level","关怀等级"),field("fund.poorLevel","困难评定等级"),field("party.stage","当前阶段",PARTY_STAGES),field("party.leagueStatus","团员身份",PARTY_LEAGUE_STATUSES),...PARTY_TRAINING_CONFIG.map(function(item){return field("party.training."+item.key+".status",item.label+"状态",PARTY_TRAINING_STATUSES);})]},
     {key:"nnuzc_dorm_dist",label:"住宿分布",fields:[field("accom","住宿情况")]},
     {key:"nnuzc_fund_records",label:"资助记录",fields:[field("poorLevel","困难评定等级")]},
     {key:"nnuzc_talks",label:"谈心谈话",fields:[field("type","类型",talk["类型"]),field("way","方式",talk["方式"]),field("mood","情绪",talk["情绪"])]},
@@ -18337,8 +18392,8 @@ function directImportRowsFromSheets(sheets){
 }
 /* 统一四步 Excel 导入向导：第 3 步固定系统字段，选择 Excel 表头。
    写入函数仍由各业务模块负责，避免改变原有数据模型与校验规则。 */
-function importWizardSteps(cur){
-  const labels=["选择导入文件","确认导入信息","字段映射","校验 & 导入"];
+function importWizardSteps(cur,customLabels){
+  const labels=customLabels||["选择导入文件","确认导入信息","字段映射","校验 & 导入"];
   return '<div class="flow" style="margin-bottom:18px">'+labels.map(function(label,i){
     const state=i<cur?'done':(i===cur?'cur':'');
     return '<div class="step"><div class="dot '+state+'">'+(i<cur?'✓':i+1)+'</div><div class="cap '+state+'">'+label+'</div></div>'+(i<labels.length-1?'<div class="ln '+(i<cur?'done':'')+'"></div>':'');
@@ -18360,6 +18415,7 @@ function importWizardToRows(rows, mapping){
 }
 /* 通用导入向导的表头别名。它既用于自动匹配，也用于在带说明行的 Excel 中定位真正表头。 */
 const MAPPED_IMPORT_FIELD_ALIASES={
+  "培养层次":["学历","学历名称","教育层次","培养层次名称","level"],
   "学号":["学生学号","学生编号","编号"],
   "姓名":["学生姓名","名字"],
   "学院":["所属学院","所在学院","所属院系","院系"],
@@ -18405,43 +18461,62 @@ function openMappedImportWizard(options){
     const hit=headers.find(function(header){ return candidates.indexOf(smartHeader(header))>=0; })||'';
     return {key:field.key||field.label,label:field.label,required:!!field.required,excel:hit};
   }); }
+  function isActive(){const modal=document.getElementById('modal');return window.__mappedImportState===state&&(!options.autoRecognize||!modal||!modal.classList||modal.classList.contains('show'));}
+  function steps(step){return options.autoRecognize?importWizardSteps(step===0?0:step===3?2:1,["选择党建跟踪表","自动识别与核验","确认更新"]):importWizardSteps(step);}
   function toolbar(){ return options.template?'<div class="import-toolbar"><a class="import-link" href="javascript:;" onclick="'+options.template+'">点击下载导入模板</a></div>':''; }
   function sourceOptions(selected){ return '<option value="">不导入</option>'+state.headers.map(function(header){return '<option value="'+attr(header)+'"'+(header===selected?' selected':'')+'>'+esc(header)+'</option>';}).join(''); }
   function render(){
-    if(window.__mappedImportState!==state)return;
+    if(!isActive())return;
     let body='',foot='';
     if(state.step===0){
-      body=importWizardSteps(0)+toolbar()+'<div class="import-drop" id="mappedImportDrop"><div class="ico">📁</div><div class="t1">点击或将文件拖拽到这里导入</div><div class="t2">支持 .xlsx、.xls、.csv 文件</div><input type="file" id="mappedImportFile" style="display:none" accept=".xlsx,.xls,.csv"></div>'+(state.file?'<div class="import-file-info"><span class="fn">'+esc(state.file.name)+'</span><span class="fs">'+(state.file.size/1024).toFixed(1)+' KB</span></div>':'');
-      foot='<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" id="mappedImportNext" onclick="mappedImportNext()" '+(state.file?'':'disabled style="opacity:.5;cursor:not-allowed"')+'>下一步 →</button>';
+      body=steps(0)+(options.autoRecognize?'<div class="tip">直接选择原始党建跟踪表，无需整理模板或手动映射。系统自动识别学生与六个发展日期，预览后确认更新；每次选择一个文件。</div>':toolbar())+'<div class="import-drop" id="mappedImportDrop"><div class="ico">📁</div><div class="t1">点击或将文件拖拽到这里导入</div><div class="t2">支持 .xlsx、.xls、.csv 文件</div><input type="file" id="mappedImportFile" style="display:none" accept=".xlsx,.xls,.csv"></div>'+(state.file?'<div class="import-file-info"><span class="fn">'+esc(state.file.name)+'</span><span class="fs">'+(state.file.size/1024).toFixed(1)+' KB</span></div>':'');
+      foot='<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-primary" id="mappedImportNext" onclick="mappedImportNext()" '+(state.file?'':'disabled style="opacity:.5;cursor:not-allowed"')+'>'+(options.autoRecognize?'识别并预览':'下一步 →')+'</button>';
     }else if(state.step===1){
       const modeHtml=(options.modeOptions||[]).length?'<div class="import-mode-row" style="margin:12px 0">'+options.modeOptions.map(function(option){return '<label class="mode-item '+(state.mode===option.value?'checked':'')+'"><input type="radio" name="mappedImportMode" value="'+attr(option.value)+'" '+(state.mode===option.value?'checked':'')+' onchange="mappedImportModeChange(this)"><span class="ml">'+esc(option.label)+'</span><span class="desc">'+esc(option.desc||'')+'</span></label>';}).join('')+'</div>':'';
-      body=importWizardSteps(1)+toolbar()+'<div class="tip">'+(options.infoHtml||('已识别 <b>'+state.rawRows.length+'</b> 行数据、<b>'+state.headers.length+'</b> 个 Excel 表头。请进入下一步设置字段映射。'))+'</div>'+modeHtml+'<div class="import-preview"><div class="ph"><b>数据预览</b><span>前 3 行</span></div><div style="max-height:220px;overflow:auto"><table><thead><tr>'+state.headers.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+state.rawRows.slice(0,3).map(function(row){return '<tr>'+state.headers.map(function(h){return '<td>'+esc(row[h]||'')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div></div>';
+      body=steps(1)+toolbar()+'<div class="tip">'+(options.infoHtml||('已识别 <b>'+state.rawRows.length+'</b> 行数据、<b>'+state.headers.length+'</b> 个 Excel 表头。请进入下一步设置字段映射。'))+'</div>'+modeHtml+'<div class="import-preview"><div class="ph"><b>数据预览</b><span>前 3 行</span></div><div style="max-height:220px;overflow:auto"><table><thead><tr>'+state.headers.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+state.rawRows.slice(0,3).map(function(row){return '<tr>'+state.headers.map(function(h){return '<td>'+esc(row[h]||'')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div></div>';
       foot='<button class="btn btn-ghost" onclick="mappedImportPrev()">← 上一步</button><button class="btn btn-primary" onclick="mappedImportNext()">下一步 →</button>';
     }else if(state.step===2){
-      body=importWizardSteps(2)+toolbar()+'<div class="tip"><b>字段映射：</b>左侧系统字段固定，右侧选择本次 Excel 文件中的表头。带 * 的系统字段必须映射；学生身份须同时核验学号和姓名，两项同时一致才直接通过，缺失或不一致会在下一步弹窗逐行确认处理。</div><table class="import-field-table"><thead><tr><th style="width:48%">系统字段</th><th style="width:42%">Excel 列（表头）</th><th style="width:10%;text-align:center">必填</th></tr></thead><tbody>'+state.mapping.map(function(field,index){return '<tr><td><input class="in" readonly value="'+attr(field.label)+'" style="background:#f7fafa"></td><td><select class="in" onchange="mappedImportMapChange('+index+',this.value)">'+sourceOptions(field.excel)+'</select></td><td style="text-align:center;color:#d6453d;font-weight:700">'+(field.required?'*':'')+'</td></tr>';}).join('')+'</tbody></table>';
+      body=steps(2)+(state.recognitionIssue?'<div class="tip" role="alert">'+esc(state.recognitionIssue)+'。请核对下方对应列，或返回重新选择文件。</div>':'')+toolbar()+'<div class="tip"><b>字段映射：</b>左侧系统字段固定，右侧选择本次 Excel 文件中的表头。带 * 的系统字段必须映射；学生身份须同时核验学号和姓名，两项同时一致才直接通过，缺失或不一致会在下一步弹窗逐行确认处理。</div><table class="import-field-table"><thead><tr><th style="width:48%">系统字段</th><th style="width:42%">Excel 列（表头）</th><th style="width:10%;text-align:center">必填</th></tr></thead><tbody>'+state.mapping.map(function(field,index){return '<tr><td><input class="in" readonly value="'+attr(field.label)+'" style="background:#f7fafa"></td><td><select class="in" onchange="mappedImportMapChange('+index+',this.value)">'+sourceOptions(field.excel)+'</select></td><td style="text-align:center;color:#d6453d;font-weight:700">'+(field.required?'*':'')+'</td></tr>';}).join('')+'</tbody></table>';
       foot='<button class="btn btn-ghost" onclick="mappedImportPrev()">← 上一步</button><button class="btn btn-primary" onclick="mappedImportNext()">校验数据 →</button>';
     }else{
-      const errors=state.errors||[], result=state.result||{};
-      body=importWizardSteps(3)+toolbar()+'<div class="import-summary"><div class="kpi total"><div class="n">'+state.rawRows.length+'</div><div class="l">总行数</div></div><div class="kpi ok"><div class="n">'+state.validRows.length+'</div><div class="l">可导入</div></div><div class="kpi fail"><div class="n">'+errors.length+'</div><div class="l">需修正</div></div></div>'+(errors.length?'<div class="import-errors" style="margin-top:14px"><div class="eh"><span>校验问题（最多显示 30 条）</span></div><table><thead><tr><th>行号</th><th>原因</th></tr></thead><tbody>'+errors.slice(0,30).map(function(e){return '<tr><td>第 '+esc(e.row||'—')+' 行</td><td>'+esc(e.msg||e.message||'数据不符合要求')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="import-finish" style="margin-top:14px"><div class="ico">✓</div><div class="t1">校验通过</div><div class="t2">确认导入后才会写入 '+esc(options.name)+' 数据。</div></div>')+(state.warnings.length?'<div class="tip import-warnings" role="status" style="margin-top:14px"><b>重复数据提示：已自动去重 '+state.duplicates+' 行，保留 '+state.validRows.length+' 条待导入记录。</b><div>'+state.warnings.slice(0,30).map(function(w){return '第 '+esc(w.row)+' 行：'+esc(w.msg);}).join('<br>')+'</div></div>':'')+'<div id="mappedImportStatus" role="status" aria-live="polite"></div>'+(result.done?'<div class="import-finish" style="margin-top:14px"><div class="t1">导入完成</div><div class="t2">成功写入 '+result.ok+' 条，跳过 '+result.skip+' 条。'+(result.duplicates?'其中，文件内自动去重 '+result.duplicates+' 条。':'')+'</div></div>':'');
+      const errors=state.errors||[], result=state.result||{}, warnings=options.autoRecognize?state.warnings.filter(function(w){return !/^根据发展日期识别：/.test(w.msg||"");}):state.warnings;
+      body=steps(3)+(options.autoRecognize?'':toolbar())+'<div class="import-summary"><div class="kpi total"><div class="n">'+state.rawRows.length+'</div><div class="l">总行数</div></div><div class="kpi ok"><div class="n">'+state.validRows.length+'</div><div class="l">可导入</div></div><div class="kpi fail"><div class="n">'+errors.length+'</div><div class="l">需修正</div></div></div>'+(errors.length?'<div class="import-errors" style="margin-top:14px"><div class="eh"><span>校验问题（最多显示 30 条）</span></div><table><thead><tr><th>行号</th><th>原因</th></tr></thead><tbody>'+errors.slice(0,30).map(function(e){return '<tr><td>第 '+esc(e.row||'—')+' 行</td><td>'+esc(e.msg||e.message||'数据不符合要求')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="import-finish" style="margin-top:14px"><div class="ico">✓</div><div class="t1">校验通过</div><div class="t2">确认导入后才会写入 '+esc(options.name)+' 数据。</div></div>')+(warnings.length?'<div class="tip import-warnings" role="status" style="margin-top:14px"><b>'+(state.duplicates?'重复数据提示：已自动去重 '+state.duplicates+' 行，保留 '+state.validRows.length+' 条待导入记录。':'导入提示：请核对以下日期精度或其他说明。')+'</b><div>'+warnings.slice(0,30).map(function(w){return '第 '+esc(w.row)+' 行：'+esc(w.msg);}).join('<br>')+'</div></div>':'')+'<div id="mappedImportStatus" role="status" aria-live="polite"></div>'+(result.done?'<div class="import-finish" style="margin-top:14px"><div class="t1">导入完成</div><div class="t2">成功写入 '+result.ok+' 条，跳过 '+result.skip+' 条。'+(result.duplicates?'其中，文件内自动去重 '+result.duplicates+' 条。':'')+'</div></div>':'');
       foot=result.done?'<button class="btn btn-primary" onclick="closeModal()">完成</button>':'<button class="btn btn-ghost" onclick="mappedImportPrev()">← 返回映射</button><button class="btn btn-primary" onclick="mappedImportCommit()" '+(state.validRows.length?'':'disabled style="opacity:.5;cursor:not-allowed"')+'>确认导入 '+state.validRows.length+' 条</button>';
+    }
+    if(options.autoRecognize&&state.step===3){
+      body='<div class="tip">'+esc(state.file&&state.file.name||"")+' · '+esc(state.rawRows.__workbookMeta&&state.rawRows.__workbookMeta.sheet||"")+' · 已识别字段，确认后更新现有学生。</div>'+body;
+      if(options.previewHtml)body+=options.previewHtml(state);
+      body='<style>.party-smart-import .import-finish{padding:12px 0;margin-top:8px!important}.party-smart-import .import-finish .ico{display:none}.party-smart-import .import-finish .t1{font-size:15px;margin:0 0 5px}.party-smart-import .import-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.party-smart-import .import-summary .kpi{min-width:0}.party-smart-import .import-warnings{max-height:150px;overflow:auto}.party-smart-import .import-preview table{min-width:680px}@media(max-width:600px){.party-smart-import .import-summary .kpi{flex-direction:column;padding:10px;gap:4px}.party-smart-import .import-summary .l{white-space:nowrap}.party-smart-import .import-preview .ph{flex-wrap:wrap;gap:5px}}</style><div class="party-smart-import">'+body+'</div>';
+      if(!state.result)foot=foot.replace('← 返回映射','查看或调整识别').replace('<button class="btn btn-ghost"','<button class="btn btn-ghost" onclick="closeModal()">取消</button><button class="btn btn-ghost"');
     }
     document.getElementById('modalBody').innerHTML=body; document.getElementById('modalFoot').innerHTML=foot;
     const file=document.getElementById('mappedImportFile'), drop=document.getElementById('mappedImportDrop');
-    const choose=function(f){ if(f&&!state.reading){ state.file=f; render(); } };
+    const choose=function(f){ if(f&&!state.reading&&!state.validating){ state.file=f; render(); if(options.autoRecognize)void window.mappedImportNext(); } };
     if(file) file.onchange=function(){choose(file.files&&file.files[0]);};
     if(drop){ drop.onclick=function(){file.click();}; drop.ondragover=function(e){e.preventDefault();drop.classList.add('over');}; drop.ondragleave=function(){drop.classList.remove('over');}; drop.ondrop=function(e){e.preventDefault();drop.classList.remove('over');choose(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]);}; }
   }
   window.mappedImportNext=async function(){
-    if(state.reading)return;
-    if(state.step===0){ state.reading=true;const next=document.getElementById("mappedImportNext");if(next)next.disabled=true;try{ const hints=[];fields.forEach(function(field){hints.push(field.label,field.key);(field.aliases||[]).forEach(function(alias){hints.push(alias);});});state.rawRows=await parseWorkbookToRows(state.file,hints,{preserveTime:options.preserveTime===true}); }catch(e){showToast('读取失败：'+(e.message||e),'error');return;}finally{state.reading=false;if(next)next.disabled=false;} if(!state.rawRows.length){showToast('文件中没有可导入的数据','error');return;} state.headers=Object.keys(state.rawRows.reduce(function(all,row){Object.keys(row).forEach(function(key){all[key]=1;});return all;},{})); state.mapping=defaultMapping(state.headers); }
-    else if(state.step===2){ const studentIdentityMapped=state.mapping.some(function(field){return /^(?:学号|学生学号|姓名|学生姓名)$/.test(String(field.label||"").trim())&&field.excel;});const missing=state.mapping.filter(function(field){const identity=/^(?:学号|学生学号|姓名|学生姓名)$/.test(String(field.label||"").trim());return field.required&&!field.excel&&!(identity&&studentIdentityMapped);}); const duplicate=state.mapping.filter(function(field,index){return field.excel&&state.mapping.some(function(other,otherIndex){return otherIndex<index&&other.excel===field.excel;});}); if(missing.length||duplicate.length){showToast(missing.length?'请映射必填字段：'+missing.map(function(x){return x.label;}).join('、'):'同一 Excel 表头不能重复映射','error');return;} state.mappedRows=importWizardToRows(state.rawRows,state.mapping); const smartMatch=await importConfirmApproximateMatches(options.name,state.mappedRows,fields,options.fixedOptions);if(!smartMatch.confirmed)return; let studentErrors=[];if(options.studentLink!==false&&window.StudentLinkIntegrity){const linked=StudentLinkIntegrity.reconcileImportRows(state.mappedRows,fields,students);if(linked.enabled){const decision=await studentLinkConfirmImport(options.name,linked);if(!decision.confirmed)return;state.mappedRows=linked.accepted;studentErrors=linked.rejected.map(function(item){return {row:item.row,msg:item.reason+"；本次未导入"};}).concat(linked.rejectedReferences.map(function(item){return {row:item.row,msg:item.field+"中的"+item.reason+"；该学号本次未导入"};}));}} const enumErrors=importEnumRows(options.name,state.mappedRows,fields,options.fixedOptions); const checked=enumErrors.length?{ok:[],errors:enumErrors}:(options.validate?options.validate(state.mappedRows,state):{ok:state.mappedRows,errors:[]}); state.validRows=checked.ok||[];const checkedErrors=(checked.errors||[]).map(function(error){const n=Number(error&&error.row),source=Number.isFinite(n)&&n>=2&&state.mappedRows[n-2];return source&&source.__importRowNumber?Object.assign({},error,{row:source.__importRowNumber}):error;}); state.errors=studentErrors.concat(checkedErrors); state.warnings=checked.warnings||[]; state.duplicates=checked.duplicates||0; }
+    if(state.reading||state.validating||state.committing||!isActive())return;
+    if(state.step===0){ state.reading=true;const next=document.getElementById("mappedImportNext");if(next)next.disabled=true;try{ const hints=[];fields.forEach(function(field){hints.push(field.label,field.key);(field.aliases||[]).forEach(function(alias){hints.push(alias);});});state.rawRows=await parseWorkbookToRows(state.file,hints,{preserveTime:options.preserveTime===true}); }catch(e){showToast('读取失败：'+(e.message||e),'error');return;}finally{state.reading=false;if(next)next.disabled=false;} if(!state.rawRows.length){showToast('文件中没有可导入的数据','error');return;} state.headers=Object.keys(state.rawRows.reduce(function(all,row){Object.keys(row).forEach(function(key){all[key]=1;});return all;},{})); state.mapping=defaultMapping(state.headers);
+      if(!isActive())return;
+      if(options.autoRecognize){
+        const absent=(options.autoRequiredFields||[]).filter(function(key){return !state.mapping.some(function(field){return field.key===key&&field.excel;});});
+        const ambiguous=fields.filter(function(field){const names=[field.label].concat(field.aliases||[]).map(smartHeader);return state.headers.filter(function(header){return names.includes(smartHeader(String(header).replace(/（第\d+列）$/, "")));}).length>1;});
+        state.recognitionIssue=absent.length?'未完整识别学号、姓名或六个发展日期':ambiguous.length?'存在多个含义相同的列：'+ambiguous.map(function(field){return field.label;}).join('、'):'';
+        state.step=2;render();
+        if(!state.recognitionIssue)await window.mappedImportNext();
+        return;
+      }
+    }
+    else if(state.step===2){ state.validating=true;try{ const studentIdentityMapped=state.mapping.some(function(field){return /^(?:学号|学生学号|姓名|学生姓名)$/.test(String(field.label||"").trim())&&field.excel;});const missing=state.mapping.filter(function(field){const identity=/^(?:学号|学生学号|姓名|学生姓名)$/.test(String(field.label||"").trim());return field.required&&!field.excel&&!(identity&&studentIdentityMapped);}); const duplicate=state.mapping.filter(function(field,index){return field.excel&&state.mapping.some(function(other,otherIndex){return otherIndex<index&&other.excel===field.excel;});}); if(missing.length||duplicate.length){showToast(missing.length?'请映射必填字段：'+missing.map(function(x){return x.label;}).join('、'):'同一 Excel 表头不能重复映射','error');return;} state.mappedRows=importWizardToRows(state.rawRows,state.mapping); const smartMatch=await importConfirmApproximateMatches(options.name,state.mappedRows,fields,options.fixedOptions);if(!smartMatch.confirmed||!isActive())return; let studentErrors=[];if(options.studentLink!==false&&window.StudentLinkIntegrity){const linked=StudentLinkIntegrity.reconcileImportRows(state.mappedRows,fields,students);if(linked.enabled){const decision=await studentLinkConfirmImport(options.name,linked);if(!decision.confirmed||!isActive())return;state.mappedRows=linked.accepted;studentErrors=linked.rejected.map(function(item){return {row:item.row,msg:item.reason+"；本次未导入"};}).concat(linked.rejectedReferences.map(function(item){return {row:item.row,msg:item.field+"中的"+item.reason+"；该学号本次未导入"};}));}} const enumErrors=importEnumRows(options.name,state.mappedRows,fields,options.fixedOptions); const checked=enumErrors.length?{ok:[],errors:enumErrors}:(options.validate?options.validate(state.mappedRows,state):{ok:state.mappedRows,errors:[]}); state.validRows=checked.ok||[];const checkedErrors=(checked.errors||[]).map(function(error){const n=Number(error&&error.row),source=Number.isFinite(n)&&n>=2&&state.mappedRows[n-2];return source&&source.__importRowNumber?Object.assign({},error,{row:source.__importRowNumber}):error;}); state.errors=studentErrors.concat(checkedErrors); state.warnings=checked.warnings||[]; state.duplicates=checked.duplicates||0; }catch(error){if(isActive())showToast("校验失败："+(error.message||error),"error");return;}finally{state.validating=false;} }
+    if(!isActive())return;
     state.step++; render();
   };
-  window.mappedImportPrev=function(){ if(state.step>0){state.step--;render();} };
-  window.mappedImportMapChange=function(index,value){state.mapping[index].excel=value;};
+  window.mappedImportPrev=function(){ if(state.reading||state.validating||state.committing)return;if(state.step>0){state.step--;render();} };
+  window.mappedImportMapChange=function(index,value){if(state.validating||state.committing)return;state.mapping[index].excel=value;};
   window.mappedImportModeChange=function(input){state.mode=input.value;render();};
   window.mappedImportCommit=async function(){
-    if(state.committing||state.result&&state.result.done||!state.validRows.length)return;
+    if(!isActive()||state.step!==3||state.validating||state.committing||state.result&&state.result.done||!state.validRows.length)return;
     const enumErrors=importEnumRows(options.name,state.validRows,fields,options.fixedOptions);
     if(enumErrors.length){state.errors=enumErrors;state.validRows=[];render();return;}
     state.committing=true;
@@ -18716,8 +18791,8 @@ window.workbenchApplySyncedData=function(changedKeys){
   const parsed={};keys.forEach(function(key){if(arrays[key])parsed[key]=array(key);});
   if(keys.has(ORG_KEY)){
     const orgs=JSON.parse(localStorage.getItem(ORG_KEY)||"{}");
-    [[ORG_DEPTS,"depts"],[ORG_MAJORS,"majors"],[ORG_CLASSES,"classes"],[ORG_GRADES,"grades"],[ORG_DORMS,"dorms"],[ORG_ENROLL_TYPES,"enrollTypes"]].forEach(function(pair){
-      const values=Array.isArray(orgs[pair[1]])?orgs[pair[1]]:[];pair[0].splice(0,pair[0].length,...values);
+    [[ORG_DEPTS,"depts"],[ORG_MAJORS,"majors"],[ORG_CLASSES,"classes"],[ORG_GRADES,"grades"],[ORG_DORMS,"dorms"],[ORG_ENROLL_TYPES,"enrollTypes"],[ORG_LEVELS,"levels"]].forEach(function(pair){
+      const values=Array.isArray(orgs[pair[1]])?orgs[pair[1]]:(pair[0]===ORG_LEVELS?ORG_LEVELS.slice():[]);pair[0].splice(0,pair[0].length,...values);
     });
   }
   Object.keys(parsed).forEach(function(key){arrays[key](parsed[key]);});

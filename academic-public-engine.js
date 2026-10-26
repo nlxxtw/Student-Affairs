@@ -25,6 +25,7 @@ function validateRules(r){
  return warningRules(r);
 }
 function level(n,r){if(!r)return '';let out='';r.thresholds.forEach((t,i)=>{if(r.enabled[i]&&n>=t)out=LEVELS[i];});return out;}
+const gradeRemark=status=>({'已出分':'正常考试','缺考':'旷考','违纪':'作弊'}[status]||status||'未出分');
 function result(raw,scale,status,r){
  if(!['已出分','待出分','缓考','缺考','违纪','成绩撤回'].includes(status))fail('考试状态无效');
  if(!['百分制','五级制','两级制'].includes(scale))fail('请选择百分制、五级制或两级制','SCORE_INVALID');
@@ -107,4 +108,4 @@ function summarize(state,students,term,query){
  }
  return {rows,details,term,rules:r,selection,version:state.version};
 }
-module.exports={LEVELS,clean,fail,validateRules,warningRules,result,level,summarize,selectionFor,validTerm,enrollmentTerm};
+module.exports={LEVELS,clean,fail,gradeRemark,validateRules,warningRules,result,level,summarize,selectionFor,validTerm,enrollmentTerm};

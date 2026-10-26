@@ -204,7 +204,7 @@
   window.aiTodayContent=function(){return siAiSituation()+siOriginalAiToday();};
 
   function siCockpitPage(){
-    /* 2026-08-23：学籍状态统计改用与学生管理一致的七类口径（cockpitStatusRows，见 app.js），
+    /* 学籍状态统计改用与学生管理一致的八类口径（cockpitStatusRows，见 app.js），
        修复旧版把退学、延期毕业等错误并入「其他」导致的统计不一致。 */
     const snapshot=siBuildSnapshot(),total=snapshot.total,statusData=cockpitStatusRows(snapshot.students),onCampus=snapshot.onCampus,onPct=siPercent(onCampus,total);
     const legend=cockpitStatusLegend(statusData.rows);

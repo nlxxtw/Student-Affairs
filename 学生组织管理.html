@@ -199,8 +199,9 @@ tr:hover td{background:#fafdfb}
 input[type=date],input[type=datetime-local]{cursor:pointer}
 input[type=date].in,input[type=datetime-local].in{min-width:160px}
 </style>
+<link rel="stylesheet" href="/assets/workbench-ui.css">
 </head>
-<body>
+<body data-workbench-surface="organization">
 <div class="layout">
 <aside>
   <div class="brand"><b>🏛️ 学生组织管理</b><small>数智学工 · 已接入系统数据与附件库</small></div>
@@ -220,6 +221,7 @@ input[type=date].in,input[type=datetime-local].in{min-width:160px}
  * 嵌入状态复用父页面已完成初始化的系统桥接，避免再次读取全量存储、在线校验授权。 */
 var KEY="nnuzc_student_org_v1";
 var IS_EMBEDDED=new URLSearchParams(location.search).get("embedded")==="1";
+var TEMPLATE_ONLY=IS_EMBEDDED&&new URLSearchParams(location.search).get("templates")==="1";
 var INITIAL_TAB=new URLSearchParams(location.search).get("tab")||"home";
 if(IS_EMBEDDED)document.body.classList.add("embedded");
 function studentOrgDemoActive(){try{return !!(IS_EMBEDDED&&window.parent&&window.parent.__WORKBENCH_DEMO__&&window.parent.__WORKBENCH_DEMO__.active);}catch(e){return false;}}
@@ -259,6 +261,8 @@ function downloadXlsxFile(sheetName,rows,fileName){var enc=new TextEncoder(),fil
 /* ---------- 存储 ---------- */
 function uid(p){return p+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function loadData(){
+  // Data-center template downloads must not normalize or save existing business data.
+  if(TEMPLATE_ONLY)return blank();
   /* 清除旧独立预览版遗留的演示缓存；正式数据只读取系统同步键。 */
   try{var storage=systemStorage();storage.removeItem("szo_data_v1");return normalize(JSON.parse(storage.getItem(KEY)||"{}"));}catch(e){return blank();}
 }
@@ -342,6 +346,7 @@ function studentOrgHydrateClassroom(row){
   return row;
 }
 function save(){
+  if(TEMPLATE_ONLY)return false;
   if(studentOrgDemoActive()){studentOrgDemoNotice();DB=loadData();scheduleRender();return false;}
   try{systemStorage().setItem(KEY,JSON.stringify(DB));}
   catch(e){toast("保存失败：无法同步到数智学工系统，请检查服务连接后重试","warn");}

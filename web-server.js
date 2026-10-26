@@ -18,15 +18,18 @@ const { once } = require("events");
 const { Readable, Transform } = require("stream");
 const { finished, pipeline } = require("stream/promises");
 const { DatabaseSync } = require("node:sqlite");
+const { LicenseClient } = require("./license-client");
 const { UpdateClient } = require("./update-client");
 const { buildDemoStore } = require("./demo-data");
 const { createService: createAcademicPublicService } = require("./academic-public-service");
 const partyImportEngine = require("./party-import-engine");
+const studentIdentitySync = require("./student-identity-sync");
+const STUDENT_IDENTITY_LINKS_KEY = "nnuzc_student_identity_links_v1";
 
 const ROOT = __dirname;
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.XIANGCAI_PORT || 18766);
-const APP_VERSION = "V5.5.9";
+const APP_VERSION = "V5.6.3";
 const SERVER_STARTED_AT = new Date().toISOString();
 const SERVER_SOURCE_HASH = crypto.createHash("sha256").update(fs.readFileSync(__filename)).digest("hex");
 const DEMO_DATA_SOURCE_HASH = crypto.createHash("sha256").update(fs.readFileSync(path.join(ROOT, "demo-data.js"))).digest("hex");
@@ -198,7 +201,7 @@ const STATIC_ASSETS = Object.freeze({
   excelMergeApp: { raw: EXCEL_MERGE_APP_SOURCE, gzip: zlib.gzipSync(EXCEL_MERGE_APP_SOURCE, { level: 6 }), etag: `"${EXCEL_MERGE_APP_HASH}"` },
   excelMergeWorker: { raw: EXCEL_MERGE_WORKER_SOURCE, gzip: zlib.gzipSync(EXCEL_MERGE_WORKER_SOURCE, { level: 6 }), etag: `"${EXCEL_MERGE_WORKER_HASH}"` },
   excelMergeExtract: { raw: EXCEL_MERGE_EXTRACT_SOURCE, gzip: zlib.gzipSync(EXCEL_MERGE_EXTRACT_SOURCE, { level: 6 }), etag: `"${EXCEL_MERGE_EXTRACT_HASH}"` },
-  excelCheckToolHtml: { raw: EXCEL_CHECK_TOOL_HTML_SERVED, gzip: zlib.gzipSync(EXCEL_CHECK_TOOL_HTML_SOURCE, { level: 6 }), etag: `"${EXCEL_CHECK_TOOL_HTML_HASH}"` },
+  excelCheckToolHtml: { raw: EXCEL_CHECK_TOOL_HTML_SERVED, gzip: zlib.gzipSync(EXCEL_CHECK_TOOL_HTML_SERVED, { level: 6 }), etag: `"${EXCEL_CHECK_TOOL_HTML_HASH}"` },
   excelCheckApp: { raw: EXCEL_CHECK_APP_SOURCE, gzip: zlib.gzipSync(EXCEL_CHECK_APP_SOURCE, { level: 6 }), etag: `"${EXCEL_CHECK_APP_HASH}"` },
   excelCheckStyle: { raw: EXCEL_CHECK_STYLE_SOURCE, gzip: zlib.gzipSync(EXCEL_CHECK_STYLE_SOURCE, { level: 6 }), etag: `"${EXCEL_CHECK_STYLE_HASH}"` },
   dataMatchToolHtml: { raw: DATA_MATCH_TOOL_HTML_SERVED, gzip: zlib.gzipSync(DATA_MATCH_TOOL_HTML_SERVED, { level: 6 }), etag: `"${DATA_MATCH_TOOL_HTML_HASH}"` },
@@ -215,7 +218,7 @@ const VALID_TABLES = new Set([
   "meetings", "talk_records", "home_contacts", "punishment_records",
   "fund_records", "dorm_distribution_records", "dorm_module_state",
   "academic_public_state", "academic_public_artifacts", "academic_public_batches", "academic_public_warning_runs", "academic_term_records", "legacy_ui_store", "migration_meta", "recycle_bin", "recycle_bin_audit", "recycle_bin_requests",
-  "local_auth", "web_backup_records",
+  "local_auth", "web_backup_records", "data_center_history", "data_center_asset_map",
   "party_profiles", "party_history",
   "classroom_records", "student_dorm_records", "ai_secret"
 ]);
@@ -260,13 +263,13 @@ const BRANDING_STORE_KEY = "nnuzc_branding";
 const BRANDING_DEFAULT_NAME = "数智学工";
 const BRANDING_MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const authSessions = new Map();
-/* 已取消云端激活码门禁：授权改为人工分发安装包，本机不再校验激活状态。 */
+let licenseClient = null;
 let updateClient = null;
 let updateInstallScheduled = false;
 let lastAiModelListAt = 0;
 
 function licensePublicStatus() {
-  return { required: false, valid: true, state: "disabled" };
+  return licenseClient ? licenseClient.publicStatus() : { required: false, valid: true, state: "disabled" };
 }
 
 function updatePublicStatus() {
@@ -319,15 +322,30 @@ function ensureUpdateInstallSpace(packageBytes) {
 }
 
 function licenseAllowsOperations() {
-  return true;
+  const status = licensePublicStatus();
+  return status.required !== true || status.valid === true;
 }
 
-function licenseAllowsLockedOperation(_request, _url) {
-  return true;
+/* 未激活时允许浏览与演示数据生命周期；业务写入仍在请求入口和提交前双重校验。 */
+function licenseAllowsLockedOperation(request, url) {
+  const method = String(request && request.method || "GET").toUpperCase();
+  const pathname = String(url && url.pathname || "");
+  if (method === "GET" || method === "HEAD") return true;
+  if (workbenchReadOnlyRender(request, url)) return true;
+  return method === "POST" && ["/api/demo/load", "/api/demo/clear", "/api/updates/check", "/api/updates/download", "/api/updates/install"].includes(pathname);
 }
 
 function workbenchReadOnlyRender(request, url) {
   return request.method === "POST" && ["/api/academic-warning/render", "/api/academic-warning/batch", "/api/academic-public/exports", "/api/academic-public/analysis"].includes(url.pathname);
+}
+
+function licenseReadOnlyPayload() {
+  return {
+    error: "当前未激活，可以载入演示数据并浏览全部功能；导入、新增及数据修改需要有效激活码。",
+    code: "LICENSE_LOCKED",
+    licenseRequired: true,
+    license: licensePublicStatus()
+  };
 }
 const loginAttempts = new Map();
 let database;
@@ -515,7 +533,80 @@ function normalizeStudentLeaves(value, store, before, historical=false, original
   }
   catch(error){throw httpError(422,error.message||'请销假数据校验失败。',true);}
 }
-function applyStoreBatch(input, requireBaseline = false) {
+function prepareStudentIdentitySync(current, merged, operations) {
+  const submitted=operations.find(op=>op.key==="nnuzc_students"),master=merged.find(op=>op.key==="nnuzc_students"&&op.method==="PUT");
+  if(!master)return [];
+  const before=JSON.parse(current.nnuzc_students||"[]"),after=JSON.parse(master.value);
+  if(Array.isArray(after)){
+    after.forEach(row=>{if(row&&typeof row==="object"){if(["string","number"].includes(typeof row.id))row.id=String(row.id).trim();if(typeof row.name==="string")row.name=row.name.trim();}});
+    master.value=JSON.stringify(after);
+  }
+  const renames=submitted&&Object.hasOwn(submitted,"studentIdRenames")?submitted.studentIdRenames:[];
+  const changes=studentIdentitySync.identityChanges(before,after,renames,submitted?.baseValue?JSON.parse(submitted.baseValue):undefined);
+  if(!changes.length)return changes;
+  const oldIds=new Set(before.map(s=>String(s.id)));
+  for(const change of changes)if(change.oldId!==change.id&&oldIds.has(change.oldId)){
+    for(const key of studentIdentitySync.KEYS)if(current[key]&&studentIdentitySync.containsId(key,JSON.parse(current[key]),change.id))throw studentIdentitySync.conflict("新学号已有历史关联记录，不能自动合并；请先核查目标学号。");
+    if(database.prepare("SELECT 1 FROM recycle_bin WHERE status='active' AND student_lookup=? LIMIT 1").get(recycleStudentLookup(change.id)))throw studentIdentitySync.conflict("新学号在回收站已有学生关联记录，请先核查后再修改。");
+  }
+  for(const key of studentIdentitySync.KEYS){
+    const operation=merged.find(op=>op.key===key),value=operation?operation.value:current[key];
+    if(value==null)continue;
+    const next=JSON.stringify(studentIdentitySync.rewrite(key,JSON.parse(value),changes));
+    if(storeEqual(next,value))continue;
+    if(operation)operation.value=next;else merged.push({key,method:"PUT",value:next});
+  }
+  return changes;
+}
+
+function protectStudentIdentityReferences(current,merged,changes){
+  const proposed={...current};merged.forEach(op=>{if(op.method==="DELETE")delete proposed[op.key];else proposed[op.key]=op.value;});
+  const people=JSON.parse(proposed.nnuzc_students||"[]"),ids=new Set(people.map(s=>String(s.id))),links=Object.assign(Object.create(null),JSON.parse(current[STUDENT_IDENTITY_LINKS_KEY]||"{}"));
+  for(const change of changes)if(change.oldId!==change.id){
+    if(links[change.id]&&links[change.id]!==change.oldId)throw studentIdentitySync.conflict("新学号曾属于其他学生，不能自动复用，请先核查历史关联。");
+    for(const id of Object.keys(links))if(links[id]===change.oldId)links[id]=change.id;
+    delete links[change.id];links[change.oldId]=change.id;
+  }
+  for(const sid of ids)if(links[sid])throw studentIdentitySync.conflict("该学号已经更正，不能重新创建另一份学生档案，请读取最新名单。");
+  const retired=Object.keys(links).filter(sid=>!ids.has(sid)),names=people.map(s=>({oldId:String(s.id),id:String(s.id),name:s.name}));
+  for(const operation of merged){
+    if(operation.method!=="PUT"||!studentIdentitySync.KEYS.has(operation.key))continue;
+    const value=JSON.parse(operation.value);
+    for(const sid of retired)if(studentIdentitySync.containsId(operation.key,value,sid))throw studentIdentitySync.conflict("记录仍引用已更正的旧学号，请读取最新学生信息后重试。");
+    operation.value=JSON.stringify(studentIdentitySync.rewrite(operation.key,value,names));
+  }
+  if(changes.some(c=>c.oldId!==c.id))merged.push({key:STUDENT_IDENTITY_LINKS_KEY,method:"PUT",value:JSON.stringify(links)});
+}
+
+function syncRecycledStudentIdentity(changes) {
+  if(!changes.length)return;
+  for(const row of database.prepare("SELECT id,module_key,entity_type FROM recycle_bin WHERE status='active' AND entity_type!='student_archive'").all()){
+    const adapter=RECYCLE_ARRAY_ADAPTERS[row.module_key];
+    if(!adapter||(!studentIdentitySync.KEYS.has(adapter.storeKey)&&adapter.storeKey!=="nnuzc_students"))continue;
+    const entry=recycleGet(row.id),payload=entry.payload;
+    let next=studentIdentitySync.rewrite(adapter.storeKey,payload,changes);
+    if(adapter.storeKey==="nnuzc_students"){
+      next=studentIdentitySync.rewriteObject(payload,changes,{idFallback:!adapter.nested});
+      for(const change of changes)if(String(payload.parentId||"")===change.oldId){next.parentId=change.id;next.parentLabel=change.name;const nestedId=String(next.id||"");if(nestedId.startsWith(change.oldId+"::"))next.id=change.id+nestedId.slice(change.oldId.length);}
+    }
+    if(storeEqual(next,payload))continue;
+    const entityId=adapter.nested?String(next.id):recycleEntityId(next,adapter),studentId=recycleRecordStudentId(adapter,next);
+    database.prepare("UPDATE recycle_bin SET payload_json=?,checksum=?,student_lookup=?,entity_id_enc=?,entity_lookup=?,display_title_enc=? WHERE id=?").run(encryptText(JSON.stringify(next)),recycleRecordChecksum(next),recycleStudentLookup(studentId),encryptText(entityId),recycleLookup(row.module_key,entityId),encryptText(adapter.title(next)),row.id);
+  }
+}
+
+function assertUnmappedStudentRenames(current,merged,changes){
+  const master=merged.find(op=>op.key==="nnuzc_students"&&op.method==="PUT");if(!master)return;
+  const before=JSON.parse(current.nnuzc_students||"[]"),after=JSON.parse(master.value),oldIds=new Set(before.map(s=>String(s.id))),newIds=new Set(after.map(s=>String(s.id)));
+  if(!after.some(s=>!oldIds.has(String(s.id))))return;
+  const mapped=new Set(changes.map(c=>c.oldId));
+  for(const student of before){const sid=String(student.id);if(newIds.has(sid)||mapped.has(sid))continue;
+    for(const key of studentIdentitySync.KEYS){const op=merged.find(item=>item.key===key),value=op?op.value:current[key];if(value&&studentIdentitySync.containsId(key,JSON.parse(value),sid))throw studentIdentitySync.conflict("旧页面缺少学号关联变更信息，请读取最新数据后在学生编辑中修改学号。");}
+    if(academicPublicService.hasStudentReference(sid))throw studentIdentitySync.conflict("学号变更尚未关联公用版学业记录，请读取最新数据后重新修改。");
+  }
+}
+
+function applyStoreBatch(input, requireBaseline = false, options = {}) {
   const operations = input && Array.isArray(input.operations) ? input.operations : null;
   if (!operations || !operations.length || operations.length > 500) throw httpError(400, "批量保存操作数量无效。", true);
   const force = input.force === true, seen = new Set(); let totalBytes = 0;
@@ -524,6 +615,8 @@ function applyStoreBatch(input, requireBaseline = false) {
     const key = String(operation && operation.key || ""), method = String(operation && operation.method || "").toUpperCase();
     if (!safeStoreKey(key) || seen.has(key) || !["PUT", "DELETE"].includes(method)) throw httpError(400, "批量保存包含无效或重复的数据键。", true);
     if (method === "PUT" && isRetiredStoreKey(key)) throw httpError(410, "该功能已经下线，相关数据不能再写入。", true);
+    if(key===STUDENT_IDENTITY_LINKS_KEY)throw httpError(403,"学生身份关联由系统维护，不能直接修改。",true);
+    if(operation.studentIdRenames!==undefined&&(key!=="nnuzc_students"||method!=="PUT"))throw httpError(400,"学号变更说明只能随学生主档保存。",true);
     seen.add(key);
     operation.method = method;
     if (method === "PUT") {
@@ -532,7 +625,7 @@ function applyStoreBatch(input, requireBaseline = false) {
     }
   });
   if (totalBytes > MAX_BODY_BYTES) throw httpError(413, "批量保存总内容过大。", true);
-  database.exec("BEGIN IMMEDIATE");
+  if(options.transaction!==false)database.exec("BEGIN IMMEDIATE");
   try {
     const current = readStore(), remoteMergedKeys = [];
     const merged = operations.map(operation => {
@@ -546,6 +639,8 @@ function applyStoreBatch(input, requireBaseline = false) {
       if (!same) remoteMergedKeys.push(operation.key);
       return { key: operation.key, method: value === null ? "DELETE" : "PUT", value };
     });
+    const identityChanges=prepareStudentIdentitySync(current,merged,operations);
+    protectStudentIdentityReferences(current,merged,identityChanges);
     if (merged.some(op => ["nnuzc_students", "nnuzc_dorm_dist", "nnuzc_dorm_spatial_v1"].includes(op.key))) {
       const proposedStore = Object.assign({}, current);
       merged.forEach(op => { if (op.method === "DELETE") delete proposedStore[op.key]; else proposedStore[op.key] = op.value; });
@@ -554,6 +649,7 @@ function applyStoreBatch(input, requireBaseline = false) {
     const leaveOperation=merged.find(op=>op.key==='nnuzc_student_leaves'&&op.method==='PUT');
     if(leaveOperation){const proposedStore={...current};merged.forEach(op=>{if(op.method==='DELETE')delete proposedStore[op.key];else proposedStore[op.key]=op.value;});leaveOperation.value=normalizeStudentLeaves(leaveOperation.value,proposedStore,current.nnuzc_student_leaves,false,merged.some(op=>op.key==='nnuzc_students')?current.nnuzc_students:undefined);}
     if(merged.some(op=>['nnuzc_term_list','nnuzc_students'].includes(op.key))&&!merged.some(op=>op.key==='nnuzc_student_leaves')&&current.nnuzc_student_leaves){const proposedStore={...current};merged.forEach(op=>{if(op.method==='DELETE')delete proposedStore[op.key];else proposedStore[op.key]=op.value;});normalizeStudentLeaves(current.nnuzc_student_leaves,proposedStore,current.nnuzc_student_leaves,true);}
+    assertUnmappedStudentRenames(current,merged,identityChanges);
     if (input.recycleCheckClassIds !== undefined) {
       const ids = recycleValidateIds(input.recycleCheckClassIds);
       const required = ["nnuzc_checkclass", "nnuzc_students", "nnuzc_chaoxing_imports"];
@@ -564,7 +660,11 @@ function applyStoreBatch(input, requireBaseline = false) {
       const preview = recycleDeletePreview({moduleKey:"checkClassRecord",entityType:"check_class_record",entityIds:ids});
       recycleMove({confirmation:"移入回收站",previewToken:preview.previewToken,requestId:crypto.randomUUID()}, false);
     }
-    merged.forEach((operation) => {
+    // Validate the complete proposed state above, then write masters before records
+    // whose student references are checked against the database inside this transaction.
+    const writePriority = key => key === "nnuzc_orgs" ? 0 : key === "nnuzc_students" ? 1 : 2;
+    const writeOperations = merged.slice().sort((a, b) => writePriority(a.key) - writePriority(b.key));
+    writeOperations.forEach((operation) => {
       const key = String(operation.key), method = String(operation.method).toUpperCase();
       if (storeEqual(operation.value === null ? undefined : operation.value, current[key])) return;
       if (method === "DELETE") {
@@ -574,11 +674,45 @@ function applyStoreBatch(input, requireBaseline = false) {
       }
       if (!writeCoreKey(key, operation.value, force ? "force" : "sync", { transaction: false })) database.prepare("INSERT INTO legacy_ui_store(key,value,updated_at) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at").run(key, encryptText(operation.value));
     });
-    database.exec("COMMIT");
+    const academicIdentityChanged=academicPublicService.syncStudentIdentity(identityChanges);
+    syncRecycledStudentIdentity(identityChanges);
+    if(options.transaction!==false)database.exec("COMMIT");
     const saved = readStore(), storeValues = {};
-    operations.forEach(op => { storeValues[op.key] = saved[op.key] ?? null; });
-    return { ok: true, count: operations.length, storage: "sqlite-transaction", storeValues, remoteMergedKeys };
-  } catch (error) { try { database.exec("ROLLBACK"); } catch (_ignored) {} throw error; }
+    merged.forEach(op => { storeValues[op.key] = saved[op.key] ?? null; });
+    return { ok: true, count: operations.length, storage: "sqlite-transaction", storeValues, remoteMergedKeys, academicIdentityChanged };
+  } catch (error) { try { if(options.transaction!==false)database.exec("ROLLBACK"); } catch (_ignored) {} throw error; }
+}
+
+let dataCenterService=null;
+function getDataCenterService(){
+  if(dataCenterService)return dataCenterService;
+  const academicExport=()=>{
+    academicPublicService.init();
+    const row=database.prepare("SELECT payload FROM academic_public_state WHERE id=1").get();
+    const state={version:0,rules:null,courses:[],attempts:[],exams:[],cases:[],reportReferences:[],publications:[],ruleHistory:[],acl:{},...(row?JSON.parse(decryptText(row.payload)):{})};
+    return {state,batches:database.prepare("SELECT id,actor,created,payload FROM academic_public_batches").all().map(r=>({...r,payload:JSON.parse(decryptText(r.payload))})),warningRuns:database.prepare("SELECT id,actor,created,selection_key,data_version,payload FROM academic_public_warning_runs").all().map(r=>({...r,payload:JSON.parse(decryptText(r.payload))}))};
+  };
+  const academicValidate=(data,students)=>{
+    const state=data.state,people=new Set(students.map(s=>String(s.id))),courses=new Set();
+    for(const collection of ['courses','attempts','exams','cases','reportReferences','publications','ruleHistory'])if(!Array.isArray(state[collection]))throw httpError(400,'公用版学业集合格式无效',true);
+    if(state.rules)require('./academic-public-engine').validateRules(state.rules);
+    for(const collection of ['courses','attempts','exams','cases','reportReferences','publications']){const ids=new Set();for(const row of state[collection]){if(!row||typeof row!=='object'||typeof row.id!=='string'||!row.id||ids.has(row.id))throw httpError(400,'公用版学业记录标识缺失或重复',true);ids.add(row.id);}}
+    for(const rows of [data.batches,data.warningRuns])if(new Set(rows.map(r=>r.id)).size!==rows.length)throw httpError(400,'公用版学业历史标识重复',true);
+    for(const course of state.courses){if(!course.id||courses.has(course.id)||!people.has(String(course.sid)))throw httpError(400,'公用版学业课程标识或学生关联无效',true);courses.add(course.id);}
+    for(const attempt of state.attempts)if(!courses.has(attempt.courseId))throw httpError(400,'公用版学业考试阶段缺少课程关联',true);
+    for(const row of [...state.exams,...state.cases,...state.reportReferences])if(row.sid&&!people.has(String(row.sid)))throw httpError(400,'公用版学业记录缺少学生关联',true);
+    for(const rows of [data.batches,data.warningRuns])if(rows.some(r=>typeof r.id!=='string'||typeof r.actor!=='string'||typeof r.created!=='string'||!r.payload||typeof r.payload!=='object'))throw httpError(400,'公用版学业历史格式无效',true);
+  };
+  const academicImport=data=>{
+    const current=academicExport(),state={...data.state,version:Number(current.state.version||0)+1,acl:current.state.acl||{}};
+    database.prepare('INSERT INTO academic_public_state(id,version,payload) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET version=excluded.version,payload=excluded.payload').run(state.version,encryptText(JSON.stringify(state)));
+    database.exec('DELETE FROM academic_public_batches; DELETE FROM academic_public_warning_runs; DELETE FROM academic_public_artifacts;');
+    for(const r of data.batches)database.prepare('INSERT INTO academic_public_batches(id,actor,created,payload) VALUES(?,?,?,?)').run(r.id,r.actor,r.created,encryptText(JSON.stringify(r.payload)));
+    for(const r of data.warningRuns)database.prepare('INSERT INTO academic_public_warning_runs(id,actor,created,selection_key,data_version,payload) VALUES(?,?,?,?,?,?)').run(r.id,r.actor,r.created,String(r.selection_key||''),Number(r.data_version)||0,encryptText(JSON.stringify(r.payload)));
+  };
+  const warningTemplate={meta:academicWarningCustomTemplateMeta,read:()=>{const meta=academicWarningCustomTemplateMeta();if(!meta)return null;const file=academicWarningTemplateBytes(),mime=meta.extension==='.doc'?'application/msword':'application/vnd.openxmlformats-officedocument.wordprocessingml.document';return {...meta,data:'data:'+mime+';base64,'+file.content.toString('base64')};},install:file=>{const paths=[ACADEMIC_WARNING_CUSTOM_TEMPLATE_PATH,ACADEMIC_WARNING_CUSTOM_TEMPLATE_META_PATH],old=paths.map(p=>fs.existsSync(p)?fs.readFileSync(p):null);commitAcademicWarningTemplate(file.content,{name:file.name,extension:file.extension,size:file.size,sha256:file.sha256,updatedAt:new Date().toISOString()});return ()=>{paths.forEach((p,i)=>{if(old[i])fs.writeFileSync(p,old[i],{mode:0o600});else fs.rmSync(p,{force:true});});};}};
+  dataCenterService=require('./data-center-service').createService({db:()=>database,dataDir:DATA_DIR,indexHtml:fs.readFileSync(path.join(ROOT,'index.html'),'utf8'),version:APP_VERSION,readStore,academicExport,academicValidate,academicImport,warningTemplate,attachmentPath,analysisDir:ACADEMIC_ANALYSIS_RUN_DIR,encryptBuffer,decryptBuffer,sha256File,attachmentQuota:MAX_ATTACHMENT_TOTAL_BYTES,attachmentBytes:()=>fs.readdirSync(UPLOAD_DIR).reduce((n,f)=>{const p=path.join(UPLOAD_DIR,f);return n+(fs.statSync(p).isFile()?fs.statSync(p).size:0);},0),backup:createBackup,apply:operations=>applyStoreBatch({operations},false,{transaction:false}),validate:(operations,academic)=>{database.exec("SAVEPOINT data_center_validate");try{if(operations.length)applyStoreBatch({operations},false,{transaction:false});if(academic)academicImport(academic);}finally{database.exec("ROLLBACK TO data_center_validate; RELEASE data_center_validate");}},readJson, json:sendJson});
+  return dataCenterService;
 }
 
 function importPartyLedger(input, actor) {
@@ -645,6 +779,7 @@ const RECYCLE_ARRAY_ADAPTERS = Object.freeze({
   ,baseClass: { label: "基础数据 · 班级", entityType: "base_class", storeKey: "nnuzc_orgs", rootCollection: "classes", idField: "name", studentField: "", title: (row) => `${row.name || "班级"} · ${row.major || "未归属专业"}` }
   ,baseGrade: { label: "基础数据 · 年级", entityType: "base_grade", storeKey: "nnuzc_orgs", rootCollection: "grades", idField: "name", studentField: "", title: (row) => row.name || "年级" }
   ,baseEnrollType: { label: "基础数据 · 招生类别", entityType: "base_enroll_type", storeKey: "nnuzc_orgs", rootCollection: "enrollTypes", idField: "name", studentField: "", title: (row) => row.name || "招生类别" }
+  ,baseLevel: { label: "基础数据 · 培养层次", entityType: "base_level", storeKey: "nnuzc_orgs", rootCollection: "levels", idField: "name", studentField: "", title: (row) => row.name || "培养层次" }
   ,baseDorm: { label: "基础数据 · 宿舍楼", entityType: "base_dorm", storeKey: "nnuzc_orgs", rootCollection: "dorms", idField: "building", studentField: "", title: (row) => `${row.zone || "未分区"} · ${row.building || "宿舍楼"}` }
   ,dormBuilding: { label: "宿舍空间 · 楼栋", entityType: "dorm_building", storeKey: "nnuzc_dorm_spatial_v1", rootCollection: "buildings", studentField: "", title: (row) => `${row.zone || "未分区"} · ${row.building || "宿舍楼"}` }
   ,dormRoom: { label: "宿舍空间 · 房间", entityType: "dorm_room", storeKey: "nnuzc_dorm_spatial_v1", rootCollection: "rooms", embedCollections: [{ field: "__bedNotes", source: "bedNotes", foreignKey: "roomId" }], studentField: "", title: (row) => `${row.zone || "未分区"} · ${row.building || ""} · ${row.room || "房间"}` }
@@ -1748,6 +1883,17 @@ function writeCoreKey(key, value, action = "sync", options = {}) {
   try {
     if (key === "nnuzc_orgs") {
       const orgs = parseJson(value, "基础数据");
+      if (orgs.levels !== undefined) {
+        if (!Array.isArray(orgs.levels)) throw httpError(400, "培养层次字典必须是列表。", true);
+        const levelNames = new Set();
+        orgs.levels = orgs.levels.map(row => {
+          if (!row || typeof row.name !== "string" || !row.name.trim()) throw httpError(400, "培养层次名称不能为空。", true);
+          const name = row.name.trim();
+          if (levelNames.has(name)) throw httpError(400, "培养层次名称不能重复。", true);
+          levelNames.add(name);
+          return Object.assign({}, row, { name });
+        });
+      }
       const departments = Array.isArray(orgs.depts) ? orgs.depts : [];
       const majors = Array.isArray(orgs.majors) ? orgs.majors : [];
       const classes = Array.isArray(orgs.classes) ? orgs.classes : [];
@@ -1767,7 +1913,8 @@ function writeCoreKey(key, value, action = "sync", options = {}) {
       const orgAux = {
         grades: Array.isArray(orgs.grades) ? orgs.grades : [],
         dorms: Array.isArray(orgs.dorms) ? orgs.dorms : [],
-        enrollTypes: Array.isArray(orgs.enrollTypes) ? orgs.enrollTypes : []
+        enrollTypes: Array.isArray(orgs.enrollTypes) ? orgs.enrollTypes : [],
+        ...(Array.isArray(orgs.levels) ? { levels: orgs.levels } : {})
       };
       database.prepare("INSERT INTO legacy_ui_store(key,value,updated_at) VALUES('nnuzc_orgs_extra',?,CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=CURRENT_TIMESTAMP").run(encryptText(JSON.stringify(orgAux)));
     } else if (key === "nnuzc_term_list") {
@@ -2074,6 +2221,16 @@ function restoreJsonBackup(payload) {
     if (typeof text !== "string" || Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) throw httpError(400, `备份数据项 ${key} 无效或过大。`);
     entries.set(key, text);
   }
+  if(entries.has("nnuzc_students")||entries.has(STUDENT_IDENTITY_LINKS_KEY)){
+    const current=readStore(),storedLinks=entries.get(STUDENT_IDENTITY_LINKS_KEY)??current[STUDENT_IDENTITY_LINKS_KEY];
+    if(storedLinks!=null){
+      const links=JSON.parse(storedLinks),people=JSON.parse(entries.get("nnuzc_students")??current.nnuzc_students??"[]");
+      if(!links||typeof links!=="object"||Array.isArray(links)||!Array.isArray(people))throw httpError(400,"备份中的学号关联数据格式无效。",true);
+      const ids=new Set(people.map(s=>String(s.id))),valid=Object.create(null);
+      for(const [from,to]of Object.entries(links))if(typeof to==="string"&&from!==to&&!ids.has(from)&&ids.has(to))valid[from]=to;
+      entries.set(STUDENT_IDENTITY_LINKS_KEY,JSON.stringify(valid));
+    }
+  }
   if(entries.has("nnuzc_student_leaves")){const proposed={...readStore(),...Object.fromEntries(entries)};entries.set("nnuzc_student_leaves",normalizeStudentLeaves(entries.get("nnuzc_student_leaves"),proposed,null,true));}
   else if(entries.has('nnuzc_students')||entries.has('nnuzc_term_list')){const current=readStore();if(current.nnuzc_student_leaves)normalizeStudentLeaves(current.nnuzc_student_leaves,{...current,...Object.fromEntries(entries)},current.nnuzc_student_leaves,true);}
   if (!entries.size && !skippedRetiredKeys.length) throw httpError(400, "备份中没有可恢复的数据。");
@@ -2187,14 +2344,15 @@ function readCoreStore(sourceDatabase = database) {
   const majors = sourceDatabase.prepare("SELECT code,name,department_name AS dept,years FROM majors ORDER BY name").all();
   const classes = sourceDatabase.prepare("SELECT name,department_name AS dept,major_name AS major,grade,counselor,teacher,level,enroll_type AS enrollType FROM class_groups ORDER BY name").all().map((row)=>Object.assign({},row,{counselor:decryptText(row.counselor),teacher:decryptText(row.teacher)}));
   const orgAux = (() => { try { const r = sourceDatabase.prepare("SELECT value FROM legacy_ui_store WHERE key='nnuzc_orgs_extra'").get(); if (r && r.value) return JSON.parse(decryptText(r.value)); } catch (_e) {} return { grades: [], dorms: [], enrollTypes: [] }; })();
-  if (departments.length || majors.length || classes.length || (orgAux.grades && orgAux.grades.length) || (orgAux.dorms && orgAux.dorms.length) || (orgAux.enrollTypes && orgAux.enrollTypes.length)) {
+  if (departments.length || majors.length || classes.length || (orgAux.grades && orgAux.grades.length) || (orgAux.dorms && orgAux.dorms.length) || (orgAux.enrollTypes && orgAux.enrollTypes.length) || Array.isArray(orgAux.levels)) {
     store.nnuzc_orgs = JSON.stringify({
       depts: departments,
       majors,
       classes,
       grades: Array.isArray(orgAux.grades) ? orgAux.grades : [],
       dorms: Array.isArray(orgAux.dorms) ? orgAux.dorms : [],
-      enrollTypes: Array.isArray(orgAux.enrollTypes) ? orgAux.enrollTypes : []
+      enrollTypes: Array.isArray(orgAux.enrollTypes) ? orgAux.enrollTypes : [],
+      ...(Array.isArray(orgAux.levels) ? { levels: orgAux.levels } : {})
     });
   }
   const terms = sourceDatabase.prepare("SELECT name,is_current FROM terms ORDER BY sort_order,name").all();
@@ -2681,6 +2839,7 @@ function deleteBackup(id) {
 /* 清除本机业务与功能配置；本机/云端备份和本机登录状态不受影响。
  * WebDAV 仅保留服务器地址和云端文件名，账号、授权码及临时文件一律清除。 */
 function clearLocalBusinessData(body) {
+  if(dataCenterService?.isBusy())throw httpError(409,"数据中心正在处理文件，请完成后再清空数据。",true);
   if (!body || body.confirmation !== "清空本地全部数据") throw httpError(400, "请完整输入确认文字后再清空本地数据。", true);
   const savedWebdav = loadWebdavSecret();
   const retainedWebdav = savedWebdav && savedWebdav.url && savedWebdav.remoteFile
@@ -2694,6 +2853,7 @@ function clearLocalBusinessData(body) {
   database.exec("BEGIN IMMEDIATE");
   try {
     tables.forEach((table) => { validateTable(table); database.prepare(`DELETE FROM ${table}`).run(); });
+    for(const table of ["data_center_history","data_center_asset_map"])if(database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)){validateTable(table);database.prepare(`DELETE FROM ${table}`).run();}
     database.prepare("DELETE FROM legacy_ui_store WHERE key LIKE 'nnuzc_%'").run();
     /* “清空本地全部数据”必须同时结束可能遗留的演示模式状态。
        其他 migration_meta 项是数据库迁移完成标记，不能一并删除。 */
@@ -2711,6 +2871,8 @@ function clearLocalBusinessData(body) {
     fs.rmSync(target, { recursive: true, force: true, maxRetries: 3, retryDelay: 120 });
     fs.mkdirSync(target, { recursive: true, mode: 0o700 });
   };
+  if(dataCenterService)dataCenterService.reset();
+  clearDirectory(path.join(DATA_DIR,"data-center"),"data-center","数据中心临时文件");
   clearDirectory(UPLOAD_DIR, "attachments", "附件");
   clearDirectory(WEBDAV_TEMP_DIR, "webdav-tmp", "WebDAV 临时文件");
   resetAcademicWarningCustomTemplate();
@@ -2740,6 +2902,7 @@ function backupPreflight(id) {
 }
 
 function restoreBackup(id, confirmation) {
+  if(dataCenterService?.isBusy())throw httpError(409,"数据中心正在处理文件，请完成后再恢复备份。",true);
   const preflight = backupPreflight(id);
   if (!confirmation || confirmation.confirmId !== id || confirmation.sha256 !== preflight.sha256) throw httpError(400, "恢复确认信息无效，请重新执行恢复前检查。");
   const mode = confirmation.mode === "merge" ? "merge" : "replace";
@@ -2751,43 +2914,101 @@ function restoreBackup(id, confirmation) {
     return file.startsWith(path.resolve(BACKUP_DIR) + path.sep) && fs.existsSync(file);
   });
   if (mode === "merge") return mergeBackup(source, "", registry, id);
-  // 完整数据库恢复可能回退账号的授权版本，不能让旧会话随备份复活。
-  for (const [sessionId, session] of authSessions) if (session.uid !== "local-super-admin") authSessions.delete(sessionId);
-  database.close();
-  database = null;
-  fs.copyFileSync(source, DB_PATH);
-  const attachmentSource = `${source}.attachments`;
   const keySource = `${source}.portable-data-key.json`;
-  const academicTemplateSource = `${source}.academic-warning-template.bin`;
-  const academicTemplateMetaSource = `${source}.academic-warning-template.json`;
-  // 旧版备份可能没有附件副本；恢复时清空现有附件，以避免与恢复后的数据库记录不一致。
-  fs.rmSync(UPLOAD_DIR, { recursive: true, force: true, maxRetries: 3, retryDelay: 120 });
-  if (fs.existsSync(attachmentSource)) fs.cpSync(attachmentSource, UPLOAD_DIR, { recursive: true, force: true });
-  else fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  if (fs.existsSync(keySource)) {
-    const nextKey = loadPortableDataKeyFile(keySource);
-    if (!nextKey) throw new Error("备份中的便携数据密钥无效，已停止恢复。");
-    fs.copyFileSync(keySource, PORTABLE_DATA_KEY_PATH);
+  const previousKey = Buffer.from(requireDataKey()), nextKey = fs.existsSync(keySource) ? loadPortableDataKeyFile(keySource) : Buffer.from(previousKey);
+  if (!nextKey) { previousKey.fill(0); throw httpError(409, "备份中的便携数据密钥无效，当前数据未被修改。", true); }
+  const staging = fs.mkdtempSync(path.join(DATA_DIR, "backup-restore-"));
+  const templatePresent = fs.existsSync(`${source}.academic-warning-template.bin`) && fs.existsSync(`${source}.academic-warning-template.json`);
+  const items = [
+    { name: "database", source, target: DB_PATH },
+    { name: "attachments", source: `${source}.attachments`, target: UPLOAD_DIR, directory: true },
+    ...(fs.existsSync(keySource) ? [{ name: "key", source: keySource, target: PORTABLE_DATA_KEY_PATH }] : []),
+    { name: "template", source: templatePresent ? `${source}.academic-warning-template.bin` : "", target: ACADEMIC_WARNING_CUSTOM_TEMPLATE_PATH },
+    { name: "template-meta", source: templatePresent ? `${source}.academic-warning-template.json` : "", target: ACADEMIC_WARNING_CUSTOM_TEMPLATE_META_PATH }
+  ];
+  let replacementStarted = false, canClean = true;
+  function removeSidecars() { for (const suffix of ["-wal", "-shm"]) fs.rmSync(DB_PATH + suffix, { force: true }); }
+  try {
+    // Finish copies and authenticate all encrypted database values before touching current files.
+    for (const item of items) {
+      item.incoming = path.join(staging, "incoming-" + item.name);
+      item.previous = path.join(staging, "previous-" + item.name);
+      if (item.source && fs.existsSync(item.source)) {
+        if (item.directory) fs.cpSync(item.source, item.incoming, { recursive: true });
+        else fs.copyFileSync(item.source, item.incoming);
+      } else if (item.directory) fs.mkdirSync(item.incoming);
+    }
+    if (crypto.createHash("sha256").update(fs.readFileSync(items[0].incoming)).digest("hex") !== preflight.sha256) throw new Error("备份在准备恢复时发生变化，请重新检查。");
+    const stagedKey = items.find(item => item.name === "key");
+    if (stagedKey) {
+      const copiedKey = loadPortableDataKeyFile(stagedKey.incoming);
+      if (!copiedKey) throw new Error("备份中的便携数据密钥无效。");
+      nextKey.set(copiedKey); copiedKey.fill(0);
+    }
+    validateBackupEncryption(items[0].incoming, nextKey);
+    for (const file of fs.readdirSync(items[1].incoming, { withFileTypes: true })) {
+      if (file.isFile()) decryptBuffer(fs.readFileSync(path.join(items[1].incoming, file.name)), nextKey);
+    }
+    const stagedTemplate = items.find(item => item.name === "template");
+    if (fs.existsSync(stagedTemplate.incoming)) decryptBuffer(fs.readFileSync(stagedTemplate.incoming), nextKey);
+    database.exec("PRAGMA wal_checkpoint(TRUNCATE);");
+    database.close(); database = null; replacementStarted = true;
+    for (const item of items) {
+      if (fs.existsSync(item.target)) { fs.renameSync(item.target, item.previous); item.moved = true; }
+      if (fs.existsSync(item.incoming)) { fs.renameSync(item.incoming, item.target); item.installed = true; }
+    }
+    removeSidecars();
     activateDataKey(nextKey);
+    openDatabase();
+    database.prepare("DELETE FROM local_auth WHERE id=1").run();
+    migrateSensitiveData();
+    purgeRetiredNameCheckHistory();
+    purgeRetiredCounselorGrowthPlans();
+    purgeRetiredKnowledgeFeature();
+    purgeRetiredStudentLegacyFields();
+    backfillStudentIdentityBlanks();
+    const register = database.prepare("INSERT OR REPLACE INTO web_backup_records(id,relative_path,sha256,note,created_at) VALUES (?,?,?,?,?)");
+    registry.forEach((item) => register.run(item.id, item.relative_path, item.sha256, item.note, item.created_at));
+    // Revoke historic nonlocal sessions only after restoration succeeds.
+    for (const [sessionId, session] of authSessions) if (session.uid !== "local-super-admin") authSessions.delete(sessionId);
+    return { restored: true };
+  } catch (error) {
+    if (replacementStarted) {
+      try {
+        if (database) { database.close(); database = null; }
+        removeSidecars();
+        for (const item of [...items].reverse()) {
+          if (item.installed) fs.rmSync(item.target, { recursive: !!item.directory, force: true, maxRetries: 3, retryDelay: 120 });
+          if (item.moved) fs.renameSync(item.previous, item.target);
+        }
+        activateDataKey(previousKey); openDatabase();
+      } catch (rollbackError) {
+        canClean = false;
+        log(`备份恢复回滚失败，保留恢复材料 ${path.basename(staging)}：${rollbackError.message}`);
+        throw httpError(500, "备份恢复失败且自动回退未完成。请保留数据目录并联系维护人员，勿再次恢复或清理文件。", true);
+      }
+    }
+    throw httpError(409, "备份恢复失败，当前数据已保留：" + error.message, true);
+  } finally {
+    previousKey.fill(0); nextKey.fill(0);
+    if (canClean) try { fs.rmSync(staging, { recursive: true, force: true, maxRetries: 3, retryDelay: 120 }); } catch (error) { log(`恢复临时材料待清理 ${path.basename(staging)}：${error.message}`); }
   }
-  if (fs.existsSync(academicTemplateSource) && fs.existsSync(academicTemplateMetaSource)) {
-    fs.copyFileSync(academicTemplateSource, ACADEMIC_WARNING_CUSTOM_TEMPLATE_PATH);
-    fs.copyFileSync(academicTemplateMetaSource, ACADEMIC_WARNING_CUSTOM_TEMPLATE_META_PATH);
-  } else {
-    resetAcademicWarningCustomTemplate();
-  }
-  ["-wal", "-shm"].forEach((suffix) => { const file = DB_PATH + suffix; if (fs.existsSync(file)) fs.unlinkSync(file); });
-  openDatabase();
-  database.prepare("DELETE FROM local_auth WHERE id=1").run();
-  migrateSensitiveData();
-  purgeRetiredNameCheckHistory();
-  purgeRetiredCounselorGrowthPlans();
-  purgeRetiredKnowledgeFeature();
-  purgeRetiredStudentLegacyFields();
-  backfillStudentIdentityBlanks();
-  const register = database.prepare("INSERT OR REPLACE INTO web_backup_records(id,relative_path,sha256,note,created_at) VALUES (?,?,?,?,?)");
-  registry.forEach((item) => register.run(item.id, item.relative_path, item.sha256, item.note, item.created_at));
-  return { restored: true };
+}
+
+function validateBackupEncryption(source, key) {
+  const check = new DatabaseSync(source, { readOnly: true });
+  try {
+    for (const row of check.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()) {
+      const quoted = '"' + row.name.replace(/"/g, '""') + '"';
+      for (const record of check.prepare("SELECT * FROM " + quoted).iterate()) {
+        for (const value of Object.values(record)) if (isEncryptedText(value)) {
+          const encrypted = Buffer.from(value.slice("xcenc:v1:".length), "base64");
+          if (encrypted.length < 32 || encrypted.subarray(0, 4).toString("ascii") !== "XCA1") throw new Error("备份中的加密数据格式损坏。");
+          decryptBuffer(encrypted, key);
+        }
+      }
+    }
+  } finally { check.close(); }
 }
 
 /* 合并恢复统一在业务数据层执行：旧版明文库与当前加密库先解码成同一结构，
@@ -2850,9 +3071,16 @@ function mergeStoreValue(currentText, backupText, stats) {
 }
 
 function collectAttachmentReferences(value, output) {
+  if (typeof value === "string") {
+    for (const match of value.matchAll(/\/attachments\/([a-f0-9-]{36})/ig)) output.add(match[1].toLowerCase());
+    return;
+  }
   if (!value || typeof value !== "object") return;
   if (typeof value.id === "string" && /^[a-f0-9-]{36}$/i.test(value.id) && (value.url || value.name || value.fileName || value.mime || value.size)) output.add(value.id.toLowerCase());
-  Object.values(value).forEach((child) => { if (child && typeof child === "object") collectAttachmentReferences(child, output); });
+  for (const [key, child] of Object.entries(value)) {
+    if (/^(?:attachmentId|fileId|photoId)$/i.test(key) && typeof child === "string" && /^[a-f0-9-]{36}$/i.test(child)) output.add(child.toLowerCase());
+    collectAttachmentReferences(child, output);
+  }
 }
 
 function attachmentReferencesFromStore(store) {
@@ -2953,7 +3181,7 @@ function contentType(file) {
 
 function attachmentPath(id) {
   if (typeof id !== "string" || !/^[a-f0-9-]{36}$/i.test(id)) throw new Error("附件标识无效。");
-  return path.join(UPLOAD_DIR, id);
+  return path.join(UPLOAD_DIR, id.toLowerCase());
 }
 
 function saveAttachment(nameValue, content) {
@@ -2971,7 +3199,7 @@ function saveAttachment(nameValue, content) {
 
 function deleteAttachment(id) {
   const state = attachmentMaintenanceState();
-  if (state.referenceIds.has(id)) throw httpError(409, "附件仍被业务记录引用，不能删除。请先保存记录变更后再重试。");
+  if (state.referenceIds.has(id.toLowerCase())) throw httpError(409, "附件仍被业务记录引用，不能删除。请先保存记录变更后再重试。");
   const file = attachmentPath(id);
   if (fs.existsSync(file)) fs.unlinkSync(file);
   return { deleted: true };
@@ -2979,23 +3207,15 @@ function deleteAttachment(id) {
 
 function attachmentMaintenanceState() {
   const references = new Set();
-  const visit = (value) => {
-    if (typeof value === "string") {
-      for (const match of value.matchAll(/\/attachments\/([a-f0-9-]{36})/ig)) references.add(match[1]);
-      return;
-    }
-    if (!value || typeof value !== "object") return;
-    if (typeof value.id === "string" && /^[a-f0-9-]{36}$/i.test(value.id) && (value.url || value.name || value.fileName || value.mime || value.size)) references.add(value.id);
-    Object.values(value).forEach(visit);
-  };
-  Object.values(readStore()).forEach((value) => { try { visit(JSON.parse(value)); } catch (_error) { visit(value); } });
+  // Maintenance, recycle-bin retention and merge restore must agree on live references.
+  Object.values(readStore()).forEach((value) => { try { collectAttachmentReferences(JSON.parse(value), references); } catch (_error) { collectAttachmentReferences(value, references); } });
   /* 回收站中的附件在彻底删除前仍是有效引用，不能被孤立附件维护误隔离。 */
   database.prepare("SELECT attachment_ids_json FROM recycle_bin WHERE status IN ('active','restore_failed')").all().forEach((row) => {
     try { JSON.parse(decryptText(row.attachment_ids_json)).forEach((id) => { if (/^[a-f0-9-]{36}$/i.test(String(id || ""))) references.add(String(id).toLowerCase()); }); } catch (_error) {}
   });
   const files = fs.readdirSync(UPLOAD_DIR).filter((name) => /^[a-f0-9-]{36}$/i.test(name) && fs.statSync(path.join(UPLOAD_DIR, name)).isFile());
-  const fileSet = new Set(files);
-  const orphanIds = files.filter((id) => !references.has(id));
+  const fileSet = new Set(files.map(id => id.toLowerCase()));
+  const orphanIds = files.filter((id) => !references.has(id.toLowerCase()));
   const missingIds = [...references].filter((id) => !fileSet.has(id));
   return { totalFiles: files.length, referencedCount: references.size, orphanCount: orphanIds.length, missingCount: missingIds.length, orphanIds, missingIds, referenceIds: references };
 }
@@ -3674,10 +3894,10 @@ function encryptBuffer(value) {
   return Buffer.concat([Buffer.from("XCA1", "ascii"), iv, cipher.getAuthTag(), ciphertext]);
 }
 
-function decryptBuffer(value) {
+function decryptBuffer(value, dataKey) {
   const input = Buffer.from(value);
   if (input.length < 32 || input.subarray(0, 4).toString("ascii") !== "XCA1") return input;
-  const decipher = crypto.createDecipheriv("aes-256-gcm", requireDataKey(), input.subarray(4, 16));
+  const decipher = crypto.createDecipheriv("aes-256-gcm", dataKey || requireDataKey(), input.subarray(4, 16));
   decipher.setAAD(Buffer.from("xiangcai-sensitive-v1", "utf8"));
   decipher.setAuthTag(input.subarray(16, 32));
   return Buffer.concat([decipher.update(input.subarray(32)), decipher.final()]);
@@ -3987,6 +4207,9 @@ function assertRequestSession(request) {
     const error = httpError(401, "会话已失效或账号已切换，本次请求未执行。请重新登录。"); error.code = "SESSION_INVALID"; throw error;
   }
   const url = new URL(request.url, `http://${HOST}:${PORT}`);
+  if (!licenseAllowsOperations() && !licenseAllowsLockedOperation(request, url)) {
+    const payload = licenseReadOnlyPayload(), error = httpError(403, payload.error); error.code = payload.code; error.license = payload.license; throw error;
+  }
   if (loadDemoState() && !demoAllowsOperation(request, url)) {
     const payload = demoLockedPayload(), error = httpError(423, payload.error); error.code = payload.code; throw error;
   }
@@ -5020,7 +5243,7 @@ function bridgeScript(activeSession) {
     const HOST_SESSION=SESSION.uid==='local-super-admin';
     window.__WORKBENCH_LICENSE__=${scriptJson(initialLicense)};
     window.__WORKBENCH_DEMO__=${scriptJson(initialDemo)};
-    window.__WORKBENCH_READ_ONLY__=false;
+    window.__WORKBENCH_READ_ONLY__=window.__WORKBENCH_LICENSE__.required===true&&window.__WORKBENCH_LICENSE__.valid!==true;
     const nativeFetch=window.fetch.bind(window);
     function contextFetch(input,options){
       const target=new URL(typeof input==='string'?input:input&&input.url||String(input),location.href);
@@ -5032,6 +5255,14 @@ function bridgeScript(activeSession) {
     window.fetch=async function(input,options){
       const response=await contextFetch(input,options);
       if(response.status===401 && response.headers.get("X-Workbench-Session")==="invalid" && location.pathname!=="/login.html") lockWorkbenchSession();
+      if(response.status===403){
+        response.clone().json().then(function(payload){
+          if(payload&&payload.code==="LICENSE_LOCKED"&&window.__WORKBENCH_LICENSE__&&window.__WORKBENCH_LICENSE__.valid===true&&location.pathname!=="/login.html"){
+            window.__WORKBENCH_LICENSE__=payload.license||{required:true,valid:false,state:"revoked"};
+            lockWorkbenchSession('license');
+          }
+        }).catch(function(){});
+      }
       return response;
     };
     const nativeGet=Storage.prototype.getItem, nativeSet=Storage.prototype.setItem, nativeRemove=Storage.prototype.removeItem;
@@ -5073,13 +5304,14 @@ function bridgeScript(activeSession) {
         ['goto','openModal','showDrawer'].forEach(function(name){const original=window[name];if(typeof original==='function')window[name]=function(){if(window.__workbenchSessionInvalid)return false;return original.apply(this,arguments);};});
         const root=document.createElement('div');root.id='workbenchSessionLock';root.setAttribute('role','alertdialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-labelledby','workbenchSessionLockTitle');
         root.innerHTML='<div class="session-lock-card"><h2 id="workbenchSessionLockTitle">工作台会话已失效</h2><p>会话已退出、设备已解除配对或主机服务已重启。业务页面已锁定，请重新进入。</p><p>服务器中已保存的数据不会删除。未保存的操作及当前弹窗表单快照可先导出；附件文件需要重新选择。</p><div class="session-lock-actions"><button class="btn btn-ghost" id="workbenchLockedDraft" type="button">导出未保存草稿</button><button class="btn btn-primary" id="workbenchRelogin" type="button">重新登录</button></div></div>';
-        if(HOST_SESSION){root.querySelector('h2').textContent='主机会话已失效';root.querySelector('p').textContent='主机会话已过期或主机服务已重启。业务页面已锁定，请返回主机入口重新进入。';root.querySelector('#workbenchRelogin').textContent='返回主机入口';}
+        if(HOST_SESSION){root.querySelector('h2').textContent='主机会话已失效';root.querySelector('p').textContent='主机会话已过期或主机服务已重启。业务页面已锁定，请返回主页重新进入。';root.querySelector('#workbenchRelogin').textContent='返回主页';}
+        if(reason==='license'){root.querySelector('h2').textContent='主机授权不可用';root.querySelector('p').textContent='主机授权已失效，业务页面已锁定。请先导出草稿，并由主机管理员重新激活后继续使用。';root.querySelector('#workbenchRelogin').textContent='返回主页';}
         document.body.appendChild(root);
         root.querySelector('#workbenchLockedDraft').onclick=function(){
           const operations=workbenchDraft();if(!operations.length&&!lockedFormDrafts.length)return alert('没有未保存草稿。');
           const url=URL.createObjectURL(new Blob([JSON.stringify({format:'数智学工未保存草稿',time:new Date().toISOString(),operations:operations,formSnapshots:lockedFormDrafts},null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='数智学工-会话失效未保存草稿.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
         };
-        root.querySelector('#workbenchRelogin').onclick=function(){if((workbenchDraft().length||lockedFormDrafts.length)&&!confirm('即将离开当前页面，未保存内容不会自动保存。请先导出草稿。是否继续重新登录？'))return;location.replace('/login.html');};
+        root.querySelector('#workbenchRelogin').onclick=function(){if((workbenchDraft().length||lockedFormDrafts.length)&&!confirm('即将离开当前页面，未保存内容不会自动保存。请先导出草稿。是否继续返回主页？'))return;location.replace('/');};
         root.querySelector('#workbenchRelogin').focus();
       }
       if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
@@ -5092,11 +5324,12 @@ function bridgeScript(activeSession) {
     });
     async function saveRequest(operation,force){
       const options={method:operation.method,headers:{"X-Workbench-Token":TOKEN}};
-      if(operation.operations){options.headers["Content-Type"]="application/json";options.body=JSON.stringify({operations:operation.operations.map(function(item){return {key:item.key,method:item.method,value:item.value,baseValue:item.baseValue};}),force:force===true,recycleCheckClassIds:operation.recycleCheckClassIds});}
+      if(operation.operations){options.headers["Content-Type"]="application/json";options.body=JSON.stringify({operations:operation.operations.map(function(item){return {key:item.key,method:item.method,value:item.value,baseValue:item.baseValue,studentIdRenames:item.studentIdRenames};}),force:force===true,recycleCheckClassIds:operation.recycleCheckClassIds});}
       else if(operation.value!==undefined){options.headers["Content-Type"]="application/json";options.body=JSON.stringify({value:String(operation.value),force:force===true});}
       const response=await contextFetch(operation.url,options);
       let payload={};try{payload=await response.json();}catch(_error){}
       if(response.status===401){lockWorkbenchSession();throw new Error("会话无效，请先导出未保存草稿，再重新登录");}
+      if(response.status===403&&payload.code==='LICENSE_LOCKED'){window.__WORKBENCH_LICENSE__=payload.license||{required:true,valid:false};lockWorkbenchSession('license');}
       if(!response.ok){
         if(response.status===409&&payload&&payload.code==="STUDENTS_DROP_GUARD"){
           const g=payload.guard||{};
@@ -5120,6 +5353,8 @@ function bridgeScript(activeSession) {
       savePromise=saveRequest({method:"POST",url:"/api/store/batch",operations:batch},false)
         .then(function(payload){
           const values={};batch.forEach(function(item){if(!SAVE_QUEUE.has(item.key)&&STORE[item.key]===item.value)values[item.key]=payload.storeValues[item.key];if(item.method==="DELETE"&&!SAVE_QUEUE.has(item.key)&&!Object.prototype.hasOwnProperty.call(STORE,item.key))values[item.key]=payload.storeValues[item.key];});
+          Object.keys(payload.storeValues||{}).forEach(function(key){if(!batch.some(item=>item.key===key)&&!SAVE_QUEUE.has(key))values[key]=payload.storeValues[key];});
+          if(payload.academicIdentityChanged)MODEL_UPDATES.add("academic_public_state");
           Object.keys(values).forEach(function(key){
             const item=batch.find(function(row){return row.key===key;});
             if(item && values[key]!==item.value){RUNTIME_BASE.set(key,item.value===undefined?null:item.value);MODEL_UPDATES.add(key);}
@@ -5129,7 +5364,7 @@ function bridgeScript(activeSession) {
           if(payload.remoteMergedKeys&&payload.remoteMergedKeys.length)window.__workbenchRemoteRefresh=true;
           return payload;
         })
-        .catch(function(error){failedBatch=batch;notifySaveFailure(error);throw error;})
+        .catch(function(error){if(error&&error.code==="DEMO_MODE_READ_ONLY"){throw error;}failedBatch=batch;notifySaveFailure(error);throw error;})
         .finally(function(){saveInFlight=false;inFlightBatch=[];if(SAVE_QUEUE.size&&!failedBatch&&!sessionLocked)scheduleSaveDrain();});
       return savePromise;
     }
@@ -5137,7 +5372,12 @@ function bridgeScript(activeSession) {
       if(saveTimer)return;
       saveTimer=setTimeout(function(){saveTimer=null;startSaveDrain().catch(function(){});},25);
     }
-    function queueSave(key,method,url,value,baseValue){storeVersion++;const existing=SAVE_QUEUE.get(key);SAVE_QUEUE.set(key,{key:key,method:method,url:url,value:value,baseValue:existing?existing.baseValue:baseValue,sequence:++saveSequence});if(!failedBatch)scheduleSaveDrain();}
+    function queueSave(key,method,url,value,baseValue){storeVersion++;const existing=SAVE_QUEUE.get(key);const operation={key:key,method:method,url:url,value:value,baseValue:existing?existing.baseValue:baseValue,sequence:++saveSequence};if(existing&&existing.studentIdRenames)operation.studentIdRenames=existing.studentIdRenames;SAVE_QUEUE.set(key,operation);if(!failedBatch)scheduleSaveDrain();}
+    function registerStudentIdRename(from,to){
+      const operation=SAVE_QUEUE.get("nnuzc_students");if(!operation)throw new Error("学生主档尚未排队保存，请刷新后重试。");
+      const renames=operation.studentIdRenames||(operation.studentIdRenames=[]),previous=renames.find(item=>item.to===String(from));
+      if(previous){previous.to=String(to);if(previous.from===previous.to)renames.splice(renames.indexOf(previous),1);}else renames.push({from:String(from),to:String(to)});
+    }
     async function flushStoreQueue(){
       if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
       do{await startSaveDrain();}while(saveInFlight||SAVE_QUEUE.size);
@@ -5157,6 +5397,8 @@ function bridgeScript(activeSession) {
             RUNTIME_BASE.set(item.key,item.value===undefined?null:item.value);
             if(values[item.key]!==item.value)MODEL_UPDATES.add(item.key);
           }});
+          Object.keys(payload.storeValues||{}).forEach(function(key){if(!batch.some(item=>item.key===key)&&!SAVE_QUEUE.has(key))values[key]=payload.storeValues[key];});
+          if(payload.academicIdentityChanged)MODEL_UPDATES.add("academic_public_state");
           applyServerStoreSnapshot(values,true);window.__workbenchLastSavedAt=Date.now();
           return payload;
         }finally{explicitActive=false;explicitBatch=[];}
@@ -5272,6 +5514,7 @@ function bridgeScript(activeSession) {
     };
     window.workbench={legacy:{
       flushStore:flushStoreQueue,
+      registerStudentIdRename:registerStudentIdRename,
       commitStoreBatch:commitExplicitBatch,
       readStoreSnapshot:async function(){await flushStoreQueue();const version=storeVersion;const response=await contextFetch("/api/store",{headers:{"X-Workbench-Token":TOKEN},cache:"no-store"});const values=await response.json();if(!response.ok)throw new Error(values.error||"读取数据失败");if(version===storeVersion)applyServerStoreSnapshot(values,false);return values;},
       applyServerStoreSnapshot:applyServerStoreSnapshot,
@@ -5301,7 +5544,7 @@ function bridgeScript(activeSession) {
       clearLocalBusinessData:async()=>{await flushStoreQueue();const r=await fetch("/api/store/clear-local-business-data",{method:"POST",headers:{"X-Workbench-Token":TOKEN,"Content-Type":"application/json"},body:JSON.stringify({confirmation:"清空本地全部数据"})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"清空本地数据失败");replaceServerStoreSnapshot(j.storeValues||{});return j;},
       demoStatus:async()=>{const r=await fetch("/api/demo/status",{headers:{"X-Workbench-Token":TOKEN},cache:"no-store"});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"读取演示数据状态失败");return j;},
       demoLoad:async()=>{await flushStoreQueue();const r=await fetch("/api/demo/load",{method:"POST",headers:{"X-Workbench-Token":TOKEN,"Content-Type":"application/json"},body:"{}"});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||"载入演示数据失败");e.code=j.code||"";throw e;}return j;},
-      demoClear:async()=>{await flushStoreQueue();const r=await fetch("/api/demo/clear",{method:"POST",headers:{"X-Workbench-Token":TOKEN,"Content-Type":"application/json"},body:"{}"});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||"清除演示数据失败");e.code=j.code||"";throw e;}return j;},
+      demoClear:async()=>{failedBatch=null;SAVE_QUEUE.clear();window.__workbenchSaveFailure=false;window.__workbenchSaveError="";const r=await fetch("/api/demo/clear",{method:"POST",headers:{"X-Workbench-Token":TOKEN,"Content-Type":"application/json"},body:"{}"});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error||"清除演示数据失败");e.code=j.code||"";throw e;}return j;},
       legacyBackupReport:async()=>{const r=await fetch("/api/backups/legacy-report",{headers:{"X-Workbench-Token":TOKEN}});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"历史备份扫描失败");return j;},
       legacyBackupPurge:async(report)=>{const r=await fetch("/api/backups/legacy-purge",{method:"POST",headers:{"X-Workbench-Token":TOKEN,"Content-Type":"application/json"},body:JSON.stringify({action:"purge",phrase:report.actionPhrase,confirmCount:report.fileCount,confirmBytes:report.totalBytes})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"历史备份清理失败");return j;},
       systemHealth:async()=>{const r=await fetch("/api/system/health",{headers:{"X-Workbench-Token":TOKEN}});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"读取系统健康状态失败");return j;},
@@ -5366,12 +5609,26 @@ async function handler(request, response) {
     if (request.method === "GET" && url.pathname === "/favicon.ico") url.pathname = "/assets/login-logo-icon.png";
     if (request.method === "GET" && url.pathname === "/api/health") return sendJson(response, 200, { ok: true, service: "xiangcai-workbench", version: APP_VERSION, port: PORT, pid: process.pid, serverHash: SERVER_SOURCE_HASH, appHash: APP_SOURCE_HASH, studentLinkIntegrityHash: STUDENT_LINK_INTEGRITY_HASH, indexHash: INDEX_FILE_HASH, counselorGrowthHash: COUNSELOR_GROWTH_MODULE_SOURCE_HASH, demoDataHash: DEMO_DATA_SOURCE_HASH, searchableFilterHash: SEARCHABLE_FILTER_SELECTS_HASH, searchableFilterCssHash: SEARCHABLE_FILTER_SELECTS_CSS_HASH, startedAt: SERVER_STARTED_AT, license: licensePublicStatus() });
     if (request.method === "GET" && url.pathname === "/api/branding") return sendJson(response, 200, brandingPublicConfig());
-    /* 激活码授权已停用；保留状态查询兼容旧前端，激活相关接口固定返回已退役。 */
+    /* 商业授权接口只接受本机同源调用；学生、课程等业务数据不会发送到授权服务器。 */
     if (request.method === "GET" && url.pathname === "/api/license/status") {
-      return sendJson(response, 200, licensePublicStatus());
+      if (!isLocalRequest(request)) return sendJson(response, 403, { error: "仅允许在安装本机上查询授权。" });
+      /* 状态查询按验证间隔走：未到期只返回本地凭证状态，不产生云端调用；强制复核走 /api/license/refresh。 */
+      return sendJson(response, 200, await licenseClient.ensureUsable());
     }
-    if (request.method === "POST" && ["/api/license/activate", "/api/license/refresh", "/api/license/deactivate"].includes(url.pathname)) {
-      return sendJson(response, 410, { error: "激活码授权已停用，请使用作者手动分发的安装包。", code: "LICENSE_RETIRED" });
+    if (request.method === "POST" && url.pathname === "/api/license/activate") {
+      if (!isLocalRequest(request) || !requestOriginAllowed(request)) return sendJson(response, 403, { error: "仅允许在安装本机上激活。" });
+      try { return sendJson(response, 200, await licenseClient.activate((await readJson(request)).code)); }
+      catch (error) { return sendJson(response, Number(error.statusCode) || 400, { error: error.message, code: error.code || "ACTIVATION_FAILED" }); }
+    }
+    if (request.method === "POST" && url.pathname === "/api/license/refresh") {
+      if (!isLocalRequest(request) || !requestOriginAllowed(request)) return sendJson(response, 403, { error: "仅允许在安装本机上验证授权。" });
+      try { return sendJson(response, 200, await licenseClient.ensureUsable(true)); }
+      catch (error) { return sendJson(response, Number(error.statusCode) || 400, { error: error.message, code: error.code || "VERIFY_FAILED" }); }
+    }
+    if (request.method === "POST" && url.pathname === "/api/license/deactivate") {
+      if (!isLocalRequest(request) || !requestOriginAllowed(request)) return sendJson(response, 403, { error: "仅允许在安装本机上解除激活。" });
+      try { return sendJson(response, 200, await licenseClient.deactivate()); }
+      catch (error) { return sendJson(response, Number(error.statusCode) || 400, { error: error.message, code: error.code || "DEACTIVATION_FAILED" }); }
     }
     /* 免密本机入口：仍限制本机同源，并以不按使用时长过期的 HttpOnly 会话保护业务接口。 */
     if (request.method === "GET" && url.pathname === "/api/auth/status") {
@@ -5380,6 +5637,9 @@ async function handler(request, response) {
     if (request.method === "POST" && url.pathname === "/api/auth/enter") {
       if (!requestOriginAllowed(request)) return sendJson(response, 403, { error: "请求来源无效。" });
       if (!activeDataKey) return sendJson(response, 409, { error: "历史加密数据需要先完成一次迁移。", migrationRequired: true });
+      /* 进入系统时按验证间隔复核（到期才联网，默认 72 小时一次）；「联网验证授权」按钮仍强制立即复核。
+         明确停用/解绑最迟在下一次到期验证时清除旧凭证并转为只读；真实断网或云端临时故障继续使用离线宽限。 */
+      if (isLocalRequest(request)) await licenseClient.ensureUsable();
       const session = createSession();
       return sendJson(response, 200, { ok: true }, { "Set-Cookie": sessionCookie(session.id) });
     }
@@ -5404,6 +5664,7 @@ async function handler(request, response) {
       if (request.method === "GET" && url.pathname === "/bridge.js") return sendCompressed(request, response, 200, compressedAsset(bridgeScript(authenticatedSession)), "application/javascript; charset=utf-8", "no-store");
       const attachment = url.pathname.match(/^\/attachments\/([a-f0-9-]{36})$/i);
       if (request.method === "GET" && attachment) {
+        if (!licenseAllowsOperations()) return sendJson(response, 403, licenseReadOnlyPayload());
         const file = attachmentPath(attachment[1]);
         if (!fs.existsSync(file)) return send(response, 404, "Not found", "text/plain; charset=utf-8");
         const requestedType = String(url.searchParams.get("type") || "").toLowerCase();
@@ -5417,8 +5678,10 @@ async function handler(request, response) {
     }
     if (url.pathname.startsWith("/api/")) {
       if (!authorize(request)) return sendJson(response, 401, { error: "本地会话无效。" }, { "X-Workbench-Session": "invalid" });
-      /* 演示模式由服务端强制只读，不能通过直接调用接口混入真实数据。 */
+      /* 演示模式由服务端强制只读。即使已激活，也不能通过直接调用接口混入真实数据。 */
       if (loadDemoState() && request.method !== "GET" && request.method !== "HEAD" && !demoAllowsOperation(request, url)) return sendJson(response, 423, demoLockedPayload());
+      /* 授权不可用时保留查询与演示入口，业务写入必须重新激活。 */
+      if (!licenseAllowsOperations() && !licenseAllowsLockedOperation(request, url)) return sendJson(response, 403, licenseReadOnlyPayload());
       // 只对白名单内的无业务写入渲染接口允许只读POST；模板编辑等仍按写操作拦截。
       const readOnlyRender = workbenchReadOnlyRender(request, url);
       const actor = currentSession(request, false), mutation = !["GET", "HEAD"].includes(request.method) && !readOnlyRender;
@@ -5426,6 +5689,7 @@ async function handler(request, response) {
       academicPublicService.init();
       const adminOnly = /^\/api\/(?:updates|branding|webdav|ai\/(?:config|test)|store\/(?:restore-json|clear-local-business-data)|demo|backups|maintenance|system)/.test(url.pathname) || /\/purge(?:-|$|\/)|\/retention$/.test(url.pathname);
       if ((mutation && actor.role === "viewer") || (adminOnly && (!isLocalRequest(request)||actor.uid!=="local-super-admin"))) return sendJson(response, 403, { error: "当前账号没有此操作权限。", code: "COLLABORATION_FORBIDDEN" });
+      if (url.pathname.startsWith("/api/data-center/")) return await getDataCenterService().handle(request,response,url,actor);
       if (url.pathname.startsWith("/api/academic-public/")) return academicPublicService.handle(request,response,url,actor);
       if (request.method === "GET" && url.pathname === "/api/workbench/state") {
         const snapshot = workbenchSnapshot(), changed = url.searchParams.get("known") !== snapshot.revision;
@@ -5675,6 +5939,19 @@ async function handler(request, response) {
       if (request.method === "GET" && url.pathname === "/api/ai/usage") { const hours = Number(url.searchParams.get("hours")) || 24; return sendJson(response, 200, { hours: Math.max(1, Math.min(24 * 90, Math.floor(hours))), rows: readAiUsageSummary(hours), usage: aiPublicConfig().usage }); }
       return sendJson(response, 404, { error: "接口不存在。" });
     }
+    if (request.method === "GET" && url.pathname === "/assets/academic-public-user-manual.docx") {
+      if (!activeDataKey) return send(response, 503, "旧版加密数据尚未迁移，请联系维护人员。", "text/plain; charset=utf-8");
+      const manualAccess = ensureAccessSession(request);
+      if (!manualAccess) return sendJson(response, 403, { error: "仅允许本机访问。" });
+      const manualPath = path.join(ROOT, "assets", "academic-public-user-manual.docx");
+      if (!fs.existsSync(manualPath)) return send(response, 404, "手册文件暂不可用，请联系维护人员。", "text/plain; charset=utf-8");
+      const manualBytes = fs.readFileSync(manualPath);
+      const manualHeaders = manualAccess.created ? { "Set-Cookie": sessionCookie(manualAccess.session.id) } : {};
+      return send(response, 200, manualBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", Object.assign({}, manualHeaders, {
+        "Content-Disposition": academicWarningDisposition("学业情况公用版使用与操作手册.docx"),
+        "Content-Length": String(manualBytes.length), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"
+      }));
+    }
     const academicSummaryReferenceFiles = {
       "/assets/academic-summary-reference/zongce-1.xlsx": ["zongce-1.xlsx", "综测1.xlsx"],
       "/assets/academic-summary-reference/zongce-2.xlsx": ["zongce-2.xlsx", "综测2.xlsx"],
@@ -5692,7 +5969,7 @@ async function handler(request, response) {
       const referenceHeaders = referenceAccess.created ? { "Set-Cookie": sessionCookie(referenceAccess.session.id) } : {};
       return send(response, 200, fs.readFileSync(referencePath), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", Object.assign({}, referenceHeaders, { "Cache-Control": "private, max-age=3600", "Content-Disposition": academicWarningDisposition(academicSummaryReference[1]) }));
     }
-    if (request.method !== "GET" || !["/", "/index.html", "/login.html", "/manifest.webmanifest", "/workbench-bridge.js", "/academic-public-module.js", "/academic-public.css", "/app.js", "/student-leave-engine.js", "/student-leave-module.js", "/student-leave.css", "/student-link-integrity.js", "/party-import-engine.js", "/chaoxing-attendance-module.js", "/searchable-filter-selects.js", "/searchable-filter-selects.css", "/dorm-spatial-module.js", "/dorm-spatial-module.css", "/achievement-enhancements.js", "/award-statistics-module.js", "/other-violation-module.js", "/dorm-roster-module.js", "/custom-roster-module.js", "/counselor-growth-module.js", "/custom-fields-module.js", "/intelligence-enhancements.js", "/html2pdf.bundle.min.js", "/jszip.min.js", "/xlsx.full.min.js", "/assets/tool-history-client.js", "/assets/workbench-ui.js", "/assets/workbench-ui.css", "/assets/academic-warning-editor-template.html", "/assets/academic-summary-tool.html", "/assets/academic-summary-tool.js", "/assets/academic-summary-tool.css", "/assets/academic-summary-tool-fixes.css", "/assets/academic-analysis-tool.html", "/assets/academic-analysis-tool.js", "/assets/academic-analysis-tool.css", "/assets/academic-analysis-rules.docx", "/assets/academic-analysis-field-template.xlsx", "/assets/excel-merge-tool.html", "/assets/excel-merge-app.js", "/assets/excel-merge-worker.js", "/assets/excel-merge-extract.js", "/assets/excel-check-tool.html", "/assets/excel-check-app.js", "/assets/excel-check-style.css", "/assets/data-match-tool.html", "/assets/data-match-app.js", "/assets/data-match-style.css", "/assets/login-logo.png", "/assets/login-logo-icon.png", "/assets/branding-logo", "/student-org.html"].includes(url.pathname)) return send(response, 404, "Not found", "text/plain; charset=utf-8");
+    if (request.method !== "GET" || !["/", "/index.html", "/login.html", "/manifest.webmanifest", "/workbench-bridge.js", "/academic-public-module.js", "/academic-public.css", "/app.js", "/student-leave-engine.js", "/student-leave-module.js", "/student-leave.css", "/student-link-integrity.js", "/party-import-engine.js", "/chaoxing-attendance-module.js", "/searchable-filter-selects.js", "/searchable-filter-selects.css", "/dorm-spatial-module.js", "/dorm-spatial-module.css", "/achievement-enhancements.js", "/award-statistics-module.js", "/other-violation-module.js", "/dorm-roster-module.js", "/custom-roster-module.js", "/counselor-growth-module.js", "/data-center-module.js", "/custom-fields-module.js", "/intelligence-enhancements.js", "/html2pdf.bundle.min.js", "/jszip.min.js", "/xlsx.full.min.js", "/assets/tool-history-client.js", "/assets/workbench-ui.js", "/assets/workbench-ui.css", "/assets/academic-warning-editor-template.html", "/assets/academic-summary-tool.html", "/assets/academic-summary-tool.js", "/assets/academic-summary-tool.css", "/assets/academic-summary-tool-fixes.css", "/assets/academic-analysis-tool.html", "/assets/academic-analysis-tool.js", "/assets/academic-analysis-tool.css", "/assets/academic-analysis-rules.docx", "/assets/academic-analysis-field-template.xlsx", "/assets/excel-merge-tool.html", "/assets/excel-merge-app.js", "/assets/excel-merge-worker.js", "/assets/excel-merge-extract.js", "/assets/excel-check-tool.html", "/assets/excel-check-app.js", "/assets/excel-check-style.css", "/assets/data-match-tool.html", "/assets/data-match-app.js", "/assets/data-match-style.css", "/assets/login-logo.png", "/assets/login-logo-icon.png", "/assets/branding-logo", "/student-org.html"].includes(url.pathname)) return send(response, 404, "Not found", "text/plain; charset=utf-8");
     if (url.pathname === "/manifest.webmanifest") return send(response, 200, JSON.stringify(brandedPwaManifest()), "application/manifest+json", { "Cache-Control": "no-cache" });
     if (url.pathname === "/student-org.html") {
       /* 学生组织页面只能由主系统同源嵌入；直接访问会绕过父页桥接，导致数据不同步。 */
@@ -5725,6 +6002,7 @@ async function handler(request, response) {
     const pageAccess = ensureAccessSession(request);
     if (!pageAccess) return sendJson(response,403,{error:"仅允许本机访问。"});
     const pageHeaders = pageAccess.created ? { "Set-Cookie": sessionCookie(pageAccess.session.id) } : {};
+    if (url.pathname === "/data-center-module.js") return send(response,200,fs.existsSync(path.join(ROOT,"data-center-module.js"))?fs.readFileSync(path.join(ROOT,"data-center-module.js")):"PAGES.dataCenter=function(){return '<div class=card>数据中心资源缺失，请重新安装完整更新包。</div>';};","application/javascript; charset=utf-8");
     if (["/assets/workbench-ui.js","/assets/workbench-ui.css"].includes(url.pathname)) return send(response,200,fs.readFileSync(path.join(ROOT,url.pathname.slice(1))),contentType(url.pathname),{"Cache-Control":"no-cache"});
     if (url.pathname === "/assets/tool-history-client.js") {
       const identity = JSON.stringify({ context: pageAccess.session.context, uid: pageAccess.session.uid, role: pageAccess.session.role }).replace(/</g, "\\u003c");
@@ -5732,6 +6010,11 @@ async function handler(request, response) {
       return sendCompressed(request, response, 200, compressedAsset(source), contentType("tool-history-client.js"), "no-store", pageHeaders);
     }
     if (url.pathname === "/workbench-bridge.js") {
+      /* 页面加载/刷新路径不强制云验证（到期才联网），避免每次刷新工作台都产生云端调用。 */
+      const openingIdentity={id:pageAccess.session.id,context:pageAccess.session.context};
+      await licenseClient.ensureUsable();
+      const currentIdentity=currentSession(request,false);
+      if(!currentIdentity||currentIdentity.id!==openingIdentity.id||currentIdentity.context!==openingIdentity.context)return sendJson(response,401,{error:"页面身份已变化，请重新登录。"},{"X-Workbench-Session":"invalid"});
       return sendCompressed(request, response, 200, compressedAsset(bridgeScript(pageAccess.session)), contentType("workbench-bridge.js"), "no-store", pageHeaders);
     }
     if(["/student-leave-engine.js","/student-leave-module.js","/student-leave.css"].includes(url.pathname))return send(response,200,fs.readFileSync(path.join(ROOT,url.pathname.slice(1))),contentType(url.pathname),{"Cache-Control":"no-cache"});
@@ -5779,6 +6062,7 @@ async function handler(request, response) {
     const status = Number(error && error.statusCode) || 400;
     const payload = { error: error && error.expose ? error.message : "服务处理失败，请稍后重试。" };
     if (error && error.expose && error.code) payload.code = error.code;
+    if (error && error.expose && error.license) payload.license = error.license;
     if (error && error.expose && error.changedKeyCount) payload.changedKeyCount = error.changedKeyCount;
     return sendJson(response, status, payload, status === 401 ? { "X-Workbench-Session": "invalid" } : {});
   }
@@ -5794,8 +6078,11 @@ function stopExistingServer() {
 
 function startWorkbenchServer() {
   ensureDirectories();
-  updateClient = new UpdateClient({ root: ROOT, dataDir: DATA_DIR, appVersion: APP_VERSION });
-  log("激活码授权已停用，改为人工分发安装包。");
+  /* 本地/开发版：授权门禁遵循 license-config.json（当前 enabled:false 即不启用激活）。
+     打包正式商业版时可改回 forceEnabled: true 以强制授权。 */
+  licenseClient = new LicenseClient({ root: ROOT, dataDir: DATA_DIR, appVersion: APP_VERSION, forceEnabled: false });
+  updateClient = new UpdateClient({ root: ROOT, dataDir: DATA_DIR, appVersion: APP_VERSION, licenseClient });
+  log(licenseClient.isEnabled() ? "云端设备授权已启用。" : "云端设备授权未启用（按 license-config.json 配置）。");
   migrateLegacyDatabaseOnce();
   openDatabase();
   pruneAiAudit(); /* 启动即按 AI_AUDIT_RETENTION 清理存量审计记录，当前保留最新 1000 条。 */

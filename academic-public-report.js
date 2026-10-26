@@ -1,6 +1,6 @@
 'use strict';
 const E=require('./academic-public-engine');
-const Exams=require('./academic-public-exams');
+const Exams=require('./academic-public-exams'),Import=require('./academic-public-import');
 const schema=[
  {name:'各二级学院各年级不及格人数情况统计表',fields:['二级学院','年级','不及格人数','在校生数','不及格率']},
  {name:'各门课程不及格人数统计表（10人以上)',fields:['序号','课程代码','课程名称','不及格人数']},
@@ -15,8 +15,9 @@ function readTable(file,definition){
  if(matches.length!==1)E.fail('必须包含且仅包含一个工作表：'+definition.name,'REPORT_SCHEMA_INVALID');
  const sheet=matches[0],header=sheet.rows.slice(0,10).find(r=>definition.fields.every(f=>r.cells.some(c=>E.clean(c.value)===f)));
  if(!header)E.fail(sheet.name+'缺少必需字段：'+definition.fields.join('、'),'REPORT_SCHEMA_INVALID');
+ const extraColumns=header.cells.flatMap((c,i)=>E.clean(c.value)==='补充说明'?[i]:[]);if(extraColumns.length>1)E.fail(sheet.name+'字段重复：补充说明','HEADER_AMBIGUOUS');const extraColumn=extraColumns[0]??-1;
  const columns=definition.fields.map(f=>{const indices=header.cells.flatMap((c,i)=>E.clean(c.value)===f?[i]:[]);if(indices.length!==1)E.fail(sheet.name+'字段重复：'+f,'HEADER_AMBIGUOUS');return indices[0];});
- return sheet.rows.filter(r=>r.sourceRow>header.sourceRow).map(row=>{const raw={_sheet:sheet.name,_row:row.sourceRow,_issues:[]};definition.fields.forEach((f,i)=>{const c=row.cells[columns[i]]||{};raw[f]=c.value??'';if(c.missingFormula)raw._issues.push(f+'公式没有缓存结果');if((f==='学号'||f==='课程代码')&&c.precisionLost)raw._issues.push(f+'精度可能丢失，请改为文本');});return raw;}).filter(r=>definition.fields.some(f=>E.clean(r[f])));
+ return sheet.rows.filter(r=>r.sourceRow>header.sourceRow).map(row=>{const raw={_sheet:sheet.name,_row:row.sourceRow,_issues:[]};if(extraColumn>=0){const c=row.cells[extraColumn]||{};raw['补充说明']=c.value??'';if(c.missingFormula)raw._issues.push('补充说明公式没有缓存结果');}definition.fields.forEach((f,i)=>{const c=row.cells[columns[i]]||{};raw[f]=c.value??'';if(c.missingFormula)raw._issues.push(f+'公式没有缓存结果');if((f==='学号'||f==='课程代码')&&c.precisionLost)raw._issues.push(f+'精度可能丢失，请改为文本');});return raw;}).filter(r=>definition.fields.some(f=>E.clean(r[f])));
 }
 function scoreFields(value){const score=E.clean(value),status=({旷考:'缺考',作弊:'违纪'})[score]||(['待出分','缓考','缺考','违纪','成绩撤回'].includes(score)?score:score?'已出分':'待出分'),scale=status!=='已出分'||/^\d+(\.\d+)?$/.test(score)?'百分制':['优秀','良好','中等','及格','不及格','优','良','中'].includes(score)?'五级制':'两级制';return {score,scale,status};}
 function read(file,reportTerm){
@@ -26,7 +27,7 @@ function read(file,reportTerm){
   const base={...raw,'原修读学期':E.clean(raw['学期']),'总评成绩':raw['成绩']};
   for(const [type,field] of [['original','成绩'],['makeup','补考成绩'],['retake','重修成绩']]){
    if(type!=='original'&&!E.clean(raw[field]))continue;
-   const score=scoreFields(raw[field]);rows.push({...base,_importType:type,'成绩制':score.scale,'考试状态':score.status,'考试批次':'预警报告-'+E.clean(raw['学期'])+'-'+type,'总评成绩':type==='original'?score.score:base['总评成绩'],[type==='makeup'?'补考成绩':type==='retake'?'重修成绩':'成绩']:score.score});
+   const score=scoreFields(raw[field]),note=type==='original'?raw['成绩备注']:E.gradeRemark(score.status),remark=Import.courseScoreFields(score.score,{'成绩备注':note,'成绩制':score.scale});rows.push({...base,'成绩备注':note,'补充说明':Import.courseScoreFields(raw['成绩'],raw).remark,_importType:type,'成绩制':score.scale,'考试状态':remark.status,'考试批次':'预警报告-'+E.clean(raw['学期'])+'-'+type,'总评成绩':type==='original'?score.score:base['总评成绩'],[type==='makeup'?'补考成绩':type==='retake'?'重修成绩':'成绩']:score.score});
   }
  }
  for(const raw of tables[4])rows.push({...raw,_importType:'reference','报告学期':reportTerm});
@@ -48,8 +49,8 @@ function build({rows,population,details,selection,cases,examResults,references})
  sheets[schema[0].name].push(...grouped(population,(dept,grade,members)=>{const enrolled=members.filter(current),fail=enrolled.filter(r=>r.fail>0).length;return [dept,grade,fail,enrolled.length,enrolled.length?fail/enrolled.length:null,members.length,members.filter(r=>r.fail>0).length,members.filter(r=>!r.warningKnown).length];}));
  const courseGroups=new Map();for(const c of failed){const key=JSON.stringify([c.code,c.name]);if(!courseGroups.has(key))courseGroups.set(key,{code:c.code,name:c.name,students:new Set()});courseGroups.get(key).students.add(c.sid);}
  sheets[schema[1].name].push(...[...courseGroups.values()].filter(c=>c.students.size>=10).sort((a,b)=>b.students.size-a.students.size||order.compare(a.code,b.code)).map((c,i)=>[i+1,c.code,c.name,c.students.size]));
- sheets[schema[2].name][0].push('通过状态','计入汇总','统计学期','成绩阶段');
- sheets[schema[2].name].push(...failed.map(c=>{const s=students.get(c.sid),last=type=>c.attempts.filter(a=>a.type===type).at(-1)?.score??'';return [s.grade,s.dept,s.major,s.cls,s.sid,s.name,c.code,c.name,c.credit,last('original'),c.remark||'',last('makeup'),last('retake'),c.nature||'',c.category,c.term,c.assessment||'','未通过','是',selection.terms.join('、'),selection.stage];}));
+ sheets[schema[2].name][0].push('通过状态','计入汇总','统计学期','成绩阶段','补充说明');
+ sheets[schema[2].name].push(...failed.map(c=>{const s=students.get(c.sid),last=type=>c.attempts.filter(a=>a.type===type).at(-1)?.score??'';return [s.grade,s.dept,s.major,s.cls,s.sid,s.name,c.code,c.name,c.credit,last('original'),E.gradeRemark(c.attempts.filter(a=>a.type==='original').at(-1)?.status),last('makeup'),last('retake'),c.nature||'',c.category,c.term,c.assessment||'','未通过','是',selection.terms.join('、'),selection.stage,c.remark||''];}));
  sheets[schema[3].name][0].push('预警人数','待核查预警人数');
  const warningIds=new Set(rows.map(r=>r.sid));
  sheets[schema[3].name].push(...grouped(population,(dept,grade,members)=>{const warnings=members.filter(r=>warningIds.has(r.sid));return [dept,grade,...E.LEVELS.map(level=>warnings.filter(r=>r.level===level).length),warnings.length,warnings.filter(r=>!r.warningKnown).length];}));

@@ -3,6 +3,11 @@
 .ap-page{min-width:0;max-width:100%;font-size:14px}
 .ap-page .card.ap-body{background:var(--card,#fff);box-shadow:none}
 .ap-page .ptitle{margin-bottom:8px}
+.ap-page .ap-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px}
+.ap-page .ap-heading .ptitle{margin:0}
+.ap-page .ap-manual-download{display:inline-block;box-sizing:border-box;max-width:100%;padding:10px 12px;border:1px solid var(--ap-line);border-radius:6px;background:var(--primary-l,#edf8f2);color:var(--primary,#12805c);font-size:14px;font-weight:600;line-height:1.6;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.ap-page .ap-manual-download:hover{color:var(--text);border-color:var(--primary,#12805c)}
+.ap-page .ap-manual-download:focus-visible{outline:2px solid var(--primary,#12805c);outline-offset:3px}
 .ap-page>.sub{line-height:1.6;margin-bottom:16px}
 .ap-page .ap-toolbar,.ap-modal .ap-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ap-toolbar .ap-grow{flex:1}

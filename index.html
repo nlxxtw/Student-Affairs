@@ -225,7 +225,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}table th{font-weight:60
 .classroom-table-wrap > .table-scroll,
 .fund-table-wrap > .table-scroll{overflow:visible}
 /* 2026-07-29 第三十九轮修复：.stu-tbl-card 例外——它自身是 overflow:hidden（非滚动容器），
-   学生信息管理（在校/休学/退学/毕业 4 个 tab 共用此表）的横竖滚动职责在内层 .table-scroll
+   学生信息管理所有学籍状态页签共用此表，横竖滚动职责在内层 .table-scroll
    （flex:1 1 0 + min-height:0）。第三十八轮误把它也设为 overflow:visible，导致内外都不滚、
    滚动条全部消失、超宽/超高内容被外层 hidden 裁切。此处显式恢复内层滚动 + 8px 滚动条；
    thead sticky 吸附在 .table-scroll 顶部，行为正确。分页条 #stuPager 在 .table-scroll 之外，
@@ -249,8 +249,8 @@ tbody tr:hover{background:#fafdfb}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
 .pane{display:none} .pane.active{display:block}
 /* 学生信息管理 · 学籍状态分类标签 */
-.stu-status-tabs{display:flex;align-items:stretch;gap:0;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
-.stu-status-tab{border:0;border-right:1px solid var(--line);background:#fff;color:var(--muted);padding:10px 28px;font:inherit;font-size:13.5px;cursor:pointer;transition:.15s;position:relative;min-width:104px}
+.stu-status-tabs{display:flex;align-items:stretch;gap:0;background:#fff;border:1px solid var(--line);border-radius:8px;overflow-x:auto;overflow-y:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+.stu-status-tab{border:0;border-right:1px solid var(--line);background:#fff;color:var(--muted);padding:10px 28px;font:inherit;font-size:13.5px;cursor:pointer;transition:.15s;position:relative;min-width:104px;flex:0 0 auto}
 .stu-status-tab:last-child{border-right:0}
 .stu-status-tab:hover{color:var(--primary);background:#f5faf7}
 .stu-status-tab.active{color:var(--primary);font-weight:700;background:#f3faf6}
@@ -409,8 +409,70 @@ body:has(#modal.show #taskTitle) #workbenchSavePanel,body:has(#modal.show #taskN
 .legend{display:flex;flex-direction:column;gap:7px;font-size:13px}
 .legend .it{display:flex;align-items:center;gap:8px}
 .flow{display:flex;align-items:center;gap:0;flex-wrap:wrap}
-.party-hero{background:linear-gradient(118deg,#8d1b25,#b8333d 55%,#dd6760);color:#fff;border-radius:15px;padding:20px 22px;margin-bottom:16px;box-shadow:0 10px 25px rgba(141,27,37,.18)}.party-hero h2{margin:0 0 6px;font-size:19px}.party-hero p{margin:0;color:rgba(255,255,255,.84);font-size:13px}.party-hero .party-steps{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}.party-hero .party-steps span{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.23);border-radius:20px;padding:4px 8px;font-size:12px}
-.party-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}.party-kpi{padding:14px 15px;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:0 4px 14px rgba(28,44,38,.05)}.party-kpi{font:inherit;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s}.party-kpi:hover,.party-kpi.active{border-color:#a32631;box-shadow:0 4px 14px rgba(163,38,49,.12)}.party-kpi.active{background:#fff5f4}.party-kpi:focus-visible{outline:2px solid #a32631;outline-offset:3px}.party-kpi b{display:block;font-size:23px;color:#a32631}.party-kpi span{display:block;font-size:12.5px;color:var(--muted);margin-top:4px}.party-current{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:#fff2f1;color:#a32631;border-radius:20px;font-size:12px;font-weight:600}.party-history{display:flex;flex-wrap:wrap;gap:6px}.party-history span{font-size:11.5px;padding:3px 7px;border-radius:14px;background:#f5f0f0;color:#8f4a50}.party-history span:last-child{background:#fbe9e7;color:#b8333d;font-weight:600}@media(max-width:820px){.party-kpis{grid-template-columns:repeat(2,1fr)}}
+/* Party ledger: compact student rows, distinct filters, readable archive. */
+.party-page{--party-accent:#a32631;min-width:0}
+.party-page-head,.party-ledger-head,.party-section-head{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.party-page-head{margin-bottom:22px;padding:2px 0 2px 14px;border-left:4px solid var(--party-accent)}
+.party-page-head h2{margin:0;font-size:23px;line-height:1.4;color:var(--text)}
+.party-page-head p,.party-ledger-head p{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.65}
+.party-page-actions,.party-secondary-actions,.party-row-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.party-page-actions .btn{min-height:38px;white-space:nowrap}
+.party-page h3{margin:0;font-size:15px;color:var(--text)}
+.party-section-head{margin-bottom:12px}.party-section-head>small{font-size:12px;color:var(--muted)}
+.party-count-help{position:relative;font-size:12px;color:var(--muted)}
+.party-count-help summary{cursor:pointer;min-height:28px;display:list-item;list-style-position:inside;padding:4px}
+.party-count-help[open]>div{position:absolute;right:0;top:100%;z-index:5;width:min(360px,72vw);padding:14px;line-height:1.8;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(20,40,60,.12);color:var(--text)}
+.party-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 20px}
+.party-kpi{position:relative;padding:16px;border:1px solid var(--line);border-top:3px solid #94a3b8;border-radius:10px;background:var(--card);font:inherit;text-align:left;cursor:pointer;color:var(--text);transition:border-color .15s}
+.party-kpi[data-tone="1"]{border-top-color:#20815a}.party-kpi[data-tone="2"]{border-top-color:#3775b5}.party-kpi[data-tone="3"]{border-top-color:#a76217}.party-kpi[data-tone="4"]{border-top-color:var(--party-accent)}
+.party-kpi:hover,.party-kpi.active{border-color:var(--primary)}.party-kpi.active{box-shadow:inset 0 0 0 1px var(--primary);background:var(--primary-l)}
+.party-kpi span{display:block;font-size:13px;line-height:1.6;min-height:22px;color:var(--text)}
+.party-kpi b{display:block;font-size:28px;line-height:1.3;margin:8px 0;color:var(--text);font-variant-numeric:tabular-nums}
+.party-kpi small{display:block;font-size:11.5px;line-height:1.5;color:var(--muted)}
+.party-page button:focus-visible,.party-count-help summary:focus-visible,.party-detail button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.party-page .party-filter-card{padding:18px 20px;margin-bottom:18px}
+.party-page .party-filter-card .ledger-filters{margin:0}
+.party-page .party-filter-card .filter-item{min-width:0;max-width:none}
+.party-page .party-ledger{padding:18px 20px;min-width:0}
+.party-ledger-head{margin-bottom:16px}.party-ledger-head h3 span{font-size:12px;font-weight:400;color:var(--muted);margin-left:8px}
+.party-page .party-table-wrap{min-width:0}
+.party-table-wrap table{min-width:1100px;width:100%;table-layout:fixed}
+.party-table-wrap th:nth-child(1){width:120px}.party-table-wrap th:nth-child(2){width:190px}.party-table-wrap th:nth-child(3){width:100px}.party-table-wrap th:nth-child(4){width:135px}.party-table-wrap th:nth-child(5){width:145px}.party-table-wrap th:nth-child(6){width:115px}.party-table-wrap th:nth-child(7){width:145px}.party-table-wrap th:nth-child(8){width:130px}
+.party-table-wrap td{padding:14px 10px;vertical-align:middle;white-space:normal;overflow-wrap:anywhere;line-height:1.6}
+.party-table-wrap th{padding:12px 10px;white-space:normal;line-height:1.5}
+.party-table-wrap .badge{white-space:normal;line-height:1.6;text-align:left;border-radius:5px;max-width:100%;font-size:12px}
+.party-student-name{border:0;background:none;padding:0;color:var(--primary-d);font:inherit;font-weight:700;text-align:left;cursor:pointer;line-height:1.7}
+.party-student-name:hover{text-decoration:underline}.party-class-name{font-weight:600;line-height:1.6}
+.party-meta{display:block;margin-top:4px;color:var(--muted);font-size:11.5px;line-height:1.6;overflow-wrap:anywhere}
+.party-stage-date{margin-top:6px;font-size:12px;color:var(--text)}.party-date{font-variant-numeric:tabular-nums}.party-date-precision{display:inline;font-size:11.5px;font-weight:400;color:var(--muted)}
+.party-stage-date .party-date-precision{display:block}
+.party-record-count{font-size:12px;font-weight:600}.party-row-actions{gap:6px;flex-wrap:nowrap}.party-row-actions .btn{padding:5px 9px;min-height:32px}
+.party-training-summary{display:grid;gap:4px;font-size:12px}.party-training-summary>div{display:flex;align-items:center;justify-content:space-between;gap:8px}.party-training-summary>div>span:first-child{color:var(--muted)}
+.party-detail{color:var(--text);min-width:0}.party-detail-head{display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.party-detail-avatar{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:12px;background:var(--primary-l);color:var(--primary-d);font-size:22px;font-weight:700}
+.party-detail-head h3{margin:0;font-size:20px}.party-detail-head p{margin:4px 0 0;font-size:13px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}
+.party-detail-section{margin-top:22px}.party-detail-section>h3{font-size:15px;margin:0 0 12px}.party-detail-section>p{font-size:12px;line-height:1.7;color:var(--muted);margin:0 0 12px}
+.party-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 20px;margin:0}
+.party-detail-grid>div{min-width:0}.party-detail-grid dt{font-size:12px;color:var(--muted);margin-bottom:6px}.party-detail-grid dd{font-size:14px;line-height:1.7;margin:0;overflow-wrap:anywhere}
+.party-detail-grid .badge{white-space:normal;line-height:1.6}.party-detail-primary{padding:16px;background:var(--primary-l);border-radius:10px;margin-bottom:18px}
+.party-milestone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.party-milestone{padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card);min-width:0}
+.party-milestone>div:first-child{font-size:12px;line-height:1.6;color:var(--muted)}.party-milestone-value{margin-top:8px;font-size:14px;font-weight:600;line-height:1.7}.party-milestone.is-empty .party-milestone-value{font-weight:400;color:var(--muted)}
+.party-training-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.party-training-card{padding:14px;border:1px solid var(--line);border-radius:8px;min-width:0;background:var(--card)}
+.party-training-card header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}.party-training-card h4{margin:0;font-size:14px}.party-training-card dl{margin:0}.party-training-card dt{font-size:12px;color:var(--muted);margin-top:10px}.party-training-card dd{margin:4px 0 0;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.party-timeline{list-style:none;padding:0;margin:0}.party-timeline-item{position:relative;margin-left:7px;padding:0 0 20px 23px;border-left:2px solid var(--line)}.party-timeline-item:last-child{padding-bottom:0;border-color:transparent}.party-timeline-item:before{content:"";position:absolute;left:-6px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--primary)}
+.party-timeline-item header{display:flex;justify-content:space-between;align-items:center;gap:12px}.party-timeline-item h4{margin:0;font-size:14px;line-height:1.7}.party-timeline-item .party-timeline-date{font-size:12px;line-height:1.7;color:var(--muted);margin:5px 0 10px}
+.party-timeline-facts{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:12px;line-height:1.7;color:var(--muted)}.party-timeline-note{margin:8px 0 0;padding:10px 12px;background:var(--primary-l);border-radius:6px;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}.party-timeline-empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
+@media(max-width:1100px){.party-page-head,.party-ledger-head{align-items:flex-start;flex-wrap:wrap}.party-kpi{padding:12px}.party-kpi span{min-height:42px}.party-page .party-filter-card .ledger-filters{grid-template-columns:repeat(4,minmax(0,1fr))}.party-page .party-filter-card .ledger-filter-actions{grid-column:1/-1}}
+@media(max-width:767px){
+ .party-page-head{padding-left:12px;margin-bottom:16px}.party-page-head h2{font-size:21px}.party-page-actions{width:100%}.party-page-actions .btn{flex:1;min-width:140px}
+ .party-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.party-kpi:last-child{grid-column:1/-1}.party-kpi span{min-height:0}.party-kpi b{font-size:25px;margin:5px 0}.party-kpi small{font-size:11px}
+ .party-page .party-filter-card,.party-page .party-ledger{padding:14px}.party-section-head{align-items:flex-start;flex-wrap:wrap;gap:6px}.party-page .party-filter-card .ledger-filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.party-secondary-actions{width:100%;gap:6px}.party-secondary-actions .btn{flex:1;min-width:100px}
+ .party-page .party-table-wrap,.party-page .party-table-wrap .table-scroll{max-height:none;overflow:visible}.party-page .party-table-wrap table{display:block;min-width:0;table-layout:auto;border:0}.party-table-wrap thead{display:none}.party-table-wrap tbody{display:block}.party-table-wrap tr[data-party-sid]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+ .party-page .party-table-wrap td[data-label]{display:block;position:static;padding:0;border:0;min-width:0;width:auto;background:transparent;overflow-wrap:anywhere;font-size:13px}.party-table-wrap td[data-label]:before{content:attr(data-label);display:block;color:var(--muted);font-size:11.5px;margin-bottom:5px}.party-table-wrap td[data-label="学生"],.party-table-wrap td[data-label="班级 / 院系"],.party-table-wrap td[data-label="操作"]{grid-column:1/-1}.party-table-wrap td[data-label="学生"]:before,.party-table-wrap td[data-label="操作"]:before{display:none}.party-student-name{font-size:16px}.party-row-actions{justify-content:flex-end;border-top:1px solid var(--line);padding-top:10px}.party-training-summary{max-width:150px}
+ .party-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.party-detail-primary{grid-template-columns:1fr;padding:14px}.party-milestone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.party-training-cards{grid-template-columns:1fr}.party-detail-head{align-items:flex-start}.party-timeline-facts{display:grid;gap:5px}.party-timeline-item{padding-left:17px}.party-detail-section{margin-top:20px}
+}
 .smart-import-hero{border:1px dashed #9acdb8;border-radius:14px;background:linear-gradient(135deg,#f2fbf6,#f8fcfa);padding:26px;text-align:center;cursor:pointer;transition:.15s}.smart-import-hero:hover,.smart-import-hero.over{border-color:var(--primary);background:#eaf7f0}.smart-import-hero .ico{font-size:31px}.smart-import-hero b{display:block;margin-top:7px}.smart-import-hero span{display:block;color:var(--muted);font-size:12.5px;margin-top:5px}.smart-import-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin-top:16px}.smart-import-module{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}.smart-import-module b{display:block;font-size:13px}.smart-import-module span{color:var(--muted);font-size:12.5px}.smart-import-module.ok{border-color:#b9dfca;background:#f7fcf9}.smart-import-module.skip{background:#fafafa}.smart-import-note{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.7}
 .flow .step{display:flex;flex-direction:column;align-items:center;gap:4px}
 .flow .dot{width:30px;height:30px;border-radius:50%;background:var(--primary-l);color:var(--primary-d);display:flex;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--primary)}
@@ -1045,7 +1107,7 @@ body.license-readonly .license-locked-action,body.demo-mode .license-locked-acti
 </script>
 <link rel="stylesheet" href="/assets/workbench-ui.css" />
 </head>
-<body>
+<body class="workbench-shell">
 <div class="app">
   <!-- Sidebar -->
   <aside class="sidebar" id="navDrawer" aria-label="主导航">
@@ -1078,7 +1140,7 @@ body.license-readonly .license-locked-action,body.demo-mode .license-locked-acti
       <div class="nav-item" data-view="party"><span class="ic">🚩</span><span>党团员发展</span></div>
       <div class="nav-item" data-view="eval"><span class="ic">⭐</span><span>综测数据</span></div>
       <div class="nav-item" data-view="academic"><span class="ic">📚</span><span>学业情况（个人版）</span></div>
-      <div class="nav-item" data-view="academicPublic"><span class="ic">📘</span><span>学业情况（公用版） 开发中</span></div>
+      <div class="nav-item" data-view="academicPublic"><span class="ic">📘</span><span>学业情况（公用版）</span></div>
       <div class="nav-item" data-view="employment"><span class="ic">🎯</span><span>毕业生就业</span></div>
 
       <div class="nav-group">奖惩助贷</div>
@@ -1123,8 +1185,9 @@ body.license-readonly .license-locked-action,body.demo-mode .license-locked-acti
       <!-- STANDALONE ONLY: exclude account authorization from network sync. -->
       <div class="nav-item" data-view="semester"><span class="ic">📅</span><span>学期设置</span></div>
       <div class="nav-item" data-view="recycle"><span class="ic">🗑️</span><span>回收站</span></div>
+      <div class="nav-item" data-view="dataCenter"><span class="ic">🗃️</span><span>数据中心</span></div>
       <div class="nav-item" data-view="backup"><span class="ic">💾</span><span>数据备份</span></div>
-      <div class="nav-item" data-view="license"><span class="ic">ℹ️</span><span>关于本软件</span></div>
+      <div class="nav-item" data-view="license"><span class="ic">🔑</span><span>授权激活</span></div>
 
       <div class="nav-group">工具箱</div>
       <div class="nav-item" data-view="excelMerge"><span class="ic">📗</span><span>Excel 表格合并</span></div>
@@ -1149,7 +1212,7 @@ body.license-readonly .license-locked-action,body.demo-mode .license-locked-acti
       </div>
       <div class="session-actions"><a class="btn btn-sm btn-ghost" id="feedbackLink" href="https://f.wps.cn/g/d2LnPnE2/" target="_blank" rel="noopener noreferrer" style="text-decoration:none" title="打开反馈与建议表单">💬 <span>反馈与建议</span></a><button class="btn btn-sm demo-data-btn demo-load" id="demoLoadBtn" type="button" onclick="demoLoadData()" title="仅在没有真实业务数据时载入演示数据">🎭 <span>载入演示数据</span></button><button class="btn btn-sm demo-data-btn demo-clear" id="demoClearBtn" type="button" onclick="demoClearData()" title="只清除由系统载入的演示数据">🧹 <span>清除演示数据</span></button><button class="btn btn-sm cockpit-entry-btn" id="cockpitEntryBtn" data-top-view="cockpit" type="button" onclick="goto('cockpit')" title="打开大屏驾驶舱">🖥️ <span class="cockpit-entry-label">大屏驾驶舱</span></button><select id="uiThemeToggle" class="ui-theme-select" title="切换界面风格" aria-label="切换界面风格"><option value="classic">🌿 经典</option><option value="tech">🌌 科技</option><option value="bluework">💠 蓝白工作台</option></select></div>
     </header>
-    <div class="license-trial-banner" id="licenseTrialBanner" hidden aria-hidden="true"></div>
+    <div class="license-trial-banner" id="licenseTrialBanner"><span>🔒</span><span><strong>当前未激活，可浏览演示：</strong>可载入演示数据、查看全部功能；导入、新增及数据修改需要激活。</span><button class="btn btn-sm" type="button" onclick="goto('license')">立即激活</button><button class="btn btn-sm btn-ghost" type="button" onclick="goto('update')">系统更新</button></div>
     <div class="demo-mode-banner" id="demoModeBanner"><span>🎭</span><span><strong>当前为演示数据模式：</strong>可以浏览全部演示内容；为避免混入真实数据，新增、编辑、删除、导入和恢复操作已锁定。</span><button class="btn btn-sm" type="button" onclick="demoClearData()">清除演示数据</button></div>
     <nav class="module-tabs" id="moduleTabs" aria-label="已打开的功能模块"></nav>
     <main class="content" id="content"><!-- pages rendered by JS --></main>
@@ -1193,6 +1256,7 @@ body.license-readonly .license-locked-action,body.demo-mode .license-locked-acti
 <script src="/dorm-roster-module.js"></script>
 <script src="/custom-roster-module.js"></script>
 <script src="/counselor-growth-module.js"></script>
+<script src="/data-center-module.js"></script>
 <script src="/student-leave-engine.js"></script>
 <script src="/student-leave-module.js"></script>
 <script src="/intelligence-enhancements.js"></script>

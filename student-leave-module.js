@@ -194,5 +194,5 @@
  function archive(s){const rows=read().filter(r=>r.studentId===String(s.id));return '<div style="font-weight:700;margin:14px 0 8px">请销假记录</div>'+portraitArchiveTable(['学期','请假类型','开始时间','预计返校','请假原因','状态','实际返校'],rows.map(r=>'<tr>'+[r.term,r.type,r.start.replace('T',' '),r.end.replace('T',' '),r.reason,E.status(r),r.returnedAt?.replace('T',' ')||'—'].map(v=>'<td>'+h(v)+'</td>').join('')+'</tr>'),'暂无请销假记录');}
  // Both writes join the existing synchronous student-edit save queue as one transaction.
  function relinkStudentId(oldId,newId){if(String(oldId)===String(newId))return;const rows=read();if(rows.some(r=>r.studentId===String(oldId)))localStorage.setItem(K,JSON.stringify(rows.map(r=>r.studentId===String(oldId)?{...r,studentId:String(newId)}:r)));}
- window.StudentLeaveModule={render,afterRender,template,archive,relinkStudentId};
+ window.StudentLeaveModule={render,afterRender,template,archive,relinkStudentId,openImport:()=>{if(readonly())throw Error("当前为只读状态，不能导入请销假记录");return importRows();}};
 })();

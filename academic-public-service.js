@@ -3,7 +3,9 @@ const crypto=require('node:crypto'),E=require('./academic-public-engine'),Files=
 const id=()=>crypto.randomUUID(),stamp=()=>new Date().toISOString(),hash=v=>crypto.createHash('sha256').update(JSON.stringify(v??null)).digest('hex');
 const fields={original:['学号','姓名','原修读学期','课程代码','课程名称','学分','课程类别','成绩制','总评成绩','考试状态','考试批次','考试日期','绩点'],makeup:['学号','姓名','原修读学期','课程代码','课程名称','考试批次','考试日期','补考成绩','考试状态','成绩制','绩点'],retake:['学号','姓名','原修读学期','课程代码','课程名称','重修学期','考试批次','考试日期','重修成绩','考试状态','成绩制','绩点'],exam:['学号','姓名','考试类型','考试批次','考试日期','等级','科目','成绩','官方结果','证书编号','举办单位']};
 const studentOrder=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
-fields.original.push('课程性质','成绩备注','考核方式');
+const Identity=require('./student-identity-sync');
+for(const type of ['original','makeup','retake'])fields[type]=fields[type].map(f=>f==='考试状态'?'成绩备注':f);
+fields.original.push('课程性质','补充说明','考核方式');
 fields.original.push('教学班号','授课教师','开课单位');
 fields.exam.push(...Exams.extraFields.map(([field])=>field));
 for(const type of ['original','makeup','retake'])fields[type].push(...Import.componentFields.map(([field])=>field));
@@ -11,10 +13,10 @@ for(const type of ['original','makeup','retake'])fields[type].push('学年','学
 for(const type of ['original','makeup','retake'])fields[type].push('成绩阶段');
 fields.report=[...new Set(Report.schema.flatMap(s=>s.fields))];
 const templateExampleValues={
- 学号:'20240001',姓名:'示例学生',学院:'示例学院',二级学院:'示例学院',专业:'示例专业',班级:'示例班级',年级:'2024级',原修读学期:'2026-2027-1',学年:'2026-2027',学期:'1',课程代码:'COURSE001',课程名称:'高等数学',学分:4,课程类别:'必修',课程性质:'专业基础课',成绩制:'百分制',总评成绩:85,补考成绩:75,重修成绩:80,考试状态:'已出分',考试批次:'2026-2027-1期末考试',考试日期:'2027-01-15',绩点:3.5,成绩备注:'',考核方式:'考试',教学班号:'JXB001',授课教师:'张老师',开课单位:'示例学院',重修学期:'2026-2027-2',考试类型:'英语四级',等级:'四级',科目:'英语',成绩:450,官方结果:'合格',证书编号:'CERT20260001',举办单位:'教育考试机构',序号:1,不及格人数:12,在校生数:50,不及格率:0.24,黄色预警:1,橙色预警:0,红色预警:0,退学预警:0,不及格课程数:1,'英语通过情况（通过/不通过）':'通过','计算机通过情况（通过/不通过）':'通过',预警级别:'黄色预警'
+ 学号:'20240001',姓名:'示例学生',学院:'示例学院',二级学院:'示例学院',专业:'示例专业',班级:'示例班级',年级:'2024级',原修读学期:'2026-2027-1',学年:'2026-2027',学期:'1',课程代码:'COURSE001',课程名称:'高等数学',学分:4,课程类别:'必修',课程性质:'专业基础课',成绩制:'百分制',总评成绩:85,补考成绩:75,重修成绩:80,考试状态:'已出分',考试批次:'2026-2027-1期末考试',考试日期:'2027-01-15',绩点:3.5,成绩备注:'正常考试',补充说明:'',考核方式:'考试',教学班号:'JXB001',授课教师:'张老师',开课单位:'示例学院',重修学期:'2026-2027-2',考试类型:'英语四级',等级:'四级',科目:'英语',成绩:450,官方结果:'合格',证书编号:'CERT20260001',举办单位:'教育考试机构',序号:1,不及格人数:12,在校生数:50,不及格率:0.24,黄色预警:1,橙色预警:0,红色预警:0,退学预警:0,不及格课程数:1,'英语通过情况（通过/不通过）':'通过','计算机通过情况（通过/不通过）':'通过',预警级别:'黄色预警'
 };
 Object.assign(templateExampleValues,{平时成绩:80,期中成绩:85,期末成绩:90,实验成绩:85,考试省份:'浙江',准考证号:'000123456789',听力成绩:150,阅读成绩:150,写作翻译成绩:150});
-function templateExampleRow(headers,type){return headers.map(field=>field==='成绩阶段'?({original:'正考',makeup:'补考',retake:'重修'})[type]||'':Object.hasOwn(templateExampleValues,field)?templateExampleValues[field]:'示例'+field);}
+function templateExampleRow(headers,type){return headers.map(field=>field==='成绩备注'&&type==='exam'?'':field==='成绩阶段'?({original:'正考',makeup:'补考',retake:'重修'})[type]||'':Object.hasOwn(templateExampleValues,field)?templateExampleValues[field]:'示例'+field);}
 function reportImportTemplate(){const sheets=Report.template();for(const definition of Report.schema)sheets[definition.name].push(templateExampleRow(definition.fields));return sheets;}
 const studentOrderFields=['dept','grade','cls','sid'];
 const compareStudents=(a,b)=>{for(const key of studentOrderFields){const order=studentOrder.compare(String(a[key]??''),String(b[key]??''));if(order)return order;}return String(a.sid).localeCompare(String(b.sid));};
@@ -89,9 +91,9 @@ function createService(dbGetter,deps){
   const course=candidates[0];if(type!=='original'&&course&&name&&name!==course.name)E.fail('课程名称与原课程代码对应名称不一致','COURSE_NAME_MISMATCH');const category=text('课程类别')||course?.category||'其他';if(!['必修','限选','选修','其他'].includes(category))E.fail('课程类别应为必修、限选、选修或其他');
   const creditText=text('学分'),credit=creditText===''?(course?.credit??null):Number(creditText);if(credit!==null&&(!Number.isFinite(credit)||credit<0||credit>100))E.fail('学分应为0—100');
   if(!course&&!name)E.fail('新课程必须填写课程名称');
-  const score=text(type==='original'?'总评成绩':type==='makeup'?'补考成绩':'重修成绩'),{status,scale}=Import.scoreFields(score,text('考试状态'),text('成绩制'));const assessed=E.result(score,scale,status,s.rules);
+  const score=text(type==='original'?'总评成绩':type==='makeup'?'补考成绩':'重修成绩'),{status,scale,remark}=Import.courseScoreFields(score,raw);const assessed=E.result(score,scale,status,s.rules);
   let gpa=text('绩点')===''?null:Number(text('绩点'));if(gpa!==null&&(!Number.isFinite(gpa)||gpa<0||gpa>10))E.fail('绩点应为0—10');
-  const metadata={};for(const [field,key] of [['课程性质','nature'],['成绩备注','remark'],['考核方式','assessment'],['教学班号','teachingClass'],['授课教师','teacher'],['开课单位','offeringDept']]){if(text(field)||Object.hasOwn(course||{},key))metadata[key]=text(field)||course?.[key]||'';}if(fromReport&&!course)metadata.coverageKind='failure-list';else if(course?.coverageKind)metadata.coverageKind=fromReport?course.coverageKind:'complete';
+  const metadata={};if(remark||Object.hasOwn(course||{},'remark'))metadata.remark=remark||course?.remark||'';for(const [field,key] of [['课程性质','nature'],['考核方式','assessment'],['教学班号','teachingClass'],['授课教师','teacher'],['开课单位','offeringDept']]){if(text(field)||Object.hasOwn(course||{},key))metadata[key]=text(field)||course?.[key]||'';}if(fromReport&&!course)metadata.coverageKind='failure-list';else if(course?.coverageKind)metadata.coverageKind=fromReport?course.coverageKind:'complete';
   const chosen=course||{id:id(),sid,term,code,name,credit,category,...metadata},parts=Import.components(raw),oldAttempt=lookup(s,src).attemptNatural.get(JSON.stringify([chosen.id,type,batch]));
   if(!Object.hasOwn(raw,'绩点')&&oldAttempt?.status===status&&oldAttempt.scale===scale&&status==='已出分'&&Number.isFinite(oldAttempt.gpa)&&oldAttempt.gpa>=0&&oldAttempt.gpa<=10){let before;try{before=E.result(oldAttempt.score,oldAttempt.scale,oldAttempt.status,s.rules);}catch(error){if(error.status!==422)throw error;before=null;}const sameScore=!!before&&(assessed.score!==null?assessed.score===before.score:assessed.grade?assessed.grade===before.grade:score===oldAttempt.score);if(sameScore)gpa=oldAttempt.gpa;}
   for(const [field,key] of Import.componentFields){if(!Object.hasOwn(raw,field)&&oldAttempt?.[key]!==undefined)parts[key]=oldAttempt[key];else if(Object.hasOwn(raw,field)&&parts[key]===undefined)parts[key]=null;}
@@ -250,7 +252,7 @@ function createService(dbGetter,deps){
     const conflicting=new Set(errors.filter(e=>e.code==='ATTEMPT_CONFLICT').map(e=>e.key));for(const x of ok)if(courseConflicts.has(x.n.course?.id))conflicting.add(x.n.key);const valid=ok.filter(x=>!conflicting.has(x.n.key));for(const row of ok.filter(x=>conflicting.has(x.n.key)))errors.push({row:row.raw._row||rawRows.indexOf(row.raw)+2,sheet:row.raw._sheet||'数据',code:'ATTEMPT_CONFLICT',message:'同一考试记录存在冲突，必须修正后导入',raw:row.raw});
     const counts={read:rawRows.length,valid:valid.length,errors:errors.length,created:valid.filter(x=>x.action==='create').length,revised:valid.filter(x=>x.action==='revise').length,duplicates:valid.filter(x=>x.action==='duplicate').length,skipped:valid.filter(x=>x.action==='skipped').length};
     const studentCorrections=valid.flatMap(item=>(item.n.studentCorrections||[]).map(change=>({...change,row:item.raw._row||rawRows.indexOf(item.raw)+2,sid:item.n.kind==='exam'?item.n.value.sid:item.n.course?.sid||item.n.value.sid||''})));
-    const previewId=artifact('preview',actor,{version:s.version,source:src.fingerprint,type,mode,ok:valid,errors,counts,studentCorrections,name:E.clean(body.name||'成绩导入'),created:stamp(),report:reportInfo});return json(200,{previewId,version:s.version,counts,report:reportInfo,studentCorrections,errors:errors.slice(0,100),sample:valid.slice(0,30).map(x=>({row:x.raw._row,action:x.action,raw:{...x.raw,...(x.n.kind==='attempt'?{'识别学期':x.n.course.term,'识别成绩制':x.n.value.scale,'识别考试状态':x.n.value.status}:{})}})),fields:fields[type]});
+    const previewId=artifact('preview',actor,{version:s.version,source:src.fingerprint,type,mode,ok:valid,errors,counts,studentCorrections,name:E.clean(body.name||'成绩导入'),created:stamp(),report:reportInfo});return json(200,{previewId,version:s.version,counts,report:reportInfo,studentCorrections,errors:errors.slice(0,100),sample:valid.slice(0,30).map(x=>({row:x.raw._row,action:x.action,raw:{...x.raw,...(x.n.kind==='attempt'?{'识别学期':x.n.course.term,'识别成绩制':x.n.value.scale,'识别成绩备注':E.gradeRemark(x.n.value.status)}:{})}})),fields:fields[type]});
    }
    if(method==='POST'&&route==='/commits'){
     permission(s,actor,'import');const key=E.clean(request.headers['idempotency-key']);if(!/^[a-f0-9-]{36}$/i.test(key))E.fail('提交标识无效');const previous=db().prepare('SELECT payload FROM academic_public_batches WHERE id=?').get(key),digest=hash(body);if(previous){const b=decode(previous.payload);if(b.actor!==actor.uid||b.digest!==digest)throw Object.assign(Error('提交标识已用于不同请求'),{status:409,code:'IDEMPOTENCY_CONFLICT'});return json(200,{batchId:b.id,counts:b.counts,state:b.state,version:s.version});}
@@ -322,7 +324,7 @@ function createService(dbGetter,deps){
     if(body.kind==='fail')rows=rows.filter(x=>x.fail>0);if(body.kind==='warning')rows=rows.filter(x=>x.level);const chosen=new Set(rows.map(x=>x.sid)),sheets={};let analysisCourses=null,analysisStudentIds=[];
     if(body.kind==='exam'){if(body.examIds!==undefined&&(!Array.isArray(body.examIds)||body.examIds.length>20000||body.examIds.some(x=>typeof x!=='string'||!s.exams.some(e=>e.id===x&&ids.has(e.sid)))))throw Object.assign(Error('考试记录范围无效或无权导出'),{status:403});const studentPositions=new Map(rows.map((r,i)=>[r.sid,i])),events=filterExams(s.exams.filter(x=>chosen.has(x.sid)&&(!body.examIds||body.examIds.includes(x.id))).map(x=>examView(x,s.rules,s.exams)),body).sort((a,b)=>studentPositions.get(a.sid)-studentPositions.get(b.sid));const eventStudents=new Set(events.map(x=>x.sid));rows=rows.filter(x=>eventStudents.has(x.sid));for(const sid of chosen)if(!eventStudents.has(sid))chosen.delete(sid);sheets['等级考试']=[['学号','姓名','考试类型','考试批次','考试日期','等级','科目','成绩','官方结果','达标情况','证书编号','举办单位',...Exams.extraFields.map(([field])=>field),'材料状态'],...events.map(x=>[x.sid,people.find(p=>String(p.id)===x.sid)?.name,x.type,x.batch,x.date,x.grade,x.subject,x.score,x.official,examView(x,s.rules,s.exams).result,x.certificate,x.organizer,...Exams.extraFields.map(([,key])=>x[key]??''),examView(x,s.rules,s.exams).documentStatus])];sheets['考证项目统计']=Exams.sheet(events.map(x=>examView(x,s.rules,s.exams)));const history=events.flatMap(x=>(x.revisions||[]).map((old,index)=>[x.sid,x.type,x.batch,index+1,old.updated,old.score,old.official,old.province,old.organizer,old.admission,old.certificate,old.listening,old.reading,old.writing,old.remark,old.batchId]));if(history.length)sheets['考证修订记录']=[['学号','考试类型','考试批次','历史版本','原更新时间','原成绩','原官方结果','原考试省份','原举办单位','原准考证号','原证书编号','原听力','原阅读','原写作翻译','原备注','原导入批次'],...history];}
     else{sheets['学生汇总']=[['学号','姓名','学院','年级','专业','班级','正考挂科门数','规则口径未通过门数','未通过学分','待核查门数','加权平均分','平均学分绩点','班级排名','专业排名','预警等级','完整性','获得学分','缺失学期','触发原因'],...rows.map(r=>[r.sid,r.name,r.dept,r.grade,r.major,r.cls,r.originalFail,r.fail,r.failCredit,r.pending,r.average,r.gpa,r.classRank??null,r.majorRank??null,r.level,r.complete?'完整':'待核查',r.earnedCredit??null,(r.missingTerms||[]).join('、'),(r.reasons||[]).map(x=>x.text).join('；')])];
-     const cs=sum.details.filter(c=>chosen.has(c.sid)&&(body.kind!=='fail'||c.pass===false));sheets['课程明细']=[['学号','原修读学期','课程代码','课程名称','学分','类别','通过状态','经历标签','计入汇总'],...cs.map(c=>[c.sid,c.term,c.code,c.name,c.credit,c.category,c.pass===null?'待核查':c.pass?'通过':'未通过',c.tags.join('、'),c.counted===false?'否（去重或课程范围）':'是'])];sheets['考试历史']=[['学号','姓名','原修读学期','课程代码','考试类型','考试批次','考试日期','成绩','成绩制','状态',...Import.componentFields.map(([field])=>field),'教学班号','授课教师','开课单位','绩点','重修学期'],...cs.flatMap(c=>c.attempts.map(a=>[c.sid,sum.rows.find(r=>r.sid===c.sid)?.name||'',c.term,c.code,{original:'正考',makeup:'补考',retake:'重修'}[a.type],a.batch,a.date,a.score,a.scale,a.status,...Import.componentFields.map(([,key])=>a[key]??null),c.teachingClass,c.teacher,c.offeringDept,a.gpa??null,a.retakeTerm||'']))];}
+     const cs=sum.details.filter(c=>chosen.has(c.sid)&&(body.kind!=='fail'||c.pass===false));sheets['课程明细']=[['学号','原修读学期','课程代码','课程名称','学分','类别','通过状态','经历标签','计入汇总'],...cs.map(c=>[c.sid,c.term,c.code,c.name,c.credit,c.category,c.pass===null?'待核查':c.pass?'通过':'未通过',c.tags.join('、'),c.counted===false?'否（去重或课程范围）':'是'])];sheets['考试历史']=[['学号','姓名','原修读学期','课程代码','考试类型','考试批次','考试日期','成绩','成绩制','成绩备注',...Import.componentFields.map(([field])=>field),'教学班号','授课教师','开课单位','绩点','重修学期','补充说明'],...cs.flatMap(c=>c.attempts.map(a=>[c.sid,sum.rows.find(r=>r.sid===c.sid)?.name||'',c.term,c.code,{original:'正考',makeup:'补考',retake:'重修'}[a.type],a.batch,a.date,a.score,a.scale,E.gradeRemark(a.status),...Import.componentFields.map(([,key])=>a[key]??null),c.teachingClass,c.teacher,c.offeringDept,a.gpa??null,a.retakeTerm||'',c.remark||'']))];}
     if(body.kind==='warning'){
      const gpaColumn=sheets['学生汇总'][0].indexOf('平均学分绩点');if(gpaColumn>=0)sheets['学生汇总'].forEach(row=>row.splice(gpaColumn,1));
      const cases=s.cases.filter(c=>caseMatches(c,sum.selection)&&c.status!=='已归档');Object.assign(sheets,Report.build({rows,population,details:sum.details,selection:sum.selection,cases,examResults:s.exams.filter(e=>ids.has(e.sid)).map(e=>examView(e,sum.rules,s.exams)),references:s.reportReferences}));
@@ -335,7 +337,7 @@ function createService(dbGetter,deps){
      if(body.kind==='courses'){delete sheets['学院年级班级统计'];delete sheets['课程类别学分统计'];const matched=new Set(analysis.courses.map(c=>c.sid));rows=rows.filter(r=>matched.has(r.sid));chosen.clear();rows.forEach(r=>chosen.add(r.sid));}
     }
     if(body.kind==='audit'){const analysis=analyze(s,sum,rows,body);Object.keys(sheets).forEach(k=>delete sheets[k]);sheets['数据核查']=Analysis.auditSheet(analysis);const found=new Set(analysis.audit.map(r=>r.sid));rows=rows.filter(r=>found.has(r.sid));chosen.clear();rows.forEach(r=>chosen.add(r.sid));analysisCourses=new Set();}
-    const revisions=sum.details.filter(c=>chosen.has(c.sid)&&(!analysisCourses||analysisCourses.has(c.id))&&(body.kind!=='fail'||c.pass===false)).flatMap(c=>c.attempts.flatMap(a=>(a.revisions||[]).map(v=>[c.sid,c.term,c.code,a.type,a.batch,v.score,v.status,v.date,v.updated,v.batchId])));if(body.kind!=='exam'&&revisions.length)sheets['修订记录']=[['学号','原修读学期','课程代码','考试类型','考试批次','修订前成绩','修订前状态','考试日期','原更新时间','原导入批次'],...revisions];
+    const revisions=sum.details.filter(c=>chosen.has(c.sid)&&(!analysisCourses||analysisCourses.has(c.id))&&(body.kind!=='fail'||c.pass===false)).flatMap(c=>c.attempts.flatMap(a=>(a.revisions||[]).map(v=>[c.sid,c.term,c.code,a.type,a.batch,v.score,E.gradeRemark(v.status),v.date,v.updated,v.batchId])));if(body.kind!=='exam'&&revisions.length)sheets['修订记录']=[['学号','原修读学期','课程代码','考试类型','考试批次','修订前成绩','修订前成绩备注','考试日期','原更新时间','原导入批次'],...revisions];
     sheets['导出口径']=[['项目','内容'],['模块','学业情况（公用版）'],['统计学期',body.term||'全部'],['统计范围',sum.selection?.label||sum.rules?.scope||'未设置'],['所选学期',(sum.selection?.terms||[]).join('、')],['统计截止学期',sum.selection?.end||''],['预警指标',({courses:'未通过门数',credits:'未通过学分',either:'门数或学分'})[sum.rules?.warningMetric||'courses']],['预警与绩点','绩点不参与预警等级、复核或解除判定'],['课程去重',sum.rules?.deduplicateCourses?'同课程代码保留最近修读学期':'按原修读课程分别统计'],['成绩阶段',sum.selection?.stage||sum.rules?.stage||'current'],['成绩通过判定',sum.rules?.passResolution==='latest'?'所选阶段最后一次成绩':'所选阶段历史有一次通过即通过'],['排名口径',sum.rules?.rank||'未设置'],['数据版本',sum.version],['规则版本',sum.rules?.version||'未设置'],['学生数',rows.length],['生成时间',stamp()],['排名状态',body.publicationId?'已发布快照':'暂算，正式发布请查发布记录']];if(body.kind==='warning'){sheets['导出口径'].push(['不及格率','同学院、专业、年级、班级、学籍和学号条件的在校未通过人数 / 在校生数；不含预警级别、办理状态筛选，按页/勾选时仅限该学生集合。'],['课程人数','不及格统计及课程明细按同组织、学籍及学生集合统计，不受预警级别和办理状态筛选限制；按课程代码和名称去重统计学生，达到10人及以上才列入课程统计表。'],['等级考试依据','报告通过情况为未核验证书的参考资料；有等级考试记录时按考试规则判定。等级考试取所有已保存记录，不受课程学期选择限制。'],['部分成绩','仅导入不及格记录的学生标为待核查，不生成完整平均分或排名。']);const primary=Report.schema.map(x=>x.name);const ordered=Object.fromEntries([...primary,...Object.keys(sheets).filter(n=>!primary.includes(n))].map(n=>[n,sheets[n]]));Object.keys(sheets).forEach(n=>delete sheets[n]);Object.assign(sheets,ordered);}
     if(['courses','statistics'].includes(body.kind))sheets['导出口径'].push(['课程筛选',JSON.stringify({courseCode:body.courseCode||[],category:body.category||[],result:body.result||[]})],['统计说明','课程统计按计入汇总记录及所选成绩阶段计算；通过率分母为已有结论人数，待核查单列。仅不及格记录不计算通过率和平均分。数值平均分只使用可折算的成绩，等第未折算人数单列。班级统计使用同学生筛选范围的全部课程，不受课程筛选影响。']);
     if(body.kind==='statistics')sheets['导出口径'].push(['逐学期对比','对当前学生筛选集合逐学期独立计算；排除入学前学期；课程筛选不影响对比。预警候选可能含部分成绩，预警口径可判定不等于人工确认。各学期人数不能直接相加当作学生总数。']);
@@ -347,6 +349,41 @@ function createService(dbGetter,deps){
    return json(404,{error:{code:'NOT_FOUND',message:'接口不存在'}});
   }catch(e){return json(e.status||500,{error:{code:e.code||'OPERATION_FAILED',message:e.status?e.message:'操作未完成，请重试或联系管理员',traceId:id(),saveState:'未执行本次写入'}});}
  }
- return {init,handle};
+ function syncStudentIdentity(changes){
+  if(!changes.length)return false;
+  const s=load(),byId=new Map(changes.map(c=>[c.oldId,c]));
+  for(const change of changes)if(change.oldId!==change.id&&hasStudentReference(change.id))throw Identity.conflict('新学号在公用版学业中已有记录，不能合并学生。');
+  function record(value,collection){
+   if(value==null)return value;
+   const names=['courses','attempts','exams'].includes(collection)?['studentName','sname','姓名']:undefined;
+   const next=Identity.rewriteObject(value,changes,{nameFields:names});
+   if(typeof next.key==='string'){try{const parts=JSON.parse(next.key);if(Array.isArray(parts)&&byId.has(String(parts[0]))){parts[0]=byId.get(String(parts[0])).id;next.key=JSON.stringify(parts);}}catch(_ignore){}}
+   return next;
+  }
+  const before=JSON.stringify(s);
+  for(const collection of ['courses','attempts','exams','cases','reportReferences','publications'])s[collection]=(s[collection]||[]).map(r=>record(r,collection));
+  let changed=JSON.stringify(s)!==before;
+  for(const row of db().prepare('SELECT id,payload FROM academic_public_batches').all()){
+   const batch=decode(row.payload),original=JSON.stringify(batch);
+   for(const change of batch.changes||[]){change.before=record(change.before,change.collection);change.after=record(change.after,change.collection);}
+   if(JSON.stringify(batch)!==original){db().prepare('UPDATE academic_public_batches SET payload=? WHERE id=?').run(encode(batch),row.id);changed=true;}
+  }
+  for(const row of db().prepare('SELECT id,payload FROM academic_public_warning_runs').all()){
+   const run=decode(row.payload),next=Identity.rewriteObject(run,changes);
+   if(JSON.stringify(next)!==JSON.stringify(run)){db().prepare('UPDATE academic_public_warning_runs SET payload=? WHERE id=?').run(encode(next),row.id);changed=true;}
+  }
+  // Prepared exports/previews contain an old identity; require fresh generation.
+  db().prepare('DELETE FROM academic_public_artifacts').run();
+  if(changed)save(s);
+  return changed;
+ }
+ function hasStudentReference(sid){
+  const s=load(),matches=r=>{if(!r)return false;if(String(r.sid)===String(sid))return true;try{return Array.isArray(JSON.parse(r.key))&&String(JSON.parse(r.key)[0])===String(sid);}catch(_ignore){return false;}};
+  if([...s.courses,...s.exams,...s.cases,...s.reportReferences,...s.publications.flatMap(p=>p.rows||[])].some(matches))return true;
+  for(const row of db().prepare('SELECT payload FROM academic_public_batches').all())if((decode(row.payload).changes||[]).some(c=>matches(c.before)||matches(c.after)))return true;
+  for(const row of db().prepare('SELECT payload FROM academic_public_warning_runs').all())if((decode(row.payload).rows||[]).some(matches))return true;
+  return false;
+ }
+ return {init,handle,syncStudentIdentity,hasStudentReference};
 }
 module.exports={createService,fields};

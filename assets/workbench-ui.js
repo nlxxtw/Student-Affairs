@@ -48,7 +48,7 @@
    const label=field.querySelector('label'),control=field.querySelector('input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea');
    if(label&&control&&!label.control){if(!control.id)control.id='workbench-field-'+(++fieldSequence);label.htmlFor=control.id;}
   });
-  scope.querySelectorAll('.table-scroll,.module-table-wrap,.list-scroll,.ap-scroll,.ap-preview').forEach(node=>{
+  scope.querySelectorAll('.table-scroll,.table-wrap,.module-table-wrap,.list-scroll,.ap-scroll,.ap-preview,.si-class-table-wrap').forEach(node=>{
    if(!node.querySelector('table')||!/(auto|scroll)/.test(root.getComputedStyle(node).overflowX))return;
    node.classList.add('workbench-table-scroll');node.dataset.workbenchScroll='';
    if(!node.hasAttribute('tabindex'))node.tabIndex=0;

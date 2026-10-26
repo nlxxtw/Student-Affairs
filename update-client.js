@@ -65,7 +65,7 @@ class UpdateClient {
     this.root = options.root;
     this.dataDir = options.dataDir;
     this.appVersion = options.appVersion;
-    this.licenseClient = options.licenseClient || null;
+    this.licenseClient = options.licenseClient;
     this.configPath = options.configPath || path.join(this.root, "update-config.json");
     this.statePath = path.join(this.dataDir, "update-state.json");
     this.downloadDir = path.join(this.dataDir, "updates", "downloads");
@@ -121,7 +121,7 @@ class UpdateClient {
     if (!Number.isSafeInteger(size) || size < 1 || size > this.maxPackageBytes()) throw new Error("更新包大小超出安全限制。");
     if (compareVersion(release.version, this.appVersion) <= 0) return null;
     if (release.minSupportedVersion && compareVersion(this.appVersion, release.minSupportedVersion) < 0) throw new Error("当前版本过旧，需先联系维护人员获取基础升级包。");
-    const publicKey = String(this.config.publicKey || (this.licenseClient && this.licenseClient.config && this.licenseClient.config.publicKey) || "");
+    const publicKey = this.licenseClient && this.licenseClient.config && String(this.licenseClient.config.publicKey || "");
     if (publicKey) {
       if (!/^[A-Za-z0-9_-]{64,256}$/.test(String(release.signature || ""))) throw new Error("更新版本缺少有效的数字签名。");
       let signatureValid = false;
@@ -135,9 +135,6 @@ class UpdateClient {
     const old = this.state();
     if (!force && old.lastCheckedAt && Date.now() - Date.parse(old.lastCheckedAt) < this.intervalMs()) return Object.assign(this.publicStatus(), { checked: false, cached: true });
     try {
-      if (!this.licenseClient || typeof this.licenseClient.requestAuthorized !== "function") {
-        throw new Error("在线更新已随激活码授权一并停用。请联系作者获取新版本安装包。");
-      }
       const result = await this.licenseClient.requestAuthorized("/v1/updates/check", { appVersion: this.appVersion, platform: platformId(), channel: String(this.config.channel || "stable") });
       const nextAvailable = this.validateRelease(result);
       const keepDownloaded = !!(this.downloaded && nextAvailable && this.downloaded.version === nextAvailable.version && this.downloaded.sha256 === nextAvailable.sha256 && this.downloaded.size === nextAvailable.size);

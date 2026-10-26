@@ -12,7 +12,7 @@
   // Keep the opening identity even if another tab logs in or clears its cache.
   const toolUid = toolSession.uid || "";
   const sessionKind = toolSession.role === 'sa' || toolUid === 'local-super-admin' ? 'host' : 'unknown';
-  const loginUrl = '/login.html';
+  const loginUrl = '/';
   if (toolContext && !global.__workbenchStoreSync) {
     function lockTool(reason) {
       if (embedded) { try { if (global.parent.__workbenchLockSession) global.parent.__workbenchLockSession(reason); } catch (_error) {} return; }
@@ -24,14 +24,17 @@
         root.style.cssText = 'position:fixed;inset:0;z-index:100100;background:#f2f5f7;color:#23453b;display:grid;place-content:center;gap:16px;padding:28px;font:17px system-ui';
         const title = document.createElement('h2'); title.id = 'toolSessionLockTitle';
         const note = document.createElement('p');
-        if (sessionKind === 'host') {
+        if (reason === 'license') {
+          title.textContent = '主机授权不可用';
+          note.textContent = '主机授权已失效，工具页面已锁定。请由主机管理员重新激活后继续使用；已保存的历史和文件仍保留。';
+        } else if (sessionKind === 'host') {
           title.textContent = '主机会话已失效';
-          note.textContent = '主机会话已过期、已退出或主机服务已重启。工具页面已锁定，请返回主机入口重新进入；已保存的历史和文件仍保留。';
+          note.textContent = '主机会话已过期、已退出或主机服务已重启。工具页面已锁定，请返回主页重新进入；已保存的历史和文件仍保留。';
         } else {
           title.textContent = '会话已失效';
-          note.textContent = '工具页面已锁定，请返回工作台入口重新进入；已保存的历史和文件仍保留。';
+          note.textContent = '工具页面已锁定，请返回主页重新进入；已保存的历史和文件仍保留。';
         }
-        const login = document.createElement('a'); login.href = loginUrl; login.textContent = sessionKind === 'host' ? '返回主机入口' : '重新登录工作台';
+        const login = document.createElement('a'); login.href = loginUrl; login.textContent = '返回主页';
         root.append(title, note, login); document.body.appendChild(root);
       }
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();
@@ -50,6 +53,7 @@
       if (response.status === 401 && response.headers.get("X-Workbench-Session") === "invalid") {
         lockTool();
       }
+      if (response.status === 403) response.clone().json().then(function (payload) { if (payload.code === 'LICENSE_LOCKED') lockTool('license'); }).catch(function () {});
       return response;
     };
     global.addEventListener('storage', function (event) {
@@ -65,7 +69,7 @@
         checking = true;
         try {
           const response = await global.fetch('/api/auth/status', { cache: 'no-store' });
-          if (response.ok) { const status = await response.json(); if (!status.authenticated) lockTool(); }
+          if (response.ok) { const status = await response.json(); if (!status.authenticated) lockTool(); else if (status.license && status.license.required && !status.license.valid) lockTool('license'); }
         } catch (_error) { /* Network loss alone does not prove revoked access. */ }
         finally { checking = false; }
       }

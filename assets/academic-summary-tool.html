@@ -1,6 +1,7 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>综测与成绩汇总（个人定制）</title><link rel="stylesheet" href="/assets/academic-summary-tool.css"><link rel="stylesheet" href="/assets/academic-summary-tool-fixes.css"></head>
-<body><main><header><span class="brand-mark">数智学工</span><div><p class="eyebrow">LOCAL EXCEL TOOL</p><h1>综测与成绩汇总（个人定制）</h1><p>按学号自动关联五份 Excel 表，在浏览器本地生成班级排名、课程最低分、补考与重修科目。</p></div><span id="health" class="health">浏览器本地模式</span></header>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>综测与成绩汇总（个人定制）</title><link rel="stylesheet" href="/assets/academic-summary-tool.css"><link rel="stylesheet" href="/assets/academic-summary-tool-fixes.css"><link rel="stylesheet" href="/assets/workbench-ui.css">
+</head>
+<body data-workbench-surface="tool"><main><header><span class="brand-mark">数智学工</span><div><p class="eyebrow">LOCAL EXCEL TOOL</p><h1>综测与成绩汇总（个人定制）</h1><p>按学号自动关联五份 Excel 表，在浏览器本地生成班级排名、课程最低分、补考与重修科目。</p></div><span id="health" class="health">浏览器本地模式</span></header>
 <section class="panel input-panel"><div class="section-heading"><div><span class="step">01</span><h2>输入</h2><p>个人数据按学号匹配；仅统计《汇总》给定名单，其他来源表多出的学生会弹窗列出并忽略。所有数据仅在本机处理。</p></div><button id="calculate" class="primary" disabled>生成汇总文件 <span>→</span></button></div>
 <div class="upload-grid">
 <label class="upload-card"><input type="file" data-key="zongce1" accept=".xlsx,.xlsm,.xlsb,.xltx,.xltm,.xls,.xlt,.xml,.et,.ett,.ods,.fods,.csv,.tsv"><span class="file-icon">1</span><strong>上传第 1 学期综测</strong><small>读取“综测总分”</small><em>选择表格文件</em></label>
